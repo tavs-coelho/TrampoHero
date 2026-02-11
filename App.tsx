@@ -632,6 +632,7 @@ const App: React.FC = () => {
   const [storeProducts, setStoreProducts] = useState<StoreProduct[]>(STORE_PRODUCTS);
   const [cart, setCart] = useState<{ productId: string; quantity: number }[]>([]);
   const [advertisements, setAdvertisements] = useState<Advertisement[]>(ADVERTISEMENTS);
+  const [isApplying, setIsApplying] = useState(false);
 
   // Refs
   const mapRef = useRef<any>(null);
@@ -656,7 +657,7 @@ const App: React.FC = () => {
   // Função helper para Toasts
   const showToast = (msg: string, type: 'success'|'error'|'info' = 'info') => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 4500); // Increased from 3000 to 4500 for better readability
   };
 
   // Carregar Job via URL
@@ -685,13 +686,13 @@ const App: React.FC = () => {
   }, [jobs, filterNiche]);
 
   const filteredEmployerJobs = useMemo(() => {
-    return jobs.filter(j => j.employerId === 'emp-1').filter(j => {
+    return jobs.filter(j => j.employerId === user.id).filter(j => {
       const matchNiche = filterNiche === 'All' || j.niche === filterNiche;
       const matchStatus = filterStatus === 'All' || j.status === filterStatus;
       const matchDate = !filterDate || j.date === filterDate;
       return matchNiche && matchStatus && matchDate;
     });
-  }, [jobs, filterNiche, filterStatus, filterDate]);
+  }, [jobs, user.id, filterNiche, filterStatus, filterDate]);
 
   useEffect(() => {
     if (user.role === 'employer') {
@@ -772,12 +773,22 @@ const App: React.FC = () => {
   }, [view, browseMode, sortedOpenJobs]);
 
   const handleApply = (job: Job) => {
+    if (isApplying) return; // Prevent duplicate submissions
+    if (user.activeJobId) {
+      showToast("Você já tem um trabalho ativo.", "error");
+      return;
+    }
+    
+    setIsApplying(true);
     setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: 'applied' } : j));
     setUser(prev => ({ ...prev, activeJobId: job.id, wallet: { ...prev.wallet, scheduled: prev.wallet.scheduled + job.payment } }));
     setSelectedJob(null);
     setView('active');
     setIsCheckedIn(false);
     showToast("Vaga aceita! Prepare-se para o trabalho.", "success");
+    
+    // Reset applying state after a short delay
+    setTimeout(() => setIsApplying(false), 1000);
   };
 
   const handleCheckIn = () => {
@@ -795,6 +806,11 @@ const App: React.FC = () => {
     if (confirm("Confirmar finalização do serviço? Certifique-se de que o contratante está ciente.")) {
         const jobPayment = activeJob.payment;
         const coinsEarned = Math.floor(jobPayment / COINS_PER_CURRENCY_UNIT);
+        
+        // Calculate actual coins before state update to use in toast
+        const currentStreak = user.trampoCoins ? user.trampoCoins.streak + 1 : 1;
+        const streakBonus = currentStreak >= STREAK_BONUS_THRESHOLD;
+        const actualCoins = streakBonus ? Math.floor(coinsEarned * STREAK_BONUS_MULTIPLIER) : coinsEarned;
         
         setJobs(prev => prev.map(j => j.id === activeJob.id ? { ...j, status: 'completed' } : j));
         setUser(prev => {
@@ -850,6 +866,19 @@ const App: React.FC = () => {
     }
     const pixKey = prompt("Digite sua chave PIX (CPF, Celular ou Email):");
     if (!pixKey) return;
+    
+    // Validate PIX key format (basic validation)
+    const cpfRegex = /^\d{11}$/;
+    const phoneRegex = /^\+?\d{10,13}$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    const isValidPixKey = cpfRegex.test(pixKey) || phoneRegex.test(pixKey) || emailRegex.test(pixKey);
+    
+    if (!isValidPixKey) {
+      showToast("Chave PIX inválida. Use CPF (11 dígitos), celular ou e-mail válido.", "error");
+      return;
+    }
+    
     const amountToWithdraw = user.wallet.balance;
     const fee = user.isPrime ? 0 : 2.50; // Taxa de saque para não-Prime
     
@@ -969,6 +998,14 @@ const App: React.FC = () => {
 
   const handleCreateJob = () => {
     if (!newJobData.title || !newJobData.payment) return showToast("Preencha título e valor.", "error");
+    
+    // Validate date is not in the past
+    const jobDate = newJobData.date || new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0];
+    if (jobDate < today) {
+      return showToast("Não é possível criar vagas com data passada.", "error");
+    }
+    
     const newJob: Job = {
         id: Date.now().toString(),
         employerId: user.id,
@@ -981,7 +1018,7 @@ const App: React.FC = () => {
         payment: parseFloat(newJobData.payment),
         paymentType: 'dia',
         description: newJobData.description || "Sem descrição.",
-        date: newJobData.date || new Date().toISOString().split('T')[0],
+        date: jobDate,
         startTime: newJobData.startTime || "09:00",
         status: 'open',
         minRatingRequired: 0
@@ -1093,6 +1130,29 @@ const App: React.FC = () => {
       if (paymentMethod === 'card') {
          if (cardData.number.length < 13 || !cardData.name || !cardData.cvv) {
              showToast("Dados do cartão incompletos.", "error");
+             return;
+         }
+         
+         // Validate CVV (3-4 digits)
+         if (cardData.cvv.length < 3 || cardData.cvv.length > 4 || !/^\d+$/.test(cardData.cvv)) {
+             showToast("CVV inválido. Use 3 ou 4 dígitos.", "error");
+             return;
+         }
+         
+         // Validate expiry date format (MM/YY)
+         if (!cardData.expiry || !/^\d{2}\/\d{2}$/.test(cardData.expiry)) {
+             showToast("Data de validade inválida. Use MM/AA.", "error");
+             return;
+         }
+         
+         // Check if expiry date is in the future
+         const [month, year] = cardData.expiry.split('/').map(Number);
+         const currentDate = new Date();
+         const currentYear = currentDate.getFullYear() % 100; // Get last 2 digits
+         const currentMonth = currentDate.getMonth() + 1;
+         
+         if (year < currentYear || (year === currentYear && month < currentMonth)) {
+             showToast("Cartão vencido. Verifique a data de validade.", "error");
              return;
          }
       }
