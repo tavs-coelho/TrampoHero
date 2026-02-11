@@ -841,6 +841,13 @@ const App: React.FC = () => {
         });
         setIsCheckedIn(false);
         setView('browse');
+        
+        // Update challenge progress for jobs completed
+        handleUpdateChallengeProgress('jobs_completed', 1);
+        
+        // Update streak challenge
+        handleUpdateChallengeProgress('streak_days', currentStreak);
+        
         showToast(`Trabalho concluído! +${actualCoins} TrampoCoins ganhos 🎉`, "success");
     }
   };
@@ -1340,6 +1347,223 @@ const App: React.FC = () => {
     } catch (error) {
       console.error("Error generating certificate:", error);
       showToast("Erro ao gerar certificado. Tente novamente.", "error");
+    }
+  };
+
+  // --- REFERRAL SYSTEM ---
+  const handleApplyReferralCode = (referralCode: string) => {
+    // Simulate checking referral code
+    if (!referralCode || referralCode.length < 5) {
+      showToast("Código de indicação inválido.", "error");
+      return;
+    }
+    
+    // In a real implementation, this would check against database
+    // For now, we'll accept any code that's not the user's own
+    if (referralCode === user.referralCode) {
+      showToast("Você não pode usar seu próprio código de indicação.", "error");
+      return;
+    }
+    
+    // Create a referral record
+    const newReferral: Referral = {
+      id: `ref-${Date.now()}`,
+      referrerId: `user-${referralCode}`, // In real app, lookup user by code
+      referredId: user.id,
+      referredRole: user.role,
+      status: 'pending',
+      reward: user.role === 'freelancer' ? REFERRAL_BONUS_FREELANCER : REFERRAL_BONUS_EMPLOYER,
+      createdDate: new Date().toISOString()
+    };
+    
+    // Update user with referral info
+    setUser(prev => ({
+      ...prev,
+      referrals: [...(prev.referrals || []), newReferral]
+    }));
+    
+    showToast(`Código aplicado! Ganhe R$ ${newReferral.reward} no seu primeiro trabalho!`, "success");
+  };
+  
+  const handleCompleteReferral = (referralId: string) => {
+    // Called when user completes their first job
+    setUser(prev => {
+      const referral = prev.referrals?.find(r => r.id === referralId);
+      if (!referral || referral.status !== 'pending') return prev;
+      
+      const updatedReferrals = (prev.referrals || []).map(r =>
+        r.id === referralId ? { ...r, status: 'completed' as const, completedDate: new Date().toISOString() } : r
+      );
+      
+      // Add bonus to wallet
+      const newTransaction: Transaction = {
+        id: `ref-bonus-${Date.now()}`,
+        type: 'referral_bonus',
+        amount: referral.reward,
+        date: new Date().toLocaleDateString('pt-BR'),
+        description: `Bônus de Indicação`
+      };
+      
+      return {
+        ...prev,
+        referrals: updatedReferrals,
+        wallet: {
+          ...prev.wallet,
+          balance: prev.wallet.balance + referral.reward,
+          transactions: [newTransaction, ...prev.wallet.transactions]
+        }
+      };
+    });
+    
+    showToast("Bônus de indicação creditado! 🎉", "success");
+  };
+
+  // --- STORE CHECKOUT ---
+  const handleStoreCheckout = () => {
+    if (cart.length === 0) {
+      showToast("Carrinho vazio. Adicione produtos primeiro.", "error");
+      return;
+    }
+    
+    // Calculate total
+    let total = 0;
+    const orderItems = cart.map(item => {
+      const product = storeProducts.find(p => p.id === item.productId);
+      if (product) {
+        total += product.price * item.quantity;
+        return {
+          productId: item.productId,
+          name: product.name,
+          quantity: item.quantity,
+          price: product.price
+        };
+      }
+      return null;
+    }).filter(Boolean);
+    
+    // Check if user has enough balance
+    if (user.wallet.balance < total) {
+      showToast(`Saldo insuficiente. Você precisa de R$ ${(total - user.wallet.balance).toFixed(2)} a mais.`, "error");
+      return;
+    }
+    
+    if (confirm(`Confirmar compra de ${cart.length} itens?\nTotal: R$ ${total.toFixed(2)}`)) {
+      // Create order and transaction
+      const newOrder: StoreOrder = {
+        id: `order-${Date.now()}`,
+        userId: user.id,
+        items: orderItems as any[],
+        total: total,
+        status: 'confirmed',
+        orderDate: new Date().toISOString(),
+        deliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days
+        trackingCode: `TH${Date.now().toString().slice(-8)}`
+      };
+      
+      const newTransaction: Transaction = {
+        id: `store-${Date.now()}`,
+        type: 'withdrawal',
+        amount: -total,
+        date: new Date().toLocaleDateString('pt-BR'),
+        description: `Compra TrampoStore - ${cart.length} itens`
+      };
+      
+      setUser(prev => ({
+        ...prev,
+        wallet: {
+          ...prev.wallet,
+          balance: prev.wallet.balance - total,
+          transactions: [newTransaction, ...prev.wallet.transactions]
+        }
+      }));
+      
+      setCart([]);
+      showToast(`Pedido confirmado! Rastreio: ${newOrder.trackingCode}`, "success");
+    }
+  };
+
+  // --- WEEKLY CHALLENGES ---
+  const handleUpdateChallengeProgress = (challengeType: 'jobs_completed' | 'referrals' | 'streak_days' | 'rating_maintained', increment: number = 1) => {
+    setChallenges(prev => prev.map(challenge => {
+      if (challenge.requirement.type === challengeType && challenge.isActive && !challenge.isCompleted) {
+        const newCurrent = challenge.requirement.current + increment;
+        const isNowCompleted = newCurrent >= challenge.requirement.target;
+        
+        // If challenge is completed, give reward
+        if (isNowCompleted && !challenge.isCompleted) {
+          handleClaimChallengeReward(challenge);
+        }
+        
+        return {
+          ...challenge,
+          requirement: {
+            ...challenge.requirement,
+            current: Math.min(newCurrent, challenge.requirement.target)
+          },
+          isCompleted: isNowCompleted
+        };
+      }
+      return challenge;
+    }));
+  };
+  
+  const handleClaimChallengeReward = (challenge: WeeklyChallenge) => {
+    if (challenge.reward.type === 'cash') {
+      const amount = typeof challenge.reward.value === 'number' ? challenge.reward.value : 0;
+      const newTransaction: Transaction = {
+        id: `challenge-${Date.now()}`,
+        type: 'deposit',
+        amount: amount,
+        date: new Date().toLocaleDateString('pt-BR'),
+        description: `Desafio Completado: ${challenge.title}`
+      };
+      
+      setUser(prev => ({
+        ...prev,
+        wallet: {
+          ...prev.wallet,
+          balance: prev.wallet.balance + amount,
+          transactions: [newTransaction, ...prev.wallet.transactions]
+        }
+      }));
+      
+      showToast(`🎉 Desafio completado! +R$ ${amount} na carteira!`, "success");
+    } else if (challenge.reward.type === 'coins') {
+      const coins = typeof challenge.reward.value === 'number' ? challenge.reward.value : 0;
+      setUser(prev => ({
+        ...prev,
+        trampoCoins: prev.trampoCoins ? {
+          ...prev.trampoCoins,
+          balance: prev.trampoCoins.balance + coins,
+          earned: [...prev.trampoCoins.earned, {
+            id: `challenge-${Date.now()}`,
+            type: 'coin_earned',
+            amount: 0,
+            date: new Date().toISOString().split('T')[0],
+            description: `Desafio: ${challenge.title}`,
+            coins: coins
+          }]
+        } : prev.trampoCoins
+      }));
+      
+      showToast(`🎉 Desafio completado! +${coins} TrampoCoins!`, "success");
+    } else if (challenge.reward.type === 'medal') {
+      // Award special medal
+      const medalId = typeof challenge.reward.value === 'string' ? challenge.reward.value : 'm-challenge';
+      const medal = MEDALS_REPO.find(m => m.id === medalId) || {
+        id: medalId,
+        name: 'Desafio Completado',
+        icon: 'fa-trophy',
+        color: 'text-amber-500',
+        description: challenge.title
+      };
+      
+      setUser(prev => ({
+        ...prev,
+        medals: [...prev.medals, medal]
+      }));
+      
+      showToast(`🏆 Desafio completado! Nova medalha desbloqueada!`, "success");
     }
   };
 
@@ -2692,12 +2916,7 @@ const App: React.FC = () => {
               </div>
               <div className="flex gap-2">
                 <button 
-                  onClick={() => {
-                    if (cart.length > 0) {
-                      showToast(`Pedido realizado! ${cart.length} itens`, 'success');
-                      setCart([]);
-                    }
-                  }}
+                  onClick={handleStoreCheckout}
                   className="w-10 h-10 bg-indigo-100 rounded-xl text-indigo-600 hover:bg-indigo-200 relative"
                 >
                   <i className="fas fa-shopping-cart"></i>
