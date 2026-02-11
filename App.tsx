@@ -6,6 +6,9 @@ import { generateContract } from './services/pdfService';
 
 declare const L: any;
 
+// --- CONSTANTES ---
+const MAX_RECENT_ITEMS = 5; // Número máximo de itens recentes a exibir (convites e notas fiscais)
+
 // --- DADOS MOCKADOS ---
 const MEDALS_REPO: Medal[] = [
   { id: 'm1', name: 'Pontualidade', icon: 'fa-clock', color: 'text-amber-500', description: 'Chegou no horário em 5 trampos' },
@@ -477,20 +480,22 @@ const App: React.FC = () => {
   // --- NOVAS FUNÇÕES PARA FUNCIONALIDADES FALTANTES ---
   const handleInviteTalent = (talentName: string, talentId?: string) => {
       // Cria novo convite e adiciona ao perfil do usuário
-      // Gera ID único usando crypto API se disponível, ou fallback para Math.random
+      // Gera ID único usando crypto API se disponível, ou fallback robusto
       const generateUniqueId = () => {
         if (typeof crypto !== 'undefined' && crypto.randomUUID) {
           return crypto.randomUUID();
         }
-        // Fallback: timestamp + random string mais longo
-        const randomPart = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-        return `inv-${Date.now()}-${randomPart}`;
+        // Fallback robusto: timestamp + performance.now() para melhor unicidade
+        const timestamp = Date.now();
+        const performanceTime = typeof performance !== 'undefined' ? performance.now() : Math.random() * 10000;
+        const randomPart = Math.random().toString(36).slice(2);
+        return `inv-${timestamp}-${performanceTime.toFixed(0)}-${randomPart}`;
       };
       
       const newInvitation: Invitation = {
           id: generateUniqueId(),
           talentName: talentName,
-          talentId: talentId || `talent-${generateUniqueId()}`, // Use provided ID or generate new one
+          talentId: talentId || `talent-${generateUniqueId()}`, // Usa ID fornecido ou gera novo (melhor fornecer ID existente)
           jobId: selectedJob?.id,
           jobTitle: selectedJob?.title || "Vaga Geral",
           status: 'pending',
@@ -1183,7 +1188,7 @@ const App: React.FC = () => {
                       Convites Enviados
                     </h3>
                     <div className="space-y-3">
-                      {user.invitations.slice(0, 5).map(inv => (
+                      {user.invitations.slice(0, MAX_RECENT_ITEMS).map(inv => (
                         <div key={inv.id} className="bg-slate-50 p-4 rounded-xl flex justify-between items-center">
                           <div>
                             <p className="font-bold text-slate-800 text-sm">{inv.talentName}</p>
@@ -1210,7 +1215,7 @@ const App: React.FC = () => {
                       Notas Fiscais
                     </h3>
                     <div className="space-y-3">
-                      {user.invoices.slice(0, 5).map(invoice => (
+                      {user.invoices.slice(0, MAX_RECENT_ITEMS).map(invoice => (
                         <div key={invoice.id} className="bg-slate-50 p-4 rounded-xl flex justify-between items-center">
                           <div>
                             <p className="font-bold text-slate-800 text-sm">{invoice.jobTitle}</p>

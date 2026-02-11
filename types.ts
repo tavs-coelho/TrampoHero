@@ -87,7 +87,7 @@ export interface Course {
 export interface Invitation {
   id: string;
   talentName: string;
-  talentId?: string;
+  talentId?: string; // ID do talento no sistema. Se fornecido, referencia registro existente. Se omitido, será gerado um novo ID.
   jobId?: string;
   jobTitle?: string;
   status: 'pending' | 'accepted' | 'declined';
