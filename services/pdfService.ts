@@ -179,15 +179,15 @@ export const generateCertificate = (certificate: Certificate) => {
   doc.setFontSize(8);
   doc.setTextColor(148, 163, 184); // Slate 400
   doc.text(
-    `Hash de Validação: ${certificate.id.substring(0, 32).toUpperCase()}`,
+    `Hash de Validação: ${certificate.id.toUpperCase()}`,
     pageWidth / 2,
     pageHeight - 15,
     { align: "center" }
   );
   
-  // QR code placeholder text (could be enhanced with actual QR code library)
+  // Verification URL (placeholder - endpoint to be implemented)
   doc.setFontSize(7);
-  doc.text("Verifique este certificado em trampohero.com/verify", pageWidth / 2, pageHeight - 10, { align: "center" });
+  doc.text("Verificação disponível em breve", pageWidth / 2, pageHeight - 10, { align: "center" });
   
   // Save PDF
   doc.save(`Certificado_${certificate.certificateNumber}.pdf`);
