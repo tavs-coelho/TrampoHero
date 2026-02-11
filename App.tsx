@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Niche, Job, UserProfile, SubscriptionTier, Message, Medal, Course, Transaction, Invitation, Invoice, TrampoCoin, InsurancePlan, UltraPlan, CourseQuestion, CourseProgress, Certificate } from './types';
+import { Niche, Job, UserProfile, SubscriptionTier, Message, Medal, Course, Transaction, Invitation, Invoice, TrampoCoin, InsurancePlan, UltraPlan, CourseQuestion, CourseProgress, Certificate, WeeklyChallenge, TalentRanking, StoreProduct, StoreOrder, Advertisement } from './types';
 import { translateMessage, supportAssistant, getRecurrentSuggestion, generateVoiceJob, generateJobDescription } from './services/geminiService';
 import { generateContract, generateCertificate } from './services/pdfService';
 
@@ -310,6 +310,187 @@ const TOP_TALENTS = [
   { id: 't6', name: 'Pedro Santos', role: 'Pintor', rating: 4.6, niche: Niche.CONSTRUCTION, hourly: 40 },
 ];
 
+// Weekly Challenges Mock Data
+const WEEKLY_CHALLENGES: WeeklyChallenge[] = [
+  {
+    id: 'wc1',
+    title: '🔥 Desafio da Semana',
+    description: 'Complete 3 trampos esta semana',
+    icon: 'fa-fire',
+    reward: { type: 'cash', value: 30 },
+    requirement: { type: 'jobs_completed', target: 3, current: 1 },
+    startDate: new Date(Date.now() - 2 * 86400000).toISOString(),
+    endDate: new Date(Date.now() + 5 * 86400000).toISOString(),
+    isActive: true,
+    isCompleted: false
+  },
+  {
+    id: 'wc2',
+    title: '👥 Influenciador Hero',
+    description: 'Indique 2 amigos e ganhe medalha exclusiva',
+    icon: 'fa-users',
+    reward: { type: 'medal', value: 'm-influencer' },
+    requirement: { type: 'referrals', target: 2, current: 0 },
+    startDate: new Date(Date.now() - 2 * 86400000).toISOString(),
+    endDate: new Date(Date.now() + 5 * 86400000).toISOString(),
+    isActive: true,
+    isCompleted: false
+  },
+  {
+    id: 'wc3',
+    title: '⭐ Estrela da Qualidade',
+    description: 'Mantenha avaliação acima de 4.5 por 7 dias',
+    icon: 'fa-star',
+    reward: { type: 'coins', value: 50 },
+    requirement: { type: 'rating_maintained', target: 7, current: 3 },
+    startDate: new Date(Date.now() - 3 * 86400000).toISOString(),
+    endDate: new Date(Date.now() + 4 * 86400000).toISOString(),
+    isActive: true,
+    isCompleted: false
+  }
+];
+
+// Talent Rankings Mock Data
+const TALENT_RANKINGS: TalentRanking[] = [
+  { userId: 't2', userName: 'Carlos Oliveira', rank: 1, score: 985, niche: Niche.CONSTRUCTION, weeklyJobs: 12, monthlyJobs: 48, rating: 5.0, badge: '🥇' },
+  { userId: 't5', userName: 'Ana Souza', rank: 2, score: 978, niche: Niche.RESTAURANT, weeklyJobs: 11, monthlyJobs: 45, rating: 5.0, badge: '🥈' },
+  { userId: 't1', userName: 'Mariana Costa', rank: 3, score: 965, niche: Niche.RESTAURANT, weeklyJobs: 10, monthlyJobs: 42, rating: 4.9, badge: '🥉' },
+  { userId: 't3', userName: 'Fernanda Lima', rank: 4, score: 952, niche: Niche.EVENTS, weeklyJobs: 10, monthlyJobs: 40, rating: 4.8 },
+  { userId: 'user-123', userName: 'Alex Silva', rank: 5, score: 940, niche: Niche.RESTAURANT, weeklyJobs: 9, monthlyJobs: 38, rating: 4.8 },
+  { userId: 't4', userName: 'João Kleber', rank: 6, score: 920, niche: Niche.CLEANING, weeklyJobs: 9, monthlyJobs: 36, rating: 4.7 },
+  { userId: 't6', userName: 'Pedro Santos', rank: 7, score: 905, niche: Niche.CONSTRUCTION, weeklyJobs: 8, monthlyJobs: 34, rating: 4.6 },
+];
+
+// TrampoStore Mock Data
+const STORE_PRODUCTS: StoreProduct[] = [
+  {
+    id: 'p1',
+    name: 'Kit Garçom Profissional',
+    category: 'uniform',
+    price: 89.90,
+    originalPrice: 129.90,
+    description: 'Conjunto completo: camisa, calça e gravata social',
+    imageUrl: 'https://via.placeholder.com/200x200?text=Kit+Garcom',
+    inStock: true,
+    relatedNiches: [Niche.RESTAURANT, Niche.EVENTS],
+    rating: 4.7,
+    reviewCount: 124
+  },
+  {
+    id: 'p2',
+    name: 'Capacete de Segurança',
+    category: 'epi',
+    price: 45.00,
+    description: 'Capacete certificado CA 31469',
+    imageUrl: 'https://via.placeholder.com/200x200?text=Capacete',
+    inStock: true,
+    relatedNiches: [Niche.CONSTRUCTION],
+    rating: 4.9,
+    reviewCount: 89
+  },
+  {
+    id: 'p3',
+    name: 'Kit Limpeza Premium',
+    category: 'tools',
+    price: 129.90,
+    originalPrice: 169.90,
+    description: 'Mop profissional, produtos e acessórios',
+    imageUrl: 'https://via.placeholder.com/200x200?text=Kit+Limpeza',
+    inStock: true,
+    relatedNiches: [Niche.CLEANING],
+    rating: 4.8,
+    reviewCount: 67
+  },
+  {
+    id: 'p4',
+    name: 'Mochila Organizadora',
+    category: 'accessories',
+    price: 69.90,
+    description: 'Mochila impermeável para equipamentos',
+    imageUrl: 'https://via.placeholder.com/200x200?text=Mochila',
+    inStock: true,
+    relatedNiches: [Niche.RESTAURANT, Niche.CONSTRUCTION, Niche.EVENTS, Niche.CLEANING],
+    rating: 4.6,
+    reviewCount: 156
+  },
+  {
+    id: 'p5',
+    name: 'Luvas Anticorte',
+    category: 'epi',
+    price: 29.90,
+    description: 'Luvas nível 5 de proteção',
+    imageUrl: 'https://via.placeholder.com/200x200?text=Luvas',
+    inStock: true,
+    relatedNiches: [Niche.CONSTRUCTION],
+    rating: 4.8,
+    reviewCount: 201
+  },
+  {
+    id: 'p6',
+    name: 'Sapato Antiderrapante',
+    category: 'uniform',
+    price: 119.90,
+    description: 'Sapato profissional para gastronomia',
+    imageUrl: 'https://via.placeholder.com/200x200?text=Sapato',
+    inStock: false,
+    relatedNiches: [Niche.RESTAURANT],
+    rating: 4.9,
+    reviewCount: 178
+  }
+];
+
+// TrampoAds Mock Data
+const ADVERTISEMENTS: Advertisement[] = [
+  {
+    id: 'ad1',
+    advertiserId: 'adv-1',
+    advertiserName: 'Banco Digital Hero',
+    type: 'banner',
+    content: {
+      title: '💳 Cartão sem anuidade',
+      description: 'Cashback de 2% em todas as compras. Abra sua conta grátis!',
+      imageUrl: 'https://via.placeholder.com/400x100?text=Banco+Hero',
+      ctaText: 'Abrir Conta',
+      ctaUrl: 'https://bancohero.com.br'
+    },
+    targeting: {
+      niches: [Niche.RESTAURANT, Niche.CONSTRUCTION, Niche.EVENTS, Niche.CLEANING],
+      userActivity: 'high'
+    },
+    budget: 2000,
+    spent: 1250,
+    impressions: 45230,
+    clicks: 892,
+    startDate: new Date(Date.now() - 7 * 86400000).toISOString(),
+    endDate: new Date(Date.now() + 23 * 86400000).toISOString(),
+    isActive: true
+  },
+  {
+    id: 'ad2',
+    advertiserId: 'adv-2',
+    advertiserName: 'EPI Shop',
+    type: 'sponsored_post',
+    content: {
+      title: '🛡️ EPIs com até 50% OFF',
+      description: 'Segurança é investimento! Confira nossa seleção especial.',
+      imageUrl: 'https://via.placeholder.com/400x200?text=EPI+Shop',
+      ctaText: 'Ver Ofertas',
+      ctaUrl: 'https://epishop.com.br'
+    },
+    targeting: {
+      niches: [Niche.CONSTRUCTION],
+      userActivity: 'medium'
+    },
+    budget: 500,
+    spent: 320,
+    impressions: 12500,
+    clicks: 245,
+    startDate: new Date(Date.now() - 3 * 86400000).toISOString(),
+    endDate: new Date(Date.now() + 11 * 86400000).toISOString(),
+    isActive: true
+  }
+];
+
 const INITIAL_JOBS: Job[] = [
   {
     id: '1', employerId: 'emp-1', title: 'Garçom de Gala (URGENTE)', employer: 'Buffet Delícia', employerRating: 4.8,
@@ -397,7 +578,7 @@ const App: React.FC = () => {
   });
 
   const [jobs, setJobs] = useState<Job[]>(INITIAL_JOBS);
-  const [view, setView] = useState<'browse' | 'wallet' | 'active' | 'chat' | 'dashboard' | 'academy' | 'profile' | 'talents' | 'coins' | 'insurance' | 'credit' | 'analytics' | 'contracts' | 'referrals'>('browse');
+  const [view, setView] = useState<'browse' | 'wallet' | 'active' | 'chat' | 'dashboard' | 'academy' | 'profile' | 'talents' | 'coins' | 'insurance' | 'credit' | 'analytics' | 'contracts' | 'referrals' | 'challenges' | 'ranking' | 'store' | 'ads'>('browse');
   const [browseMode, setBrowseMode] = useState<'list' | 'map'>('list');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -444,6 +625,13 @@ const App: React.FC = () => {
   const [filterNiche, setFilterNiche] = useState<string>('All');
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [filterDate, setFilterDate] = useState<string>('');
+
+  // Estados para novas features
+  const [challenges, setChallenges] = useState<WeeklyChallenge[]>(WEEKLY_CHALLENGES);
+  const [rankings, setRankings] = useState<TalentRanking[]>(TALENT_RANKINGS);
+  const [storeProducts, setStoreProducts] = useState<StoreProduct[]>(STORE_PRODUCTS);
+  const [cart, setCart] = useState<{ productId: string; quantity: number }[]>([]);
+  const [advertisements, setAdvertisements] = useState<Advertisement[]>(ADVERTISEMENTS);
 
   // Refs
   const mapRef = useRef<any>(null);
@@ -1871,6 +2059,28 @@ const App: React.FC = () => {
                       <p className="text-xs font-black text-slate-900">Analytics</p>
                       <p className="text-[9px] text-slate-500">Métricas</p>
                     </button>
+                    <button onClick={() => setView('challenges')} className="p-4 bg-orange-50 rounded-xl text-left hover:bg-orange-100 transition-colors">
+                      <i className="fas fa-fire text-orange-500 text-xl mb-2"></i>
+                      <p className="text-xs font-black text-slate-900">Desafios</p>
+                      <p className="text-[9px] text-slate-500">Semanal</p>
+                    </button>
+                    <button onClick={() => setView('ranking')} className="p-4 bg-purple-50 rounded-xl text-left hover:bg-purple-100 transition-colors">
+                      <i className="fas fa-trophy text-purple-500 text-xl mb-2"></i>
+                      <p className="text-xs font-black text-slate-900">Ranking</p>
+                      <p className="text-[9px] text-slate-500">Top Heroes</p>
+                    </button>
+                    <button onClick={() => setView('store')} className="p-4 bg-cyan-50 rounded-xl text-left hover:bg-cyan-100 transition-colors">
+                      <i className="fas fa-shopping-bag text-cyan-500 text-xl mb-2"></i>
+                      <p className="text-xs font-black text-slate-900">Loja</p>
+                      <p className="text-[9px] text-slate-500">EPIs & Mais</p>
+                    </button>
+                    {user.role === 'employer' && (
+                      <button onClick={() => setView('ads')} className="p-4 bg-rose-50 rounded-xl text-left hover:bg-rose-100 transition-colors">
+                        <i className="fas fa-bullhorn text-rose-500 text-xl mb-2"></i>
+                        <p className="text-xs font-black text-slate-900">Anúncios</p>
+                        <p className="text-[9px] text-slate-500">TrampoAds</p>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -2249,6 +2459,408 @@ const App: React.FC = () => {
                 </div>
               </>
             )}
+          </div>
+        )}
+
+        {/* ==================== NEW FEATURE: WEEKLY CHALLENGES ==================== */}
+        {view === 'challenges' && (
+          <div className="space-y-6 animate-in fade-in duration-500">
+            <header className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">🔥 Desafios Semanais</h2>
+                <p className="text-slate-500 text-sm">Complete desafios e ganhe recompensas</p>
+              </div>
+              <button onClick={() => setView('browse')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900"><i className="fas fa-times"></i></button>
+            </header>
+
+            {/* Active Challenges */}
+            <div className="space-y-4">
+              {challenges.filter(c => c.isActive && !c.isCompleted).map(challenge => (
+                <div key={challenge.id} className="bg-white p-6 rounded-[2.5rem] border-2 border-slate-100 hover:border-indigo-200 transition-all">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="font-black text-lg text-slate-900 mb-1">{challenge.title}</h3>
+                      <p className="text-sm text-slate-600">{challenge.description}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-2xl">
+                      <i className={`fas ${challenge.icon}`}></i>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="mb-4">
+                    <div className="flex justify-between text-xs font-bold text-slate-600 mb-2">
+                      <span>{challenge.requirement.current} / {challenge.requirement.target}</span>
+                      <span>{Math.round((challenge.requirement.current / challenge.requirement.target) * 100)}%</span>
+                    </div>
+                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full transition-all duration-500"
+                        style={{width: `${(challenge.requirement.current / challenge.requirement.target) * 100}%`}}
+                      ></div>
+                    </div>
+                  </div>
+
+                  {/* Reward */}
+                  <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                    <span className="text-xs text-slate-500 font-bold">Recompensa:</span>
+                    <span className="px-4 py-2 bg-amber-50 text-amber-600 rounded-xl font-black text-sm">
+                      {challenge.reward.type === 'cash' && `R$ ${challenge.reward.value}`}
+                      {challenge.reward.type === 'coins' && `${challenge.reward.value} Coins`}
+                      {challenge.reward.type === 'medal' && '🏆 Medalha Exclusiva'}
+                    </span>
+                  </div>
+
+                  {/* Time Remaining */}
+                  <div className="mt-3 text-xs text-slate-400 text-center">
+                    Termina em {Math.ceil((new Date(challenge.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} dias
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Completed Challenges */}
+            {challenges.filter(c => c.isCompleted).length > 0 && (
+              <div>
+                <h3 className="font-black text-slate-900 mb-3">✅ Completados</h3>
+                <div className="space-y-3">
+                  {challenges.filter(c => c.isCompleted).map(challenge => (
+                    <div key={challenge.id} className="bg-slate-50 p-4 rounded-2xl opacity-70">
+                      <p className="font-bold text-sm">{challenge.title}</p>
+                      <p className="text-xs text-slate-500">Recompensa recebida!</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ==================== NEW FEATURE: TALENT RANKING ==================== */}
+        {view === 'ranking' && (
+          <div className="space-y-6 animate-in fade-in duration-500">
+            <header className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">🏆 Ranking de Talentos</h2>
+                <p className="text-slate-500 text-sm">Top freelancers da semana</p>
+              </div>
+              <button onClick={() => setView('browse')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900"><i className="fas fa-times"></i></button>
+            </header>
+
+            {/* Filter by Niche */}
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              <button className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold whitespace-nowrap">Todos</button>
+              {Object.values(Niche).map(niche => (
+                <button key={niche} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold whitespace-nowrap hover:border-indigo-300">
+                  {niche}
+                </button>
+              ))}
+            </div>
+
+            {/* Rankings List */}
+            <div className="space-y-3">
+              {rankings.map((talent, index) => (
+                <div 
+                  key={talent.userId} 
+                  className={`bg-white p-5 rounded-[2rem] border-2 transition-all ${
+                    index < 3 ? 'border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50' : 'border-slate-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    {/* Rank Badge */}
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black ${
+                      index === 0 ? 'bg-amber-400 text-white' :
+                      index === 1 ? 'bg-slate-300 text-white' :
+                      index === 2 ? 'bg-orange-400 text-white' :
+                      'bg-slate-100 text-slate-600'
+                    }`}>
+                      {talent.badge || `#${talent.rank}`}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-black text-slate-900">{talent.userName}</h3>
+                        {talent.userId === user.id && (
+                          <span className="px-2 py-1 bg-indigo-100 text-indigo-600 rounded-lg text-xs font-bold">Você</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500">{talent.niche}</p>
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="text-xs font-bold text-slate-600">
+                          ⭐ {talent.rating.toFixed(1)}
+                        </span>
+                        <span className="text-xs font-bold text-slate-600">
+                          📊 {talent.weeklyJobs} jobs/semana
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Score */}
+                    <div className="text-right">
+                      <p className="text-2xl font-black text-indigo-600">{talent.score}</p>
+                      <p className="text-xs text-slate-400">pontos</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Your Position */}
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-[2.5rem] text-white">
+              <p className="text-xs font-bold opacity-80 uppercase tracking-widest mb-2">Sua Posição</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-4xl font-black mb-1">#{rankings.find(r => r.userId === user.id)?.rank || '-'}</p>
+                  <p className="text-sm opacity-90">Continue assim para subir no ranking!</p>
+                </div>
+                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl backdrop-blur-sm">
+                  🎯
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== NEW FEATURE: TRAMPOSTORE ==================== */}
+        {view === 'store' && (
+          <div className="space-y-6 animate-in fade-in duration-500">
+            <header className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">🛒 TrampoStore</h2>
+                <p className="text-slate-500 text-sm">Uniformes, EPIs e ferramentas</p>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => {
+                    if (cart.length > 0) {
+                      showToast(`Pedido realizado! ${cart.length} itens`, 'success');
+                      setCart([]);
+                    }
+                  }}
+                  className="w-10 h-10 bg-indigo-100 rounded-xl text-indigo-600 hover:bg-indigo-200 relative"
+                >
+                  <i className="fas fa-shopping-cart"></i>
+                  {cart.length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center font-bold">
+                      {cart.length}
+                    </span>
+                  )}
+                </button>
+                <button onClick={() => setView('browse')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900">
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+            </header>
+
+            {/* Categories */}
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              <button className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold whitespace-nowrap">Todos</button>
+              <button className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold whitespace-nowrap">Uniformes</button>
+              <button className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold whitespace-nowrap">EPIs</button>
+              <button className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold whitespace-nowrap">Ferramentas</button>
+              <button className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold whitespace-nowrap">Acessórios</button>
+            </div>
+
+            {/* Products Grid */}
+            <div className="grid grid-cols-2 gap-4">
+              {storeProducts.map(product => (
+                <div key={product.id} className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden hover:shadow-lg transition-all">
+                  {/* Product Image */}
+                  <div className="aspect-square bg-slate-100 flex items-center justify-center relative">
+                    <i className="fas fa-box text-4xl text-slate-300"></i>
+                    {product.originalPrice && (
+                      <span className="absolute top-2 right-2 px-2 py-1 bg-red-500 text-white rounded-lg text-xs font-bold">
+                        -{Math.round((1 - product.price / product.originalPrice) * 100)}%
+                      </span>
+                    )}
+                    {!product.inStock && (
+                      <span className="absolute inset-0 bg-slate-900/70 flex items-center justify-center text-white font-bold text-xs">
+                        Esgotado
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Product Info */}
+                  <div className="p-4">
+                    <h3 className="font-bold text-sm text-slate-900 mb-1 line-clamp-2">{product.name}</h3>
+                    
+                    {/* Rating */}
+                    <div className="flex items-center gap-1 mb-2">
+                      <span className="text-amber-500 text-xs">⭐</span>
+                      <span className="text-xs font-bold text-slate-600">{product.rating}</span>
+                      <span className="text-xs text-slate-400">({product.reviewCount})</span>
+                    </div>
+
+                    {/* Price */}
+                    <div className="mb-3">
+                      {product.originalPrice && (
+                        <p className="text-xs text-slate-400 line-through">R$ {product.originalPrice.toFixed(2)}</p>
+                      )}
+                      <p className="text-lg font-black text-indigo-600">R$ {product.price.toFixed(2)}</p>
+                    </div>
+
+                    {/* Add to Cart Button */}
+                    <button
+                      onClick={() => {
+                        if (product.inStock) {
+                          setCart(prev => {
+                            const existingItem = prev.find(item => item.productId === product.id);
+                            if (existingItem) {
+                              return prev.map(item => 
+                                item.productId === product.id 
+                                  ? { ...item, quantity: item.quantity + 1 }
+                                  : item
+                              );
+                            }
+                            return [...prev, { productId: product.id, quantity: 1 }];
+                          });
+                          showToast('Adicionado ao carrinho!', 'success');
+                        }
+                      }}
+                      disabled={!product.inStock}
+                      className={`w-full py-2 rounded-xl text-xs font-bold transition-all ${
+                        product.inStock 
+                          ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
+                          : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      }`}
+                    >
+                      {product.inStock ? 'Adicionar' : 'Indisponível'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Free Shipping Banner */}
+            <div className="bg-emerald-50 p-4 rounded-2xl border-2 border-emerald-200 text-center">
+              <p className="font-bold text-emerald-700">
+                <i className="fas fa-truck mr-2"></i>
+                Frete GRÁTIS acima de R$ 150
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== NEW FEATURE: TRAMPOADS ==================== */}
+        {view === 'ads' && user.role === 'employer' && (
+          <div className="space-y-6 animate-in fade-in duration-500">
+            <header className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">📢 TrampoAds</h2>
+                <p className="text-slate-500 text-sm">Anuncie para freelancers</p>
+              </div>
+              <button onClick={() => setView('dashboard')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900"><i className="fas fa-times"></i></button>
+            </header>
+
+            {/* Ad Stats Overview */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-white p-5 rounded-2xl border border-slate-100 text-center">
+                <p className="text-2xl font-black text-indigo-600 mb-1">2</p>
+                <p className="text-xs text-slate-500 font-bold">Campanhas Ativas</p>
+              </div>
+              <div className="bg-white p-5 rounded-2xl border border-slate-100 text-center">
+                <p className="text-2xl font-black text-amber-600 mb-1">57.7k</p>
+                <p className="text-xs text-slate-500 font-bold">Impressões</p>
+              </div>
+              <div className="bg-white p-5 rounded-2xl border border-slate-100 text-center">
+                <p className="text-2xl font-black text-emerald-600 mb-1">1.1k</p>
+                <p className="text-xs text-slate-500 font-bold">Cliques</p>
+              </div>
+            </div>
+
+            {/* Active Campaigns */}
+            <div>
+              <h3 className="font-black text-slate-900 mb-3">Campanhas Ativas</h3>
+              <div className="space-y-4">
+                {advertisements.filter(ad => ad.isActive).map(ad => (
+                  <div key={ad.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-100">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`px-3 py-1 rounded-lg text-xs font-bold ${
+                            ad.type === 'banner' ? 'bg-blue-100 text-blue-600' :
+                            ad.type === 'sponsored_post' ? 'bg-purple-100 text-purple-600' :
+                            ad.type === 'push_notification' ? 'bg-green-100 text-green-600' :
+                            'bg-red-100 text-red-600'
+                          }`}>
+                            {ad.type === 'banner' && '🎨 Banner'}
+                            {ad.type === 'sponsored_post' && '📱 Post Patrocinado'}
+                            {ad.type === 'push_notification' && '🔔 Push'}
+                            {ad.type === 'video_preroll' && '🎥 Vídeo'}
+                          </span>
+                          <span className="px-2 py-1 bg-emerald-100 text-emerald-600 rounded-lg text-xs font-bold">
+                            Ativo
+                          </span>
+                        </div>
+                        <h3 className="font-black text-lg text-slate-900 mb-1">{ad.content.title}</h3>
+                        <p className="text-sm text-slate-600">{ad.content.description}</p>
+                      </div>
+                    </div>
+
+                    {/* Ad Metrics */}
+                    <div className="grid grid-cols-4 gap-3 mb-4">
+                      <div>
+                        <p className="text-xs text-slate-500 mb-1">Budget</p>
+                        <p className="text-sm font-black text-slate-900">R$ {ad.budget}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 mb-1">Gasto</p>
+                        <p className="text-sm font-black text-amber-600">R$ {ad.spent}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 mb-1">Impressões</p>
+                        <p className="text-sm font-black text-indigo-600">{(ad.impressions / 1000).toFixed(1)}k</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 mb-1">CTR</p>
+                        <p className="text-sm font-black text-emerald-600">{((ad.clicks / ad.impressions) * 100).toFixed(1)}%</p>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full"
+                        style={{width: `${(ad.spent / ad.budget) * 100}%`}}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Create Campaign Button */}
+            <button 
+              onClick={() => showToast('Campanha criada com sucesso!', 'success')}
+              className="w-full py-5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-[2rem] font-black shadow-xl hover:shadow-2xl transition-all"
+            >
+              <i className="fas fa-plus mr-2"></i>
+              Criar Nova Campanha
+            </button>
+
+            {/* Pricing Info */}
+            <div className="bg-slate-50 p-6 rounded-[2.5rem]">
+              <h3 className="font-black text-slate-900 mb-4">💰 Preços</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Banner no Feed</span>
+                  <span className="font-bold">R$ 500/semana</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Post Patrocinado</span>
+                  <span className="font-bold">R$ 300/post</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Push Notification</span>
+                  <span className="font-bold">R$ 0,15/envio</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Vídeo Pre-roll</span>
+                  <span className="font-bold">R$ 2.000/semana</span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>

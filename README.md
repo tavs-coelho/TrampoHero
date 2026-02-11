@@ -39,9 +39,10 @@
 
 - **Node.js** 18+ ([Download](https://nodejs.org))
 - **NPM** 9+ (incluído com Node.js)
+- **MongoDB** (opcional - [Download](https://www.mongodb.com/try/download/community))
 - **Gemini API Key** ([Obter aqui](https://ai.google.dev))
 
-### Instalação em 3 Passos
+### Instalação Frontend
 
 1. **Clone e instale dependências**:
    ```bash
@@ -60,7 +61,43 @@
    npm run dev
    ```
 
-   Acesse: **http://localhost:5173** 🎉
+   Acesse: **http://localhost:3000** 🎉
+
+### Instalação Backend (Opcional)
+
+1. **Instale as dependências do backend**:
+   ```bash
+   cd backend
+   npm install
+   ```
+
+2. **Configure as variáveis de ambiente**:
+   ```bash
+   cp .env.example .env
+   # Edite .env com suas configurações
+   ```
+
+3. **Execute o servidor backend**:
+   ```bash
+   npm run dev
+   ```
+
+   API disponível em: **http://localhost:5000** 🚀
+
+### Full Stack (Frontend + Backend)
+
+Para executar ambos juntos, abra dois terminais:
+
+**Terminal 1 (Frontend):**
+```bash
+npm run dev
+```
+
+**Terminal 2 (Backend):**
+```bash
+cd backend
+npm run dev
+```
 
 ---
 
@@ -108,8 +145,12 @@ Criamos documentação extensiva para ajudar você a entender e contribuir com o
 
 ```
 Frontend:       React 19 + TypeScript 5.8
+Backend:        Node.js + Express.js
+Database:       MongoDB (ready for integration)
 UI:             Custom Design System (Tailwind CSS inspired)
 State:          React Hooks (useState, useMemo, useEffect)
+Auth:           JWT with bcryptjs
+Security:       Helmet, Rate Limiting, CORS
 Mapping:        Leaflet.js
 AI:             Google Gemini API
 PDF:            jsPDF
@@ -122,12 +163,20 @@ Build:          Vite 6.2
 
 ```
 TrampoHero/
-├── App.tsx                    # Componente principal (1542 linhas)
+├── App.tsx                    # Componente principal
 ├── types.ts                   # Definições TypeScript
 ├── services/
 │   ├── geminiService.ts       # Integração com Gemini AI
 │   └── pdfService.ts          # Geração de contratos PDF
-├── package.json               # Dependências e scripts
+├── backend/                   # 🆕 Backend API Server
+│   ├── src/
+│   │   ├── routes/           # API endpoints
+│   │   ├── middleware/       # Auth & security
+│   │   ├── models/           # Database models (to be added)
+│   │   └── server.js         # Main server
+│   ├── package.json          # Backend dependencies
+│   └── README.md             # Backend documentation
+├── package.json               # Frontend dependencies
 ├── vite.config.ts             # Configuração Vite
 ├── DOCUMENTATION.md           # 📖 Documentação completa
 ├── API_DOCUMENTATION.md       # 🔌 Referência de APIs
