@@ -674,7 +674,7 @@ const App: React.FC = () => {
   // Função helper para Toasts
   const showToast = (msg: string, type: 'success'|'error'|'info' = 'info') => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 4500); // Increased from 3000 to 4500 for better readability
+    setTimeout(() => setToast(null), 4500); // Increased toast duration to 4.5 seconds for better readability
   };
 
   // Carregar Job via URL
@@ -1026,10 +1026,13 @@ const App: React.FC = () => {
     if (!newJobData.title || !newJobData.payment) return showToast("Preencha título e valor.", "error");
     
     // Validate date is not in the past
-    // ISO 8601 date strings can be compared lexicographically (YYYY-MM-DD format)
+    // Compare dates at midnight in local timezone to avoid timezone issues
     const jobDate = newJobData.date || new Date().toISOString().split('T')[0];
     const today = new Date().toISOString().split('T')[0];
-    if (jobDate < today) {
+    const jobDateObj = new Date(jobDate + 'T00:00:00');
+    const todayObj = new Date(today + 'T00:00:00');
+    
+    if (jobDateObj < todayObj) {
       return showToast("Não é possível criar vagas com data passada.", "error");
     }
     
@@ -1175,7 +1178,6 @@ const App: React.FC = () => {
          // Check if expiry date is in the future
          const [month, year] = cardData.expiry.split('/').map(Number);
          const currentDate = new Date();
-         const currentYear = currentDate.getFullYear() % 100; // Get last 2 digits
          const currentMonth = currentDate.getMonth() + 1;
          
          // Convert 2-digit year to 4-digit (assuming 20xx for years 00-99)
@@ -1390,9 +1392,11 @@ const App: React.FC = () => {
     }
     
     // Create a referral record
+    // Note: In production, the referrerId should be looked up from the database
+    // using the referral code. Using a placeholder here for demo purposes.
     const newReferral: Referral = {
       id: `ref-${Date.now()}`,
-      referrerId: `user-${referralCode}`, // In real app, lookup user by code
+      referrerId: `PENDING_LOOKUP_${referralCode}`, // TODO: Lookup actual user ID in production
       referredId: user.id,
       referredRole: user.role,
       status: 'pending',
@@ -1480,6 +1484,7 @@ const App: React.FC = () => {
         total: total,
         status: 'confirmed',
         orderDate: new Date().toISOString(),
+        // DELIVERY_DAYS represents calendar days (not business days)
         deliveryDate: new Date(Date.now() + DELIVERY_DAYS_MS).toISOString().split('T')[0],
         trackingCode: `TH${Date.now().toString().slice(-8)}`
       };
