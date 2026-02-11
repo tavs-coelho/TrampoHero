@@ -358,3 +358,75 @@ export interface AnalyticsDashboard {
     bestDaysToWork?: string[];
   };
 }
+
+// ==================== VIRAL GROWTH FEATURES ====================
+
+// Weekly Challenges (Desafios Semanais)
+export interface WeeklyChallenge {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  reward: {
+    type: 'cash' | 'coins' | 'medal';
+    value: number | string; // valor em R$ ou ID da medalha
+  };
+  requirement: {
+    type: 'jobs_completed' | 'referrals' | 'streak_days' | 'rating_maintained';
+    target: number;
+    current: number;
+  };
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  isCompleted: boolean;
+}
+
+// Public Talent Ranking
+export interface TalentRanking {
+  userId: string;
+  userName: string;
+  rank: number;
+  score: number; // Pontuação baseada em: jobs completados, avaliações, pontualidade
+  niche: Niche;
+  avatar?: string;
+  weeklyJobs: number;
+  monthlyJobs: number;
+  rating: number;
+  badge?: string; // "🥇", "🥈", "🥉" para top 3
+}
+
+// Live Jobs (Vagas Relâmpago/Urgentes)
+export interface LiveJob extends Job {
+  isLive: boolean; // Precisa ser preenchida em <2 horas
+  urgencyBonus: number; // Bônus adicional pela urgência
+  expiresAt: string; // Timestamp de expiração
+  maxResponseTime: number; // Tempo máximo de resposta em minutos
+}
+
+// TrampoStore - E-commerce
+export interface StoreProduct {
+  id: string;
+  name: string;
+  category: 'uniform' | 'epi' | 'tools' | 'accessories';
+  price: number;
+  originalPrice?: number; // Para mostrar desconto
+  description: string;
+  imageUrl: string;
+  inStock: boolean;
+  relatedNiches: Niche[]; // Nichos relacionados ao produto
+  rating: number;
+  reviewCount: number;
+}
+
+export interface StoreOrder {
+  id: string;
+  userId: string;
+  products: { productId: string; quantity: number; price: number }[];
+  total: number;
+  shippingCost: number;
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  orderDate: string;
+  deliveryDate?: string;
+  trackingCode?: string;
+}
