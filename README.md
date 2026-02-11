@@ -76,6 +76,7 @@ Criamos documentação extensiva para ajudar você a entender e contribuir com o
 | **API Documentation** | Referência de todas as APIs e serviços | [API_DOCUMENTATION.md](API_DOCUMENTATION.md) |
 | **Developer Guide** | Setup, desenvolvimento e boas práticas | [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) |
 | **Novas Features** | Propostas de funcionalidades e maximização de lucros | [NEW_FEATURES_PROPOSAL.md](NEW_FEATURES_PROPOSAL.md) |
+| **Documentos Legais** | Termos de Uso, Privacidade e Conformidade LGPD | [legal/README.md](legal/README.md) |
 
 ---
 
@@ -169,7 +170,9 @@ TrampoHero/
 
 ## 🔒 Segurança
 
-- ✅ **LGPD Compliant**: Dados armazenados localmente
+- ✅ **LGPD Compliant**: Conformidade com Lei Geral de Proteção de Dados - [Ver Documentação](legal/LGPD_COMPLIANCE.md)
+- ✅ **Termos de Uso**: Proteção jurídica contra vínculos empregatícios - [Ver Termos](legal/TERMOS_DE_USO.md)
+- ✅ **Política de Privacidade**: Transparência no tratamento de dados - [Ver Política](legal/POLITICA_DE_PRIVACIDADE.md)
 - ✅ **Sistema Escrow**: Proteção para ambas as partes
 - ✅ **Validação GPS**: Anti-fraude de presença
 - ✅ **Contratos Digitais**: Hash de validação único
