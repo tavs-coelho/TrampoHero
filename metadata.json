@@ -1,0 +1,8 @@
+{
+  "name": "TrampoHero Pro",
+  "description": "Plataforma de bicos com validação por geolocalização, controle de jornada, prova fotográfica e painel de gestão para empresas.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ]
+}
