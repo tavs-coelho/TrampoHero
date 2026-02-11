@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Niche, Job, UserProfile, SubscriptionTier, Message, Medal, Course, Transaction, Invitation, Invoice } from './types';
+import { Niche, Job, UserProfile, SubscriptionTier, Message, Medal, Course, Transaction, Invitation, Invoice, TrampoCoin, InsurancePlan, UltraPlan } from './types';
 import { translateMessage, supportAssistant, getRecurrentSuggestion, generateVoiceJob, generateJobDescription } from './services/geminiService';
 import { generateContract } from './services/pdfService';
 
@@ -8,6 +8,17 @@ declare const L: any;
 
 // --- CONSTANTES ---
 const MAX_RECENT_ITEMS = 5; // Número máximo de itens recentes a exibir (convites e notas fiscais)
+
+// Constantes de Monetização
+const COINS_PER_CURRENCY_UNIT = 10; // 1 coin a cada R$ 10 trabalhados
+const COIN_TO_CURRENCY_RATE = 0.1; // 100 coins = R$ 10
+const COINS_REDEMPTION_THRESHOLD = 100; // Mínimo de coins para resgatar
+const STREAK_BONUS_THRESHOLD = 30; // Dias para ativar bonus de streak
+const STREAK_BONUS_MULTIPLIER = 1.5; // +50% de bonus
+const CREDIT_FEE_RATE = 0.039; // 3.9% ao mês
+const REFERRAL_BONUS_FREELANCER = 20; // R$ 20 por indicação de freelancer
+const REFERRAL_BONUS_EMPLOYER = 100; // R$ 100 por indicação de empregador
+const ANALYTICS_PREMIUM_PRICE = 79; // R$ 79/mês
 
 // --- DADOS MOCKADOS ---
 const MEDALS_REPO: Medal[] = [
@@ -18,9 +29,32 @@ const MEDALS_REPO: Medal[] = [
 ];
 
 const COURSES: Course[] = [
-  { id: 'c1', title: 'Excelência no Atendimento', duration: '15 min', badgeId: 'cert-1', description: 'Como encantar clientes em eventos de luxo.' },
-  { id: 'c2', title: 'Segurança em Obras', duration: '20 min', badgeId: 'm2', description: 'Prevenção de acidentes e uso correto de EPIs.' }
+  { id: 'c1', title: 'Excelência no Atendimento', duration: '15 min', badgeId: 'cert-1', description: 'Como encantar clientes em eventos de luxo.', price: 0, level: 'basic' },
+  { id: 'c2', title: 'Segurança em Obras', duration: '20 min', badgeId: 'm2', description: 'Prevenção de acidentes e uso correto de EPIs.', price: 0, level: 'basic' },
+  { id: 'c3', title: 'Gastronomia Avançada', duration: '2h', badgeId: 'cert-1', description: 'Técnicas culinárias profissionais.', price: 149, level: 'advanced', provider: 'SENAC' },
+  { id: 'c4', title: 'Certificação NR-10', duration: '40h', badgeId: 'm2', description: 'Segurança em instalações elétricas.', price: 599, level: 'certification', provider: 'SENAI' }
 ];
+
+const INSURANCE_PLANS = {
+  freelancer: {
+    name: 'TrampoProtect Freelancer',
+    price: 19.90,
+    coverage: [
+      { type: 'Acidentes de trabalho', maxAmount: 10000 },
+      { type: 'Furto de equipamentos', maxAmount: 3000 },
+      { type: 'Responsabilidade civil', maxAmount: 5000 }
+    ]
+  },
+  employer: {
+    name: 'TrampoProtect Empregador',
+    price: 49.90,
+    coverage: [
+      { type: 'Danos causados', maxAmount: 20000 },
+      { type: 'No-Show reembolso', maxAmount: 0 },
+      { type: 'Furtos internos', maxAmount: 10000 }
+    ]
+  }
+};
 
 const TOP_TALENTS = [
   { id: 't1', name: 'Mariana Costa', role: 'Garçonete', rating: 4.9, niche: Niche.RESTAURANT, hourly: 25 },
@@ -67,7 +101,20 @@ const INITIAL_USER: UserProfile = {
   role: 'freelancer', medals: [MEDALS_REPO[0], MEDALS_REPO[1]], history: [{ jobId: 'old-1', employerId: 'emp-1', date: '2023-10-01', rating: 5 }],
   favorites: ['emp-1'], 
   invitations: [], 
-  invoices: []
+  invoices: [],
+  trampoCoins: {
+    userId: 'user-123',
+    balance: 250,
+    earned: [
+      { id: 'tc1', type: 'coin_earned', amount: 0, date: '2023-10-25', description: '+25 TrampoCoins', coins: 25 }
+    ],
+    redeemed: [],
+    streak: 15,
+    lastActivity: new Date().toISOString(),
+    streakBonus: false
+  },
+  referralCode: 'ALEX-HERO-123',
+  analyticsAccess: 'free'
 };
 
 // --- COMPONENTE TOAST ---
@@ -103,7 +150,7 @@ const App: React.FC = () => {
   });
 
   const [jobs, setJobs] = useState<Job[]>(INITIAL_JOBS);
-  const [view, setView] = useState<'browse' | 'wallet' | 'active' | 'chat' | 'dashboard' | 'academy' | 'profile' | 'talents'>('browse');
+  const [view, setView] = useState<'browse' | 'wallet' | 'active' | 'chat' | 'dashboard' | 'academy' | 'profile' | 'talents' | 'coins' | 'insurance' | 'credit' | 'analytics' | 'contracts' | 'referrals'>('browse');
   const [browseMode, setBrowseMode] = useState<'list' | 'map'>('list');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -302,15 +349,39 @@ const App: React.FC = () => {
   const handleCheckout = () => {
     if (!activeJob) return;
     if (confirm("Confirmar finalização do serviço? Certifique-se de que o contratante está ciente.")) {
+        const jobPayment = activeJob.payment;
+        const coinsEarned = Math.floor(jobPayment / COINS_PER_CURRENCY_UNIT);
+        
         setJobs(prev => prev.map(j => j.id === activeJob.id ? { ...j, status: 'completed' } : j));
-        setUser(prev => ({ 
-            ...prev, 
-            activeJobId: undefined,
-            history: [...prev.history, { jobId: activeJob.id, employerId: activeJob.employerId, date: new Date().toISOString().split('T')[0] }] 
-        }));
+        setUser(prev => {
+            const newStreak = prev.trampoCoins ? prev.trampoCoins.streak + 1 : 1;
+            const streakBonus = newStreak >= STREAK_BONUS_THRESHOLD;
+            const actualCoins = streakBonus ? Math.floor(coinsEarned * STREAK_BONUS_MULTIPLIER) : coinsEarned;
+            
+            return {
+                ...prev, 
+                activeJobId: undefined,
+                history: [...prev.history, { jobId: activeJob.id, employerId: activeJob.employerId, date: new Date().toISOString().split('T')[0] }],
+                trampoCoins: prev.trampoCoins ? {
+                    ...prev.trampoCoins,
+                    balance: prev.trampoCoins.balance + actualCoins,
+                    earned: [...prev.trampoCoins.earned, {
+                        id: `tc-${Date.now()}`,
+                        type: 'coin_earned',
+                        amount: 0,
+                        date: new Date().toISOString().split('T')[0],
+                        description: `+${actualCoins} TrampoCoins${streakBonus ? ' (Streak Bonus +50%)' : ''}`,
+                        coins: actualCoins
+                    }],
+                    streak: newStreak,
+                    lastActivity: new Date().toISOString(),
+                    streakBonus
+                } : prev.trampoCoins
+            };
+        });
         setIsCheckedIn(false);
         setView('browse');
-        showToast("Trabalho concluído! O valor está agendado na sua carteira.", "success");
+        showToast(`Trabalho concluído! +${actualCoins} TrampoCoins ganhos 🎉`, "success");
     }
   };
 
@@ -1128,13 +1199,21 @@ const App: React.FC = () => {
                   {COURSES.map(course => (
                     <div key={course.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start mb-2">
-                        <span className="bg-amber-50 text-amber-600 text-[8px] font-black px-2 py-1 rounded uppercase tracking-widest"><i className="fas fa-clock mr-1"></i> {course.duration}</span>
+                        <div className="flex gap-2">
+                          <span className="bg-amber-50 text-amber-600 text-[8px] font-black px-2 py-1 rounded uppercase tracking-widest"><i className="fas fa-clock mr-1"></i> {course.duration}</span>
+                          {course.price && course.price > 0 ? (
+                            <span className="bg-indigo-50 text-indigo-600 text-[8px] font-black px-2 py-1 rounded uppercase tracking-widest">R$ {course.price}</span>
+                          ) : (
+                            <span className="bg-emerald-50 text-emerald-600 text-[8px] font-black px-2 py-1 rounded uppercase tracking-widest">GRÁTIS</span>
+                          )}
+                        </div>
                         <i className={`fas ${MEDALS_REPO.find(m => m.id === course.badgeId)?.icon || 'fa-award'} text-slate-200 text-xl`}></i>
                       </div>
                       <h4 className="font-black text-slate-800 text-lg mb-1">{course.title}</h4>
                       <p className="text-xs text-slate-400 mb-4">{course.description}</p>
+                      {course.provider && <p className="text-[9px] text-indigo-600 font-bold mb-3"><i className="fas fa-graduation-cap mr-1"></i>Parceiro: {course.provider}</p>}
                       <button onClick={() => handleStartCourse(course)} className="w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-colors">
-                          {user.medals.find(m => m.id === course.badgeId) ? 'Concluído' : 'Iniciar Micro-Curso'}
+                          {user.medals.find(m => m.id === course.badgeId) ? 'Concluído' : course.price && course.price > 0 ? 'Comprar Curso' : 'Iniciar Micro-Curso'}
                       </button>
                     </div>
                   ))}
@@ -1241,6 +1320,41 @@ const App: React.FC = () => {
                   </div>
                 )}
 
+                {/* Menu de Novas Funcionalidades */}
+                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                  <h3 className="font-black text-slate-900 text-lg mb-4 flex items-center gap-2">
+                    <i className="fas fa-sparkles text-indigo-600"></i>
+                    Recursos Exclusivos
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button onClick={() => setView('coins')} className="p-4 bg-amber-50 rounded-xl text-left hover:bg-amber-100 transition-colors">
+                      <i className="fas fa-coins text-amber-500 text-xl mb-2"></i>
+                      <p className="text-xs font-black text-slate-900">TrampoCoins</p>
+                      <p className="text-[9px] text-slate-500">Fidelidade</p>
+                    </button>
+                    <button onClick={() => setView('insurance')} className="p-4 bg-emerald-50 rounded-xl text-left hover:bg-emerald-100 transition-colors">
+                      <i className="fas fa-shield-check text-emerald-500 text-xl mb-2"></i>
+                      <p className="text-xs font-black text-slate-900">TrampoProtect</p>
+                      <p className="text-[9px] text-slate-500">Seguro</p>
+                    </button>
+                    <button onClick={() => setView('credit')} className="p-4 bg-indigo-50 rounded-xl text-left hover:bg-indigo-100 transition-colors">
+                      <i className="fas fa-hand-holding-dollar text-indigo-500 text-xl mb-2"></i>
+                      <p className="text-xs font-black text-slate-900">TrampoCredit</p>
+                      <p className="text-[9px] text-slate-500">Adiantamento</p>
+                    </button>
+                    <button onClick={() => setView('referrals')} className="p-4 bg-pink-50 rounded-xl text-left hover:bg-pink-100 transition-colors">
+                      <i className="fas fa-user-plus text-pink-500 text-xl mb-2"></i>
+                      <p className="text-xs font-black text-slate-900">Indique</p>
+                      <p className="text-[9px] text-slate-500">Ganhe R$ 20</p>
+                    </button>
+                    <button onClick={() => setView('analytics')} className="p-4 bg-blue-50 rounded-xl text-left hover:bg-blue-100 transition-colors">
+                      <i className="fas fa-chart-line text-blue-500 text-xl mb-2"></i>
+                      <p className="text-xs font-black text-slate-900">Analytics</p>
+                      <p className="text-[9px] text-slate-500">Métricas</p>
+                    </button>
+                  </div>
+                </div>
+
                 <button onClick={() => setView('academy')} className="w-full py-4 bg-slate-900 text-white rounded-[2rem] font-black uppercase tracking-widest shadow-lg">
                     Ir para Hero Academy
                 </button>
@@ -1276,6 +1390,347 @@ const App: React.FC = () => {
               </div>
             )}
           </>
+        )}
+
+        {/* ==================== FEATURE 1: TRAMPOCOINS VIEW ==================== */}
+        {view === 'coins' && user.trampoCoins && (
+          <div className="space-y-6 animate-in fade-in duration-500">
+            <header className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">TrampoCoins</h2>
+                <p className="text-slate-500 text-sm">Sistema de fidelidade e recompensas</p>
+              </div>
+              <button onClick={() => setView('wallet')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900"><i className="fas fa-times"></i></button>
+            </header>
+
+            {/* Saldo de Coins */}
+            <div className="bg-gradient-to-br from-amber-400 to-amber-600 p-10 rounded-[4rem] text-white shadow-2xl relative overflow-hidden">
+              <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 blur-3xl rounded-full"></div>
+              <div className="flex items-center gap-3 mb-4">
+                <i className="fas fa-coins text-4xl"></i>
+                <div>
+                  <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Seu Saldo</p>
+                  <h3 className="text-5xl font-black tracking-tighter">{user.trampoCoins.balance}</h3>
+                  <p className="text-xs opacity-70 mt-1">TrampoCoins = R$ {(user.trampoCoins.balance * COIN_TO_CURRENCY_RATE).toFixed(2)}</p>
+                </div>
+              </div>
+              
+              {/* Streak Bonus */}
+              <div className="mt-6 bg-white/20 p-4 rounded-2xl backdrop-blur-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider">Streak Atual</p>
+                    <p className="text-2xl font-black">{user.trampoCoins.streak} dias 🔥</p>
+                  </div>
+                  {user.trampoCoins.streakBonus && (
+                    <span className="bg-emerald-500 text-white text-xs font-black px-3 py-1 rounded-full">+50% BONUS</span>
+                  )}
+                </div>
+                <div className="mt-3 bg-white/30 h-2 rounded-full overflow-hidden">
+                  <div className="bg-white h-full rounded-full" style={{width: `${Math.min((user.trampoCoins.streak / STREAK_BONUS_THRESHOLD) * 100, 100)}%`}}></div>
+                </div>
+                <p className="text-xs mt-2 opacity-80">
+                  {user.trampoCoins.streak >= STREAK_BONUS_THRESHOLD 
+                    ? 'Bonus ativo! Continue trabalhando para manter.' 
+                    : `${STREAK_BONUS_THRESHOLD - user.trampoCoins.streak} dias para +50% bonus`}
+                </p>
+              </div>
+            </div>
+
+            {/* Como Funciona */}
+            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+              <h3 className="font-black text-slate-900 text-lg mb-4 flex items-center gap-2">
+                <i className="fas fa-lightbulb text-amber-500"></i> Como Ganhar Coins
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl">
+                  <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center font-black">1</div>
+                  <div className="flex-1">
+                    <p className="font-bold text-slate-800 text-sm">Trabalhe e Ganhe</p>
+                    <p className="text-xs text-slate-500">1 coin a cada R$ 10 trabalhados</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl">
+                  <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-black">2</div>
+                  <div className="flex-1">
+                    <p className="font-bold text-slate-800 text-sm">Mantenha o Streak</p>
+                    <p className="text-xs text-slate-500">30 dias = +50% bonus em coins</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl">
+                  <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center font-black">3</div>
+                  <div className="flex-1">
+                    <p className="font-bold text-slate-800 text-sm">Resgate Descontos</p>
+                    <p className="text-xs text-slate-500">100 coins = R$ 10 de desconto</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Resgatar */}
+            <button 
+              onClick={() => {
+                if (user.trampoCoins.balance >= COINS_REDEMPTION_THRESHOLD) {
+                  const redeemValue = COINS_REDEMPTION_THRESHOLD * COIN_TO_CURRENCY_RATE;
+                  showToast(`${COINS_REDEMPTION_THRESHOLD} TrampoCoins resgatados! R$ ${redeemValue.toFixed(2)} adicionados à carteira`, "success");
+                  setUser(prev => prev.trampoCoins ? {
+                    ...prev,
+                    wallet: { ...prev.wallet, balance: prev.wallet.balance + redeemValue },
+                    trampoCoins: { ...prev.trampoCoins, balance: prev.trampoCoins.balance - COINS_REDEMPTION_THRESHOLD }
+                  } : prev);
+                } else {
+                  showToast(`Você precisa de ${COINS_REDEMPTION_THRESHOLD - user.trampoCoins.balance} coins para resgatar`, "error");
+                }
+              }}
+              disabled={user.trampoCoins.balance < COINS_REDEMPTION_THRESHOLD}
+              className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest ${user.trampoCoins.balance >= COINS_REDEMPTION_THRESHOLD ? 'bg-slate-900 text-white shadow-xl active:scale-95' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+            >
+              Resgatar {COINS_REDEMPTION_THRESHOLD} Coins = R$ {(COINS_REDEMPTION_THRESHOLD * COIN_TO_CURRENCY_RATE).toFixed(0)}
+            </button>
+              Resgatar 100 Coins = R$ 10
+            </button>
+          </div>
+        )}
+
+        {/* ==================== FEATURE 3: INSURANCE VIEW ==================== */}
+        {view === 'insurance' && (
+          <div className="space-y-6 animate-in fade-in duration-500">
+            <header className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">TrampoProtect</h2>
+                <p className="text-slate-500 text-sm">Seguro para freelancers</p>
+              </div>
+              <button onClick={() => setView('wallet')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900"><i className="fas fa-times"></i></button>
+            </header>
+
+            {/* Status do Seguro */}
+            {user.insurance ? (
+              <div className="bg-emerald-50 p-6 rounded-[2.5rem] border-2 border-emerald-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center">
+                    <i className="fas fa-shield-check text-white text-xl"></i>
+                  </div>
+                  <div>
+                    <h3 className="font-black text-emerald-900">Protegido</h3>
+                    <p className="text-sm text-emerald-700">Plano ativo até {user.insurance.nextBillingDate}</p>
+                  </div>
+                </div>
+                <button className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm">Gerenciar Plano</button>
+              </div>
+            ) : (
+              <>
+                {/* Plano Freelancer */}
+                <div className="bg-white p-6 rounded-[2.5rem] border-2 border-indigo-200 shadow-lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-black text-xl text-slate-900">Plano Freelancer</h3>
+                    <span className="text-2xl font-black text-indigo-600">R$ 19,90<span className="text-sm text-slate-400">/mês</span></span>
+                  </div>
+                  <div className="space-y-2 mb-6">
+                    <div className="flex items-center gap-2 text-sm">
+                      <i className="fas fa-check-circle text-emerald-500"></i>
+                      <span>Acidentes de trabalho até R$ 10.000</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <i className="fas fa-check-circle text-emerald-500"></i>
+                      <span>Furto de equipamentos até R$ 3.000</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <i className="fas fa-check-circle text-emerald-500"></i>
+                      <span>Responsabilidade civil até R$ 5.000</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <i className="fas fa-check-circle text-emerald-500"></i>
+                      <span>Auxílio-doença R$ 50/dia</span>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      showToast("Seguro TrampoProtect contratado com sucesso!", "success");
+                      setUser(prev => ({
+                        ...prev,
+                        insurance: {
+                          type: 'freelancer',
+                          plan: INSURANCE_PLANS.freelancer,
+                          startDate: new Date().toISOString(),
+                          nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                          isActive: true,
+                          claims: []
+                        }
+                      }));
+                    }}
+                    className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase shadow-lg active:scale-95"
+                  >
+                    Contratar Agora
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ==================== FEATURE 6: TRAMPOCREDIT VIEW ==================== */}
+        {view === 'credit' && (
+          <div className="space-y-6 animate-in fade-in duration-500">
+            <header className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">TrampoCredit</h2>
+                <p className="text-slate-500 text-sm">Adiantamento salarial rápido</p>
+              </div>
+              <button onClick={() => setView('wallet')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900"><i className="fas fa-times"></i></button>
+            </header>
+
+            {/* Limite Disponível */}
+            <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-8 rounded-[3rem] text-white shadow-2xl">
+              <p className="text-xs font-bold opacity-70 uppercase tracking-widest mb-2">Limite Disponível</p>
+              <h3 className="text-5xl font-black mb-4">R$ 500,00</h3>
+              <p className="text-sm opacity-80">Baseado no seu histórico de trabalho</p>
+            </div>
+
+            {/* Solicitar Crédito */}
+            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+              <h3 className="font-black text-slate-900 text-lg mb-4">Solicitar Adiantamento</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase block mb-2">Valor</label>
+                  <input type="number" placeholder="R$ 250,00" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-slate-900 focus:outline-indigo-500" />
+                </div>
+                <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                  <p className="text-xs text-amber-800"><strong>Taxa:</strong> {(CREDIT_FEE_RATE * 100).toFixed(1)}% ao mês</p>
+                  <p className="text-xs text-amber-800 mt-1"><strong>Aprovação:</strong> Instantânea</p>
+                </div>
+                <button 
+                  onClick={() => showToast("Solicitação de crédito enviada! Aprovação em instantes.", "success")}
+                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase shadow-lg active:scale-95"
+                >
+                  Solicitar Agora
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== FEATURE 8: REFERRALS VIEW ==================== */}
+        {view === 'referrals' && (
+          <div className="space-y-6 animate-in fade-in duration-500">
+            <header className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">Indique e Ganhe</h2>
+                <p className="text-slate-500 text-sm">Programa de indicações</p>
+              </div>
+              <button onClick={() => setView('wallet')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900"><i className="fas fa-times"></i></button>
+            </header>
+
+            {/* Código de Indicação */}
+            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-8 rounded-[3rem] text-white shadow-2xl">
+              <p className="text-xs font-bold opacity-80 uppercase tracking-widest mb-2">Seu Código</p>
+              <div className="flex items-center justify-between bg-white/20 p-4 rounded-2xl backdrop-blur-sm">
+                <span className="text-2xl font-black tracking-wider">{user.referralCode}</span>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(user.referralCode || '');
+                    showToast("Código copiado!", "success");
+                  }}
+                  className="bg-white text-indigo-600 px-4 py-2 rounded-xl text-xs font-black"
+                >
+                  COPIAR
+                </button>
+              </div>
+              <p className="text-sm mt-4 opacity-90">Ganhe R$ {REFERRAL_BONUS_FREELANCER} por cada indicação!</p>
+            </div>
+
+            {/* Estatísticas */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 text-center">
+                <p className="text-3xl font-black text-indigo-600 mb-1">5</p>
+                <p className="text-xs text-slate-500 font-bold">Indicações</p>
+              </div>
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 text-center">
+                <p className="text-3xl font-black text-emerald-600 mb-1">R$ 100</p>
+                <p className="text-xs text-slate-500 font-bold">Ganhos</p>
+              </div>
+            </div>
+
+            {/* Como Funciona */}
+            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100">
+              <h3 className="font-black text-slate-900 text-lg mb-4">Como Funciona</h3>
+              <ol className="space-y-3 text-sm">
+                <li className="flex gap-3">
+                  <span className="font-black text-indigo-600">1.</span>
+                  <span>Compartilhe seu código com amigos</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-black text-indigo-600">2.</span>
+                  <span>Eles se cadastram com seu código</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-black text-indigo-600">3.</span>
+                  <span>Vocês dois ganham após o 1º trabalho</span>
+                </li>
+              </ol>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== FEATURE 10: ANALYTICS VIEW ==================== */}
+        {view === 'analytics' && (
+          <div className="space-y-6 animate-in fade-in duration-500">
+            <header className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">Analytics Premium</h2>
+                <p className="text-slate-500 text-sm">Insights sobre seus trabalhos</p>
+              </div>
+              <button onClick={() => setView('wallet')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900"><i className="fas fa-times"></i></button>
+            </header>
+
+            {user.analyticsAccess === 'free' ? (
+              <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-8 rounded-[3rem] border-2 border-amber-200 text-center">
+                <i className="fas fa-chart-line text-5xl text-amber-600 mb-4"></i>
+                <h3 className="font-black text-xl text-slate-900 mb-2">Upgrade para Premium</h3>
+                <p className="text-sm text-slate-600 mb-6">Acesse métricas avançadas, histórico completo e previsões com IA</p>
+                <button 
+                  onClick={() => {
+                    showToast(`Analytics Premium ativado! R$ ${ANALYTICS_PREMIUM_PRICE}/mês`, "success");
+                    setUser(prev => ({ ...prev, analyticsAccess: 'premium' }));
+                  }}
+                  className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black shadow-xl"
+                >
+                  Assinar por R$ {ANALYTICS_PREMIUM_PRICE}/mês
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Métricas */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white p-6 rounded-2xl border border-slate-100">
+                    <p className="text-xs text-slate-500 font-bold mb-1">Total Ganho</p>
+                    <p className="text-3xl font-black text-emerald-600">R$ 3.450</p>
+                  </div>
+                  <div className="bg-white p-6 rounded-2xl border border-slate-100">
+                    <p className="text-xs text-slate-500 font-bold mb-1">Jobs Completos</p>
+                    <p className="text-3xl font-black text-indigo-600">24</p>
+                  </div>
+                  <div className="bg-white p-6 rounded-2xl border border-slate-100">
+                    <p className="text-xs text-slate-500 font-bold mb-1">Média/Job</p>
+                    <p className="text-3xl font-black text-purple-600">R$ 143</p>
+                  </div>
+                  <div className="bg-white p-6 rounded-2xl border border-slate-100">
+                    <p className="text-xs text-slate-500 font-bold mb-1">Retenção</p>
+                    <p className="text-3xl font-black text-amber-600">85%</p>
+                  </div>
+                </div>
+
+                {/* Gráfico Simulado */}
+                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100">
+                  <h3 className="font-black text-slate-900 mb-4">Ganhos dos Últimos 30 Dias</h3>
+                  <div className="flex items-end gap-2 h-32">
+                    {[120, 180, 150, 200, 160, 220, 190].map((h, i) => (
+                      <div key={i} className="flex-1 bg-indigo-200 rounded-t" style={{height: `${h/2.5}px`}}></div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         )}
       </main>
 
