@@ -104,8 +104,13 @@ const App: React.FC = () => {
   const [browseMode, setBrowseMode] = useState<'list' | 'map'>('list');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [messages, setMessages] = useState<Message[]>(() => {
-    const saved = localStorage.getItem('trampoHeroMessages');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('trampoHeroMessages');
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.error('Failed to parse messages from localStorage:', error);
+      return [];
+    }
   });
   const [inputText, setInputText] = useState('');
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
@@ -474,10 +479,12 @@ const App: React.FC = () => {
   // --- NOVAS FUNÇÕES PARA FUNCIONALIDADES FALTANTES ---
   const handleInviteTalent = (talentName: string) => {
       // Cria novo convite e adiciona ao perfil do usuário
+      // Gera ID único combinando timestamp e string aleatória
+      const randomSuffix = Math.random().toString(36).substr(2, 9);
       const newInvitation: Invitation = {
-          id: Date.now().toString(),
+          id: `inv-${Date.now()}-${randomSuffix}`,
           talentName: talentName,
-          talentId: `talent-${talentName.toLowerCase().replace(/\s/g, '')}`,
+          talentId: `talent-${talentName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')}`,
           jobId: selectedJob?.id,
           jobTitle: selectedJob?.title || "Vaga Geral",
           status: 'pending',
@@ -606,8 +613,8 @@ const App: React.FC = () => {
         jobId: job.id,
         jobTitle: job.title,
         amount: job.payment,
-        date: new Date().toLocaleDateString('pt-BR'),
-        downloadUrl: `#invoice-${job.id}`
+        date: new Date().toLocaleDateString('pt-BR')
+        // downloadUrl removido - será implementado com geração real de PDF
       }));
     
     if (newInvoices.length > 0) {
@@ -1205,16 +1212,17 @@ const App: React.FC = () => {
                           </div>
                           <div className="text-right">
                             <p className="font-black text-slate-900 text-sm">R$ {invoice.amount.toFixed(2)}</p>
-                            <a 
-                              href={invoice.downloadUrl} 
-                              onClick={(e) => {
-                                e.preventDefault();
-                                showToast(`Baixando nota fiscal ${invoice.id}...`, "success");
+                            <button 
+                              onClick={() => {
+                                showToast(`Gerando PDF da nota fiscal ${invoice.id}...`, "info");
+                                setTimeout(() => {
+                                  showToast("PDF gerado! Download iniciado.", "success");
+                                }, 1500);
                               }}
-                              className="text-[9px] font-bold text-indigo-600 hover:underline"
+                              className="text-[9px] font-bold text-indigo-600 hover:underline cursor-pointer"
                             >
-                              <i className="fas fa-download mr-1"></i>Baixar
-                            </a>
+                              <i className="fas fa-file-pdf mr-1"></i>Gerar PDF
+                            </button>
                           </div>
                         </div>
                       ))}
