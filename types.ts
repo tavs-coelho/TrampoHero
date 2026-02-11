@@ -77,6 +77,13 @@ export interface Job {
   minRatingRequired?: number; // Avaliação mínima exigida
 }
 
+export interface CourseQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number; // índice da resposta correta (0-3)
+}
+
 export interface Course {
   id: string;
   title: string;
@@ -85,8 +92,36 @@ export interface Course {
   description: string;
   price?: number; // Preço do curso (undefined ou 0 = gratuito, >0 = pago)
   level?: 'basic' | 'intermediate' | 'advanced' | 'certification';
-  provider?: string; // Parceiro (SENAC, SENAI, etc)
+  provider?: string; // Parceiro (SENAC, SENAI, etc) - se não fornecido, é da própria plataforma
   revenueShare?: number; // Percentual que fica com TrampoHero (padrão 30%)
+  niche?: Niche; // Nicho específico do curso
+  ebookUrl?: string; // URL do ebook (será adicionado depois)
+  examQuestions: CourseQuestion[]; // Questões da prova
+  passingScore: number; // Percentual mínimo para aprovação (0-100)
+  certificateIssuer: string; // Emissor do certificado (ex: "TrampoHero Academy")
+}
+
+export interface CourseProgress {
+  courseId: string;
+  userId: string;
+  startedAt: string;
+  completedAt?: string;
+  examScore?: number;
+  examAttempts: number;
+  passed: boolean;
+  certificateId?: string;
+}
+
+export interface Certificate {
+  id: string;
+  userId: string;
+  userName: string;
+  courseId: string;
+  courseTitle: string;
+  issuer: string;
+  issueDate: string;
+  score: number;
+  certificateNumber: string; // Número único do certificado
 }
 
 export interface Invitation {
@@ -135,6 +170,8 @@ export interface UserProfile {
   referralCode?: string; // Código de indicação
   referrals?: Referral[]; // Indicações feitas
   analyticsAccess?: 'free' | 'premium'; // Acesso ao dashboard de analytics
+  courseProgress?: CourseProgress[]; // Progresso nos cursos
+  certificates?: Certificate[]; // Certificados emitidos
 }
 
 // ==================== FEATURE 1: TRAMPOCOINS ====================
