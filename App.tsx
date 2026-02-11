@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Niche, Job, UserProfile, SubscriptionTier, Message, Medal, Course, Transaction } from './types';
+import { Niche, Job, UserProfile, SubscriptionTier, Message, Medal, Course, Transaction, Invitation, Invoice } from './types';
 import { translateMessage, supportAssistant, getRecurrentSuggestion, generateVoiceJob, generateJobDescription } from './services/geminiService';
 import { generateContract } from './services/pdfService';
 
@@ -62,7 +62,9 @@ const INITIAL_USER: UserProfile = {
     ] 
   },
   role: 'freelancer', medals: [MEDALS_REPO[0], MEDALS_REPO[1]], history: [{ jobId: 'old-1', employerId: 'emp-1', date: '2023-10-01', rating: 5 }],
-  favorites: ['emp-1']
+  favorites: ['emp-1'], 
+  invitations: [], 
+  invoices: []
 };
 
 // --- COMPONENTE TOAST ---
@@ -101,7 +103,10 @@ const App: React.FC = () => {
   const [view, setView] = useState<'browse' | 'wallet' | 'active' | 'chat' | 'dashboard' | 'academy' | 'profile' | 'talents'>('browse');
   const [browseMode, setBrowseMode] = useState<'list' | 'map'>('list');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const saved = localStorage.getItem('trampoHeroMessages');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [inputText, setInputText] = useState('');
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -143,6 +148,11 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('trampoHeroUser', JSON.stringify(user));
   }, [user]);
+
+  // Persiste mensagens do chat
+  useEffect(() => {
+    localStorage.setItem('trampoHeroMessages', JSON.stringify(messages));
+  }, [messages]);
 
   // Função helper para Toasts
   const showToast = (msg: string, type: 'success'|'error'|'info' = 'info') => {
@@ -389,8 +399,16 @@ const App: React.FC = () => {
     setInputText('');
     
     if (user.role === 'employer') {
-        // Chat simples
+        // Chat de suporte para empregadores
+        const response = await supportAssistant(inputText);
+        setMessages(prev => [...prev, { 
+          id: Date.now().toString(), 
+          senderId: 'bot', 
+          text: response || "Olá! Sou o assistente TrampoHero para empregadores. Como posso ajudá-lo com suas vagas e contratações?", 
+          timestamp: new Date().toISOString() 
+        }]);
     } else {
+        // Chat de suporte para freelancers
         const response = await supportAssistant(inputText);
         setMessages(prev => [...prev, { id: Date.now().toString(), senderId: 'bot', text: response, timestamp: new Date().toISOString() }]);
     }
@@ -455,7 +473,23 @@ const App: React.FC = () => {
 
   // --- NOVAS FUNÇÕES PARA FUNCIONALIDADES FALTANTES ---
   const handleInviteTalent = (talentName: string) => {
-      showToast(`Convite enviado para ${talentName}!`, "success");
+      // Cria novo convite e adiciona ao perfil do usuário
+      const newInvitation: Invitation = {
+          id: Date.now().toString(),
+          talentName: talentName,
+          talentId: `talent-${talentName.toLowerCase().replace(/\s/g, '')}`,
+          jobId: selectedJob?.id,
+          jobTitle: selectedJob?.title || "Vaga Geral",
+          status: 'pending',
+          sentDate: new Date().toLocaleDateString('pt-BR')
+      };
+      
+      setUser(prev => ({
+          ...prev,
+          invitations: [...(prev.invitations || []), newInvitation]
+      }));
+      
+      showToast(`Convite enviado para ${talentName}! Você pode acompanhar na aba "Convites".`, "success");
   };
 
   const handleManageJob = (job: Job) => {
@@ -560,7 +594,36 @@ const App: React.FC = () => {
   };
 
   const handleShowInvoices = () => {
-    showToast("Enviando notas fiscais do mês para seu e-mail cadastrado...", "info");
+    // Gera notas fiscais para jobs completados se ainda não existirem
+    const completedJobs = jobs.filter(j => j.status === 'completed' && j.employerId === user.id);
+    const existingInvoiceJobIds = (user.invoices || []).map(inv => inv.jobId);
+    
+    // Gera invoices para jobs que ainda não tem
+    const newInvoices: Invoice[] = completedJobs
+      .filter(job => !existingInvoiceJobIds.includes(job.id))
+      .map(job => ({
+        id: `inv-${job.id}`,
+        jobId: job.id,
+        jobTitle: job.title,
+        amount: job.payment,
+        date: new Date().toLocaleDateString('pt-BR'),
+        downloadUrl: `#invoice-${job.id}`
+      }));
+    
+    if (newInvoices.length > 0) {
+      setUser(prev => ({
+        ...prev,
+        invoices: [...(prev.invoices || []), ...newInvoices]
+      }));
+      showToast(`${newInvoices.length} nota(s) fiscal(is) gerada(s) com sucesso!`, "success");
+    } else if ((user.invoices || []).length > 0) {
+      showToast(`Você tem ${user.invoices.length} nota(s) fiscal(is) disponível(is).`, "info");
+    } else {
+      showToast("Nenhum trabalho concluído para gerar notas fiscais.", "info");
+    }
+    
+    // Mostra painel de invoices
+    setView('profile');
   };
 
   const handleStartCourse = (course: Course) => {
@@ -1098,6 +1161,67 @@ const App: React.FC = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Seção de Convites Enviados (Apenas para Empregadores) */}
+                {user.role === 'employer' && (user.invitations || []).length > 0 && (
+                  <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                    <h3 className="font-black text-slate-900 text-lg mb-4 flex items-center gap-2">
+                      <i className="fas fa-envelope text-indigo-600"></i>
+                      Convites Enviados
+                    </h3>
+                    <div className="space-y-3">
+                      {user.invitations.slice(0, 5).map(inv => (
+                        <div key={inv.id} className="bg-slate-50 p-4 rounded-xl flex justify-between items-center">
+                          <div>
+                            <p className="font-bold text-slate-800 text-sm">{inv.talentName}</p>
+                            <p className="text-[10px] text-slate-400">{inv.jobTitle} • {inv.sentDate}</p>
+                          </div>
+                          <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${
+                            inv.status === 'accepted' ? 'bg-emerald-100 text-emerald-700' :
+                            inv.status === 'declined' ? 'bg-red-100 text-red-700' :
+                            'bg-amber-100 text-amber-700'
+                          }`}>
+                            {inv.status === 'accepted' ? 'Aceito' : inv.status === 'declined' ? 'Recusado' : 'Pendente'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Seção de Notas Fiscais (Apenas para Empregadores) */}
+                {user.role === 'employer' && (user.invoices || []).length > 0 && (
+                  <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                    <h3 className="font-black text-slate-900 text-lg mb-4 flex items-center gap-2">
+                      <i className="fas fa-file-invoice text-indigo-600"></i>
+                      Notas Fiscais
+                    </h3>
+                    <div className="space-y-3">
+                      {user.invoices.slice(0, 5).map(invoice => (
+                        <div key={invoice.id} className="bg-slate-50 p-4 rounded-xl flex justify-between items-center">
+                          <div>
+                            <p className="font-bold text-slate-800 text-sm">{invoice.jobTitle}</p>
+                            <p className="text-[10px] text-slate-400">{invoice.date}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-black text-slate-900 text-sm">R$ {invoice.amount.toFixed(2)}</p>
+                            <a 
+                              href={invoice.downloadUrl} 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                showToast(`Baixando nota fiscal ${invoice.id}...`, "success");
+                              }}
+                              className="text-[9px] font-bold text-indigo-600 hover:underline"
+                            >
+                              <i className="fas fa-download mr-1"></i>Baixar
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <button onClick={() => setView('academy')} className="w-full py-4 bg-slate-900 text-white rounded-[2rem] font-black uppercase tracking-widest shadow-lg">
                     Ir para Hero Academy
                 </button>
