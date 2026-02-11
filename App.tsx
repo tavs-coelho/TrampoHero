@@ -475,7 +475,7 @@ const App: React.FC = () => {
   };
 
   // --- NOVAS FUNÇÕES PARA FUNCIONALIDADES FALTANTES ---
-  const handleInviteTalent = (talentName: string) => {
+  const handleInviteTalent = (talentName: string, talentId?: string) => {
       // Cria novo convite e adiciona ao perfil do usuário
       // Gera ID único usando crypto API se disponível, ou fallback para Math.random
       const generateUniqueId = () => {
@@ -483,14 +483,14 @@ const App: React.FC = () => {
           return crypto.randomUUID();
         }
         // Fallback: timestamp + random string mais longo
-        const randomPart = Math.random().toString(36).substr(2, 12) + Math.random().toString(36).substr(2, 12);
+        const randomPart = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
         return `inv-${Date.now()}-${randomPart}`;
       };
       
       const newInvitation: Invitation = {
           id: generateUniqueId(),
           talentName: talentName,
-          talentId: `talent-${generateUniqueId()}`, // Use unique ID instead of name-based ID
+          talentId: talentId || `talent-${generateUniqueId()}`, // Use provided ID or generate new one
           jobId: selectedJob?.id,
           jobTitle: selectedJob?.title || "Vaga Geral",
           status: 'pending',
@@ -743,7 +743,7 @@ const App: React.FC = () => {
                                 <i className="fas fa-star text-[8px] text-amber-400"></i>
                                 <span className="text-[9px] font-bold text-amber-600">{talent.rating}</span>
                              </div>
-                             <button onClick={() => handleInviteTalent(talent.name)} className="w-full py-1.5 bg-slate-900 text-white rounded-lg text-[9px] font-bold uppercase active:scale-95 transition-transform">Convidar</button>
+                             <button onClick={() => handleInviteTalent(talent.name, talent.id)} className="w-full py-1.5 bg-slate-900 text-white rounded-lg text-[9px] font-bold uppercase active:scale-95 transition-transform">Convidar</button>
                           </div>
                       ))}
                    </div>
@@ -794,7 +794,7 @@ const App: React.FC = () => {
                                     <i className="fas fa-star text-xs text-amber-400"></i>
                                     <span className="text-xs font-bold text-slate-700">{talent.rating}</span>
                                 </div>
-                                <button onClick={() => handleInviteTalent(talent.name)} className="w-full py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-transform">Convidar</button>
+                                <button onClick={() => handleInviteTalent(talent.name, talent.id)} className="w-full py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-transform">Convidar</button>
                             </div>
                         ))}
                     </div>
