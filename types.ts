@@ -45,7 +45,7 @@ export interface WorkHistory {
 
 export interface Transaction {
   id: string;
-  type: 'deposit' | 'withdrawal' | 'anticipation' | 'job_payment' | 'coin_earned' | 'coin_redeemed' | 'loan' | 'loan_repayment' | 'referral_bonus' | 'store_purchase';
+  type: 'deposit' | 'withdrawal' | 'anticipation' | 'job_payment' | 'coin_earned' | 'coin_redeemed' | 'loan' | 'loan_repayment' | 'referral_bonus';
   amount: number;
   date: string;
   description: string;
@@ -259,8 +259,9 @@ export interface RecurringContract {
   freelancerId: string;
   employerId: string;
   jobTemplate: Partial<Job>; // Template da vaga
-  frequency: 'weekly' | 'biweekly' | 'monthly';
+  frequency: 'once_weekly' | 'twice_weekly' | 'biweekly' | 'monthly'; // Máximo 2x por semana
   dayOfWeek?: number; // Para semanal (0-6)
+  secondDayOfWeek?: number; // Para duas vezes por semana (0-6)
   dayOfMonth?: number; // Para mensal (1-31)
   startDate: string;
   endDate?: string;
@@ -291,48 +292,6 @@ export interface AffiliateProgram {
   tier: 'regular' | 'professional'; // Regular = usuário, Professional = influencer
   commissionRate: number; // 10% para profissionais por 6 meses
   referrals: Referral[];
-}
-
-// ==================== FEATURE 9: TRAMPOSTORE ====================
-export interface Product {
-  id: string;
-  name: string;
-  category: 'uniform' | 'epi' | 'tools' | 'accessories';
-  description: string;
-  price: number;
-  imageUrl: string;
-  supplier: string;
-  margin: number; // Margem de lucro (20-35%)
-  inStock: boolean;
-  rating?: number;
-  reviewCount?: number;
-}
-
-export interface CartItem {
-  productId: string;
-  quantity: number;
-  product: Product;
-}
-
-export interface Order {
-  id: string;
-  userId: string;
-  items: CartItem[];
-  subtotal: number;
-  shipping: number;
-  total: number;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  shippingAddress: {
-    street: string;
-    number: string;
-    complement?: string;
-    city: string;
-    state: string;
-    zipCode: string;
-  };
-  orderDate: string;
-  deliveryDate?: string;
-  trackingCode?: string;
 }
 
 // ==================== FEATURE 10: ANALYTICS PREMIUM ====================

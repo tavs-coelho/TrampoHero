@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Niche, Job, UserProfile, SubscriptionTier, Message, Medal, Course, Transaction, Invitation, Invoice, Product, CartItem, TrampoCoin, InsurancePlan, UltraPlan } from './types';
+import { Niche, Job, UserProfile, SubscriptionTier, Message, Medal, Course, Transaction, Invitation, Invoice, TrampoCoin, InsurancePlan, UltraPlan } from './types';
 import { translateMessage, supportAssistant, getRecurrentSuggestion, generateVoiceJob, generateJobDescription } from './services/geminiService';
 import { generateContract } from './services/pdfService';
 
@@ -55,13 +55,6 @@ const INSURANCE_PLANS = {
     ]
   }
 };
-
-const STORE_PRODUCTS = [
-  { id: 'p1', name: 'Camisa Social Preta', category: 'uniform' as const, description: 'Uniforme profissional', price: 89.90, imageUrl: '👔', supplier: 'UniformPro', margin: 25, inStock: true, rating: 4.5, reviewCount: 120 },
-  { id: 'p2', name: 'Capacete de Segurança', category: 'epi' as const, description: 'Proteção certificada', price: 45.00, imageUrl: '⛑️', supplier: 'SafetyFirst', margin: 30, inStock: true, rating: 4.8, reviewCount: 85 },
-  { id: 'p3', name: 'Kit Ferramentas Básico', category: 'tools' as const, description: '20 peças essenciais', price: 159.90, imageUrl: '🔧', supplier: 'ToolMaster', margin: 35, inStock: true, rating: 4.7, reviewCount: 64 },
-  { id: 'p4', name: 'Mochila Profissional', category: 'accessories' as const, description: 'Grande e resistente', price: 129.90, imageUrl: '🎒', supplier: 'BagCo', margin: 28, inStock: true, rating: 4.6, reviewCount: 45 }
-];
 
 const TOP_TALENTS = [
   { id: 't1', name: 'Mariana Costa', role: 'Garçonete', rating: 4.9, niche: Niche.RESTAURANT, hourly: 25 },
@@ -157,7 +150,7 @@ const App: React.FC = () => {
   });
 
   const [jobs, setJobs] = useState<Job[]>(INITIAL_JOBS);
-  const [view, setView] = useState<'browse' | 'wallet' | 'active' | 'chat' | 'dashboard' | 'academy' | 'profile' | 'talents' | 'coins' | 'insurance' | 'credit' | 'store' | 'analytics' | 'contracts' | 'referrals'>('browse');
+  const [view, setView] = useState<'browse' | 'wallet' | 'active' | 'chat' | 'dashboard' | 'academy' | 'profile' | 'talents' | 'coins' | 'insurance' | 'credit' | 'analytics' | 'contracts' | 'referrals'>('browse');
   const [browseMode, setBrowseMode] = useState<'list' | 'map'>('list');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -1349,11 +1342,6 @@ const App: React.FC = () => {
                       <p className="text-xs font-black text-slate-900">TrampoCredit</p>
                       <p className="text-[9px] text-slate-500">Adiantamento</p>
                     </button>
-                    <button onClick={() => setView('store')} className="p-4 bg-purple-50 rounded-xl text-left hover:bg-purple-100 transition-colors">
-                      <i className="fas fa-shopping-bag text-purple-500 text-xl mb-2"></i>
-                      <p className="text-xs font-black text-slate-900">TrampoStore</p>
-                      <p className="text-[9px] text-slate-500">Equipamentos</p>
-                    </button>
                     <button onClick={() => setView('referrals')} className="p-4 bg-pink-50 rounded-xl text-left hover:bg-pink-100 transition-colors">
                       <i className="fas fa-user-plus text-pink-500 text-xl mb-2"></i>
                       <p className="text-xs font-black text-slate-900">Indique</p>
@@ -1617,48 +1605,6 @@ const App: React.FC = () => {
                   Solicitar Agora
                 </button>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* ==================== FEATURE 9: TRAMPOSTORE VIEW ==================== */}
-        {view === 'store' && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            <header className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">TrampoStore</h2>
-                <p className="text-slate-500 text-sm">Equipamentos profissionais</p>
-              </div>
-              <button onClick={() => setView('wallet')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900"><i className="fas fa-times"></i></button>
-            </header>
-
-            {/* Categorias */}
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              <button className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold whitespace-nowrap">Todos</button>
-              <button className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold whitespace-nowrap">Uniformes</button>
-              <button className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold whitespace-nowrap">EPIs</button>
-              <button className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold whitespace-nowrap">Ferramentas</button>
-            </div>
-
-            {/* Produtos */}
-            <div className="grid grid-cols-2 gap-4">
-              {STORE_PRODUCTS.map(product => (
-                <div key={product.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                  <div className="text-5xl mb-3 text-center">{product.imageUrl}</div>
-                  <h3 className="font-bold text-sm text-slate-900 mb-1">{product.name}</h3>
-                  <div className="flex items-center gap-1 mb-2">
-                    <i className="fas fa-star text-amber-400 text-xs"></i>
-                    <span className="text-xs text-slate-600">{product.rating}</span>
-                  </div>
-                  <p className="text-lg font-black text-indigo-600 mb-3">R$ {product.price.toFixed(2)}</p>
-                  <button 
-                    onClick={() => showToast(`${product.name} adicionado ao carrinho!`, "success")}
-                    className="w-full py-2 bg-slate-900 text-white rounded-xl text-xs font-bold active:scale-95"
-                  >
-                    Adicionar
-                  </button>
-                </div>
-              ))}
             </div>
           </div>
         )}
