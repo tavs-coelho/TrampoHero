@@ -62,7 +62,7 @@ const COURSES: Course[] = [
     id: 'c2', 
     title: 'Manipulação Segura de Alimentos', 
     duration: '3h', 
-    badgeId: 'm1', 
+    badgeId: 'cert-1', 
     description: 'Normas de higiene, conservação e manipulação de alimentos segundo ANVISA.',
     price: 0, 
     level: 'basic',
@@ -438,6 +438,7 @@ const App: React.FC = () => {
   const [userAnswers, setUserAnswers] = useState<number[]>([]);
   const [showExamResult, setShowExamResult] = useState(false);
   const [examScore, setExamScore] = useState(0);
+  const [generatedCertificate, setGeneratedCertificate] = useState<Certificate | null>(null);
 
   // Filtros
   const [filterNiche, setFilterNiche] = useState<string>('All');
@@ -988,6 +989,7 @@ const App: React.FC = () => {
      setCurrentQuestionIndex(0);
      setUserAnswers([]);
      setShowExamResult(false);
+     setGeneratedCertificate(null);
      setShowExamModal(true);
      showToast(`Leia o material (ebook será adicionado) e faça a prova!`, "info");
   };
@@ -1045,6 +1047,9 @@ const App: React.FC = () => {
         certificateNumber: `TH-${Date.now().toString(36).toUpperCase()}`
       };
       
+      // Armazena certificado para exibição no resultado
+      setGeneratedCertificate(certificate);
+      
       // Adiciona medalha
       const medal = MEDALS_REPO.find(m => m.id === currentCourse.badgeId);
       
@@ -1070,6 +1075,7 @@ const App: React.FC = () => {
       
       showToast(`Parabéns! Você foi aprovado com ${score}%!`, "success");
     } else {
+      setGeneratedCertificate(null);
       showToast(`Você obteve ${score}%. Nota mínima: ${currentCourse.passingScore}%`, "error");
     }
     
@@ -2403,12 +2409,12 @@ const App: React.FC = () => {
                   <p className="text-sm text-slate-600 font-bold">Sua pontuação</p>
                 </div>
                 
-                {examScore >= currentCourse.passingScore && (
+                {examScore >= currentCourse.passingScore && generatedCertificate && (
                   <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-6 mb-6">
                     <i className="fas fa-certificate text-3xl text-indigo-600 mb-3"></i>
                     <h3 className="font-black text-slate-900 mb-2">Certificado Emitido</h3>
                     <p className="text-xs text-slate-600">
-                      Certificado #{user.certificates?.[user.certificates.length - 1]?.certificateNumber}
+                      Certificado #{generatedCertificate.certificateNumber}
                     </p>
                     <p className="text-xs text-slate-500 mt-2">
                       Emissor: {currentCourse.certificateIssuer}
@@ -2433,6 +2439,7 @@ const App: React.FC = () => {
                       setCurrentQuestionIndex(0);
                       setUserAnswers([]);
                       setShowExamResult(false);
+                      setGeneratedCertificate(null);
                     }}
                     className="w-full mt-3 py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-wide hover:bg-indigo-700 transition-all"
                   >

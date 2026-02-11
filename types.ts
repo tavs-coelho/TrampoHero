@@ -81,7 +81,7 @@ export interface CourseQuestion {
   id: string;
   question: string;
   options: string[];
-  correctAnswer: number; // índice da resposta correta (0-3)
+  correctAnswer: number; // índice da resposta correta (0-based index)
 }
 
 export interface Course {
