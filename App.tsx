@@ -403,20 +403,18 @@ const App: React.FC = () => {
     setMessages(prev => [...prev, newMessage]);
     setInputText('');
     
-    if (user.role === 'employer') {
-        // Chat de suporte para empregadores
-        const response = await supportAssistant(inputText);
-        setMessages(prev => [...prev, { 
-          id: Date.now().toString(), 
-          senderId: 'bot', 
-          text: response || "Olá! Sou o assistente TrampoHero para empregadores. Como posso ajudá-lo com suas vagas e contratações?", 
-          timestamp: new Date().toISOString() 
-        }]);
-    } else {
-        // Chat de suporte para freelancers
-        const response = await supportAssistant(inputText);
-        setMessages(prev => [...prev, { id: Date.now().toString(), senderId: 'bot', text: response, timestamp: new Date().toISOString() }]);
-    }
+    // Chat de suporte para ambos os papéis (freelancer e employer)
+    const fallbackMessage = user.role === 'employer' 
+      ? "Olá! Sou o assistente TrampoHero para empregadores. Como posso ajudá-lo com suas vagas e contratações?"
+      : "Olá! Como posso ajudá-lo?";
+    
+    const response = await supportAssistant(inputText);
+    setMessages(prev => [...prev, { 
+      id: Date.now().toString(), 
+      senderId: 'bot', 
+      text: response || fallbackMessage, 
+      timestamp: new Date().toISOString() 
+    }]);
   };
 
   const simulateVoiceCreate = async () => {
@@ -479,12 +477,20 @@ const App: React.FC = () => {
   // --- NOVAS FUNÇÕES PARA FUNCIONALIDADES FALTANTES ---
   const handleInviteTalent = (talentName: string) => {
       // Cria novo convite e adiciona ao perfil do usuário
-      // Gera ID único combinando timestamp e string aleatória
-      const randomSuffix = Math.random().toString(36).substr(2, 9);
+      // Gera ID único usando crypto API se disponível, ou fallback para Math.random
+      const generateUniqueId = () => {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+          return crypto.randomUUID();
+        }
+        // Fallback: timestamp + random string mais longo
+        const randomPart = Math.random().toString(36).substr(2, 12) + Math.random().toString(36).substr(2, 12);
+        return `inv-${Date.now()}-${randomPart}`;
+      };
+      
       const newInvitation: Invitation = {
-          id: `inv-${Date.now()}-${randomSuffix}`,
+          id: generateUniqueId(),
           talentName: talentName,
-          talentId: `talent-${talentName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')}`,
+          talentId: `talent-${generateUniqueId()}`, // Use unique ID instead of name-based ID
           jobId: selectedJob?.id,
           jobTitle: selectedJob?.title || "Vaga Geral",
           status: 'pending',
