@@ -1,6 +1,6 @@
 
 import { jsPDF } from "jspdf";
-import { Job, UserProfile } from "../types";
+import { Job, UserProfile, Certificate } from "../types";
 
 export const generateContract = (job: Job, freelancer: UserProfile) => {
   const doc = new jsPDF();
@@ -73,5 +73,123 @@ export const generateContract = (job: Job, freelancer: UserProfile) => {
 
   // Salvar PDF
   doc.save(`Contrato_TrampoHero_${job.id}.pdf`);
+  return true;
+};
+
+export const generateCertificate = (certificate: Certificate) => {
+  const doc = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: 'a4'
+  });
+  
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  
+  // Background decorative border
+  doc.setDrawColor(79, 70, 229); // Indigo 600
+  doc.setLineWidth(2);
+  doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
+  
+  doc.setLineWidth(0.5);
+  doc.rect(12, 12, pageWidth - 24, pageHeight - 24);
+  
+  // Header - Logo/Icon
+  doc.setFillColor(79, 70, 229); // Indigo 600
+  doc.circle(pageWidth / 2, 35, 12, 'F');
+  
+  doc.setFontSize(20);
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.text("★", pageWidth / 2, 38, { align: "center" });
+  
+  // Title
+  doc.setFontSize(28);
+  doc.setTextColor(79, 70, 229); // Indigo 600
+  doc.setFont("helvetica", "bold");
+  doc.text("CERTIFICADO DE CONCLUSÃO", pageWidth / 2, 60, { align: "center" });
+  
+  // Subtitle
+  doc.setFontSize(12);
+  doc.setTextColor(100, 116, 139); // Slate 500
+  doc.setFont("helvetica", "normal");
+  doc.text("Certificamos que", pageWidth / 2, 75, { align: "center" });
+  
+  // Student Name
+  doc.setFontSize(32);
+  doc.setTextColor(30, 41, 59); // Slate 800
+  doc.setFont("helvetica", "bold");
+  doc.text(certificate.userName.toUpperCase(), pageWidth / 2, 95, { align: "center" });
+  
+  // Completion text
+  doc.setFontSize(12);
+  doc.setTextColor(100, 116, 139); // Slate 500
+  doc.setFont("helvetica", "normal");
+  doc.text("concluiu com êxito o curso", pageWidth / 2, 110, { align: "center" });
+  
+  // Course Title
+  doc.setFontSize(18);
+  doc.setTextColor(30, 41, 59); // Slate 800
+  doc.setFont("helvetica", "bold");
+  const courseTitle = doc.splitTextToSize(certificate.courseTitle, pageWidth - 80);
+  doc.text(courseTitle, pageWidth / 2, 125, { align: "center" });
+  
+  // Score badge
+  const scoreY = 140;
+  doc.setFillColor(245, 158, 11); // Amber 500
+  doc.roundedRect(pageWidth / 2 - 25, scoreY - 8, 50, 16, 3, 3, 'F');
+  
+  doc.setFontSize(14);
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Nota: ${certificate.score}%`, pageWidth / 2, scoreY + 2, { align: "center" });
+  
+  // Details section
+  let detailsY = 165;
+  doc.setFontSize(10);
+  doc.setTextColor(100, 116, 139); // Slate 500
+  doc.setFont("helvetica", "normal");
+  
+  const details = [
+    `Emissor: ${certificate.issuer}`,
+    `Data de Emissão: ${new Date(certificate.issueDate).toLocaleDateString('pt-BR')}`,
+    `Certificado Nº: ${certificate.certificateNumber}`,
+    `ID do Aluno: ${certificate.userId}`
+  ];
+  
+  details.forEach(detail => {
+    doc.text(detail, pageWidth / 2, detailsY, { align: "center" });
+    detailsY += 6;
+  });
+  
+  // Signature line
+  const sigY = pageHeight - 40;
+  doc.setLineWidth(0.5);
+  doc.setDrawColor(100, 116, 139); // Slate 500
+  doc.line(pageWidth / 2 - 40, sigY, pageWidth / 2 + 40, sigY);
+  
+  doc.setFontSize(10);
+  doc.setTextColor(100, 116, 139);
+  doc.setFont("helvetica", "bold");
+  doc.text("TrampoHero Academy", pageWidth / 2, sigY + 6, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.text("Plataforma de Capacitação Profissional", pageWidth / 2, sigY + 11, { align: "center" });
+  
+  // Footer - Validation hash
+  doc.setFontSize(8);
+  doc.setTextColor(148, 163, 184); // Slate 400
+  doc.text(
+    `Hash de Validação: ${certificate.id.toUpperCase()}`,
+    pageWidth / 2,
+    pageHeight - 15,
+    { align: "center" }
+  );
+  
+  // Verification URL (placeholder - endpoint to be implemented)
+  doc.setFontSize(7);
+  doc.text("Verificação disponível em breve", pageWidth / 2, pageHeight - 10, { align: "center" });
+  
+  // Save PDF
+  doc.save(`Certificado_${certificate.certificateNumber}.pdf`);
   return true;
 };
