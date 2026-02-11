@@ -20,6 +20,10 @@ const REFERRAL_BONUS_FREELANCER = 20; // R$ 20 por indicação de freelancer
 const REFERRAL_BONUS_EMPLOYER = 100; // R$ 100 por indicação de empregador
 const ANALYTICS_PREMIUM_PRICE = 79; // R$ 79/mês
 
+// Constantes de Store
+const DELIVERY_DAYS = 7; // Prazo de entrega em dias
+const DELIVERY_DAYS_MS = DELIVERY_DAYS * 24 * 60 * 60 * 1000; // Conversão para milissegundos
+
 // --- DADOS MOCKADOS ---
 const MEDALS_REPO: Medal[] = [
   { id: 'm1', name: 'Pontualidade', icon: 'fa-clock', color: 'text-amber-500', description: 'Chegou no horário em 5 trampos' },
@@ -569,6 +573,19 @@ const SplashScreen = () => (
     </div>
 );
 
+// --- HELPER FUNCTIONS ---
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(amount);
+};
+
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('pt-BR');
+};
+
 // --- APP PRINCIPAL ---
 const App: React.FC = () => {
   // Estado com persistência básica
@@ -874,15 +891,17 @@ const App: React.FC = () => {
     const pixKey = prompt("Digite sua chave PIX (CPF, Celular ou Email):");
     if (!pixKey) return;
     
-    // Validate PIX key format (basic validation)
-    const cpfRegex = /^\d{11}$/;
-    const phoneRegex = /^\+?\d{10,13}$/;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Validate PIX key format (basic validation for Brazilian formats)
+    const cpfRegex = /^\d{11}$/; // CPF: exactly 11 digits
+    const phoneRegex = /^\+?55\d{10,11}$/; // Brazilian phone: +55 followed by 10-11 digits
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/; // Standard email format
     
-    const isValidPixKey = cpfRegex.test(pixKey) || phoneRegex.test(pixKey) || emailRegex.test(pixKey);
+    const isValidPixKey = cpfRegex.test(pixKey.replace(/\D/g, '')) || 
+                         phoneRegex.test(pixKey.replace(/\D/g, '')) || 
+                         emailRegex.test(pixKey);
     
     if (!isValidPixKey) {
-      showToast("Chave PIX inválida. Use CPF (11 dígitos), celular ou e-mail válido.", "error");
+      showToast("Chave PIX inválida. Use CPF (11 dígitos), celular (+55) ou e-mail válido.", "error");
       return;
     }
     
@@ -1007,6 +1026,7 @@ const App: React.FC = () => {
     if (!newJobData.title || !newJobData.payment) return showToast("Preencha título e valor.", "error");
     
     // Validate date is not in the past
+    // ISO 8601 date strings can be compared lexicographically (YYYY-MM-DD format)
     const jobDate = newJobData.date || new Date().toISOString().split('T')[0];
     const today = new Date().toISOString().split('T')[0];
     if (jobDate < today) {
@@ -1158,7 +1178,11 @@ const App: React.FC = () => {
          const currentYear = currentDate.getFullYear() % 100; // Get last 2 digits
          const currentMonth = currentDate.getMonth() + 1;
          
-         if (year < currentYear || (year === currentYear && month < currentMonth)) {
+         // Convert 2-digit year to 4-digit (assuming 20xx for years 00-99)
+         const fullYear = year < 100 ? 2000 + year : year;
+         const currentFullYear = currentDate.getFullYear();
+         
+         if (fullYear < currentFullYear || (fullYear === currentFullYear && month < currentMonth)) {
              showToast("Cartão vencido. Verifique a data de validade.", "error");
              return;
          }
@@ -1456,7 +1480,7 @@ const App: React.FC = () => {
         total: total,
         status: 'confirmed',
         orderDate: new Date().toISOString(),
-        deliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days
+        deliveryDate: new Date(Date.now() + DELIVERY_DAYS_MS).toISOString().split('T')[0],
         trackingCode: `TH${Date.now().toString().slice(-8)}`
       };
       
