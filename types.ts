@@ -396,14 +396,6 @@ export interface TalentRanking {
   badge?: string; // "🥇", "🥈", "🥉" para top 3
 }
 
-// Live Jobs (Vagas Relâmpago/Urgentes)
-export interface LiveJob extends Job {
-  isLive: boolean; // Precisa ser preenchida em <2 horas
-  urgencyBonus: number; // Bônus adicional pela urgência
-  expiresAt: string; // Timestamp de expiração
-  maxResponseTime: number; // Tempo máximo de resposta em minutos
-}
-
 // TrampoStore - E-commerce
 export interface StoreProduct {
   id: string;

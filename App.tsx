@@ -2611,7 +2611,7 @@ const App: React.FC = () => {
               <p className="text-xs font-bold opacity-80 uppercase tracking-widest mb-2">Sua Posição</p>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-4xl font-black mb-1">#5</p>
+                  <p className="text-4xl font-black mb-1">#{rankings.find(r => r.userId === user.id)?.rank || '-'}</p>
                   <p className="text-sm opacity-90">Continue assim para subir no ranking!</p>
                 </div>
                 <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl backdrop-blur-sm">
@@ -2704,7 +2704,17 @@ const App: React.FC = () => {
                     <button
                       onClick={() => {
                         if (product.inStock) {
-                          setCart(prev => [...prev, { productId: product.id, quantity: 1 }]);
+                          setCart(prev => {
+                            const existingItem = prev.find(item => item.productId === product.id);
+                            if (existingItem) {
+                              return prev.map(item => 
+                                item.productId === product.id 
+                                  ? { ...item, quantity: item.quantity + 1 }
+                                  : item
+                              );
+                            }
+                            return [...prev, { productId: product.id, quantity: 1 }];
+                          });
                           showToast('Adicionado ao carrinho!', 'success');
                         }
                       }}
