@@ -84,6 +84,25 @@ export interface Course {
   description: string;
 }
 
+export interface Invitation {
+  id: string;
+  talentName: string;
+  talentId?: string; // ID do talento no sistema. Se fornecido, referencia registro existente. Se omitido, será gerado um novo ID.
+  jobId?: string;
+  jobTitle?: string;
+  status: 'pending' | 'accepted' | 'declined';
+  sentDate: string;
+}
+
+export interface Invoice {
+  id: string;
+  jobId: string;
+  jobTitle: string;
+  amount: number;
+  date: string;
+  downloadUrl?: string;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -103,4 +122,6 @@ export interface UserProfile {
   medals: Medal[];
   history: WorkHistory[];
   favorites?: string[]; // IDs de empregadores favoritos (ou vice-versa)
+  invitations?: Invitation[]; // Convites enviados
+  invoices?: Invoice[]; // Notas fiscais geradas
 }

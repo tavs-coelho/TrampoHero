@@ -1,10 +1,13 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Niche, Job, UserProfile, SubscriptionTier, Message, Medal, Course, Transaction } from './types';
+import { Niche, Job, UserProfile, SubscriptionTier, Message, Medal, Course, Transaction, Invitation, Invoice } from './types';
 import { translateMessage, supportAssistant, getRecurrentSuggestion, generateVoiceJob, generateJobDescription } from './services/geminiService';
 import { generateContract } from './services/pdfService';
 
 declare const L: any;
+
+// --- CONSTANTES ---
+const MAX_RECENT_ITEMS = 5; // Número máximo de itens recentes a exibir (convites e notas fiscais)
 
 // --- DADOS MOCKADOS ---
 const MEDALS_REPO: Medal[] = [
@@ -62,7 +65,9 @@ const INITIAL_USER: UserProfile = {
     ] 
   },
   role: 'freelancer', medals: [MEDALS_REPO[0], MEDALS_REPO[1]], history: [{ jobId: 'old-1', employerId: 'emp-1', date: '2023-10-01', rating: 5 }],
-  favorites: ['emp-1']
+  favorites: ['emp-1'], 
+  invitations: [], 
+  invoices: []
 };
 
 // --- COMPONENTE TOAST ---
@@ -101,7 +106,15 @@ const App: React.FC = () => {
   const [view, setView] = useState<'browse' | 'wallet' | 'active' | 'chat' | 'dashboard' | 'academy' | 'profile' | 'talents'>('browse');
   const [browseMode, setBrowseMode] = useState<'list' | 'map'>('list');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const saved = localStorage.getItem('trampoHeroMessages');
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.error('Failed to parse messages from localStorage:', error);
+      return [];
+    }
+  });
   const [inputText, setInputText] = useState('');
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -143,6 +156,11 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('trampoHeroUser', JSON.stringify(user));
   }, [user]);
+
+  // Persiste mensagens do chat
+  useEffect(() => {
+    localStorage.setItem('trampoHeroMessages', JSON.stringify(messages));
+  }, [messages]);
 
   // Função helper para Toasts
   const showToast = (msg: string, type: 'success'|'error'|'info' = 'info') => {
@@ -388,12 +406,18 @@ const App: React.FC = () => {
     setMessages(prev => [...prev, newMessage]);
     setInputText('');
     
-    if (user.role === 'employer') {
-        // Chat simples
-    } else {
-        const response = await supportAssistant(inputText);
-        setMessages(prev => [...prev, { id: Date.now().toString(), senderId: 'bot', text: response, timestamp: new Date().toISOString() }]);
-    }
+    // Chat de suporte para ambos os papéis (freelancer e employer)
+    const fallbackMessage = user.role === 'employer' 
+      ? "Olá! Sou o assistente TrampoHero para empregadores. Como posso ajudá-lo com suas vagas e contratações?"
+      : "Olá! Como posso ajudá-lo?";
+    
+    const response = await supportAssistant(inputText);
+    setMessages(prev => [...prev, { 
+      id: Date.now().toString(), 
+      senderId: 'bot', 
+      text: response || fallbackMessage, 
+      timestamp: new Date().toISOString() 
+    }]);
   };
 
   const simulateVoiceCreate = async () => {
@@ -454,8 +478,36 @@ const App: React.FC = () => {
   };
 
   // --- NOVAS FUNÇÕES PARA FUNCIONALIDADES FALTANTES ---
-  const handleInviteTalent = (talentName: string) => {
-      showToast(`Convite enviado para ${talentName}!`, "success");
+  const handleInviteTalent = (talentName: string, talentId?: string) => {
+      // Cria novo convite e adiciona ao perfil do usuário
+      // Gera ID único usando crypto API se disponível, ou fallback robusto
+      const generateUniqueId = () => {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+          return crypto.randomUUID();
+        }
+        // Fallback robusto: timestamp + performance.now() para melhor unicidade
+        const timestamp = Date.now();
+        const performanceTime = typeof performance !== 'undefined' ? performance.now() : Math.random() * 10000;
+        const randomPart = Math.random().toString(36).slice(2);
+        return `inv-${timestamp}-${performanceTime.toFixed(0)}-${randomPart}`;
+      };
+      
+      const newInvitation: Invitation = {
+          id: generateUniqueId(),
+          talentName: talentName,
+          talentId: talentId || `talent-${generateUniqueId()}`, // Usa ID fornecido ou gera novo (melhor fornecer ID existente)
+          jobId: selectedJob?.id,
+          jobTitle: selectedJob?.title || "Vaga Geral",
+          status: 'pending',
+          sentDate: new Date().toLocaleDateString('pt-BR')
+      };
+      
+      setUser(prev => ({
+          ...prev,
+          invitations: [...(prev.invitations || []), newInvitation]
+      }));
+      
+      showToast(`Convite enviado para ${talentName}! Você pode acompanhar na aba "Convites".`, "success");
   };
 
   const handleManageJob = (job: Job) => {
@@ -560,7 +612,36 @@ const App: React.FC = () => {
   };
 
   const handleShowInvoices = () => {
-    showToast("Enviando notas fiscais do mês para seu e-mail cadastrado...", "info");
+    // Gera notas fiscais para jobs completados se ainda não existirem
+    const completedJobs = jobs.filter(j => j.status === 'completed' && j.employerId === user.id);
+    const existingInvoiceJobIds = (user.invoices || []).map(inv => inv.jobId);
+    
+    // Gera invoices para jobs que ainda não tem
+    const newInvoices: Invoice[] = completedJobs
+      .filter(job => !existingInvoiceJobIds.includes(job.id))
+      .map(job => ({
+        id: `inv-${job.id}`,
+        jobId: job.id,
+        jobTitle: job.title,
+        amount: job.payment,
+        date: new Date().toLocaleDateString('pt-BR')
+        // downloadUrl removido - será implementado com geração real de PDF
+      }));
+    
+    if (newInvoices.length > 0) {
+      setUser(prev => ({
+        ...prev,
+        invoices: [...(prev.invoices || []), ...newInvoices]
+      }));
+      showToast(`${newInvoices.length} nota(s) fiscal(is) gerada(s) com sucesso!`, "success");
+    } else if ((user.invoices || []).length > 0) {
+      showToast(`Você tem ${user.invoices.length} nota(s) fiscal(is) disponível(is).`, "info");
+    } else {
+      showToast("Nenhum trabalho concluído para gerar notas fiscais.", "info");
+    }
+    
+    // Mostra painel de invoices
+    setView('profile');
   };
 
   const handleStartCourse = (course: Course) => {
@@ -667,7 +748,7 @@ const App: React.FC = () => {
                                 <i className="fas fa-star text-[8px] text-amber-400"></i>
                                 <span className="text-[9px] font-bold text-amber-600">{talent.rating}</span>
                              </div>
-                             <button onClick={() => handleInviteTalent(talent.name)} className="w-full py-1.5 bg-slate-900 text-white rounded-lg text-[9px] font-bold uppercase active:scale-95 transition-transform">Convidar</button>
+                             <button onClick={() => handleInviteTalent(talent.name, talent.id)} className="w-full py-1.5 bg-slate-900 text-white rounded-lg text-[9px] font-bold uppercase active:scale-95 transition-transform">Convidar</button>
                           </div>
                       ))}
                    </div>
@@ -718,7 +799,7 @@ const App: React.FC = () => {
                                     <i className="fas fa-star text-xs text-amber-400"></i>
                                     <span className="text-xs font-bold text-slate-700">{talent.rating}</span>
                                 </div>
-                                <button onClick={() => handleInviteTalent(talent.name)} className="w-full py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-transform">Convidar</button>
+                                <button onClick={() => handleInviteTalent(talent.name, talent.id)} className="w-full py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-transform">Convidar</button>
                             </div>
                         ))}
                     </div>
@@ -1098,6 +1179,68 @@ const App: React.FC = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Seção de Convites Enviados (Apenas para Empregadores) */}
+                {user.role === 'employer' && (user.invitations || []).length > 0 && (
+                  <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                    <h3 className="font-black text-slate-900 text-lg mb-4 flex items-center gap-2">
+                      <i className="fas fa-envelope text-indigo-600"></i>
+                      Convites Enviados
+                    </h3>
+                    <div className="space-y-3">
+                      {user.invitations.slice(0, MAX_RECENT_ITEMS).map(inv => (
+                        <div key={inv.id} className="bg-slate-50 p-4 rounded-xl flex justify-between items-center">
+                          <div>
+                            <p className="font-bold text-slate-800 text-sm">{inv.talentName}</p>
+                            <p className="text-[10px] text-slate-400">{inv.jobTitle} • {inv.sentDate}</p>
+                          </div>
+                          <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${
+                            inv.status === 'accepted' ? 'bg-emerald-100 text-emerald-700' :
+                            inv.status === 'declined' ? 'bg-red-100 text-red-700' :
+                            'bg-amber-100 text-amber-700'
+                          }`}>
+                            {inv.status === 'accepted' ? 'Aceito' : inv.status === 'declined' ? 'Recusado' : 'Pendente'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Seção de Notas Fiscais (Apenas para Empregadores) */}
+                {user.role === 'employer' && (user.invoices || []).length > 0 && (
+                  <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                    <h3 className="font-black text-slate-900 text-lg mb-4 flex items-center gap-2">
+                      <i className="fas fa-file-invoice text-indigo-600"></i>
+                      Notas Fiscais
+                    </h3>
+                    <div className="space-y-3">
+                      {user.invoices.slice(0, MAX_RECENT_ITEMS).map(invoice => (
+                        <div key={invoice.id} className="bg-slate-50 p-4 rounded-xl flex justify-between items-center">
+                          <div>
+                            <p className="font-bold text-slate-800 text-sm">{invoice.jobTitle}</p>
+                            <p className="text-[10px] text-slate-400">{invoice.date}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-black text-slate-900 text-sm">R$ {invoice.amount.toFixed(2)}</p>
+                            <button 
+                              onClick={() => {
+                                showToast(`Gerando PDF da nota fiscal ${invoice.id}...`, "info");
+                                setTimeout(() => {
+                                  showToast("PDF gerado! Download iniciado.", "success");
+                                }, 1500);
+                              }}
+                              className="text-[9px] font-bold text-indigo-600 hover:underline cursor-pointer"
+                            >
+                              <i className="fas fa-file-pdf mr-1"></i>Gerar PDF
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <button onClick={() => setView('academy')} className="w-full py-4 bg-slate-900 text-white rounded-[2rem] font-black uppercase tracking-widest shadow-lg">
                     Ir para Hero Academy
                 </button>
