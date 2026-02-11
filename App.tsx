@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Niche, Job, UserProfile, SubscriptionTier, Message, Medal, Course, Transaction, Invitation, Invoice, TrampoCoin, InsurancePlan, UltraPlan, CourseQuestion, CourseProgress, Certificate } from './types';
 import { translateMessage, supportAssistant, getRecurrentSuggestion, generateVoiceJob, generateJobDescription } from './services/geminiService';
-import { generateContract } from './services/pdfService';
+import { generateContract, generateCertificate } from './services/pdfService';
 
 declare const L: any;
 
@@ -1082,6 +1082,19 @@ const App: React.FC = () => {
     setShowExamResult(true);
   };
 
+  const handleDownloadCertificate = (certificate: Certificate) => {
+    try {
+      showToast("Gerando certificado em PDF...", "info");
+      setTimeout(() => {
+        generateCertificate(certificate);
+        showToast("Certificado baixado com sucesso!", "success");
+      }, 500);
+    } catch (error) {
+      console.error("Error generating certificate:", error);
+      showToast("Erro ao gerar certificado. Tente novamente.", "error");
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-['Inter'] pb-24">
@@ -1814,12 +1827,7 @@ const App: React.FC = () => {
                               </div>
                             </div>
                             <button
-                              onClick={() => {
-                                showToast("Gerando certificado em PDF...", "info");
-                                setTimeout(() => {
-                                  showToast("Certificado baixado com sucesso!", "success");
-                                }, 1500);
-                              }}
+                              onClick={() => handleDownloadCertificate(cert)}
                               className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-[9px] font-bold hover:bg-indigo-700 transition-colors"
                             >
                               <i className="fas fa-download mr-1"></i>PDF
@@ -2413,12 +2421,18 @@ const App: React.FC = () => {
                   <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-6 mb-6">
                     <i className="fas fa-certificate text-3xl text-indigo-600 mb-3"></i>
                     <h3 className="font-black text-slate-900 mb-2">Certificado Emitido</h3>
-                    <p className="text-xs text-slate-600">
+                    <p className="text-xs text-slate-600 mb-3">
                       Certificado #{generatedCertificate.certificateNumber}
                     </p>
-                    <p className="text-xs text-slate-500 mt-2">
+                    <p className="text-xs text-slate-500 mb-4">
                       Emissor: {currentCourse.certificateIssuer}
                     </p>
+                    <button
+                      onClick={() => handleDownloadCertificate(generatedCertificate)}
+                      className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-indigo-700 transition-all"
+                    >
+                      <i className="fas fa-download mr-2"></i> Baixar Certificado (PDF)
+                    </button>
                   </div>
                 )}
                 
