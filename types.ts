@@ -83,7 +83,7 @@ export interface Course {
   duration: string;
   badgeId: string;
   description: string;
-  price?: number; // Preço do curso (0 = gratuito)
+  price?: number; // Preço do curso (undefined ou 0 = gratuito, >0 = pago)
   level?: 'basic' | 'intermediate' | 'advanced' | 'certification';
   provider?: string; // Parceiro (SENAC, SENAI, etc)
   revenueShare?: number; // Percentual que fica com TrampoHero (padrão 30%)

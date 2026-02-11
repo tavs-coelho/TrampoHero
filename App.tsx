@@ -9,6 +9,17 @@ declare const L: any;
 // --- CONSTANTES ---
 const MAX_RECENT_ITEMS = 5; // Número máximo de itens recentes a exibir (convites e notas fiscais)
 
+// Constantes de Monetização
+const COINS_PER_CURRENCY_UNIT = 10; // 1 coin a cada R$ 10 trabalhados
+const COIN_TO_CURRENCY_RATE = 0.1; // 100 coins = R$ 10
+const COINS_REDEMPTION_THRESHOLD = 100; // Mínimo de coins para resgatar
+const STREAK_BONUS_THRESHOLD = 30; // Dias para ativar bonus de streak
+const STREAK_BONUS_MULTIPLIER = 1.5; // +50% de bonus
+const CREDIT_FEE_RATE = 0.039; // 3.9% ao mês
+const REFERRAL_BONUS_FREELANCER = 20; // R$ 20 por indicação de freelancer
+const REFERRAL_BONUS_EMPLOYER = 100; // R$ 100 por indicação de empregador
+const ANALYTICS_PREMIUM_PRICE = 79; // R$ 79/mês
+
 // --- DADOS MOCKADOS ---
 const MEDALS_REPO: Medal[] = [
   { id: 'm1', name: 'Pontualidade', icon: 'fa-clock', color: 'text-amber-500', description: 'Chegou no horário em 5 trampos' },
@@ -346,13 +357,13 @@ const App: React.FC = () => {
     if (!activeJob) return;
     if (confirm("Confirmar finalização do serviço? Certifique-se de que o contratante está ciente.")) {
         const jobPayment = activeJob.payment;
-        const coinsEarned = Math.floor(jobPayment / 10); // 1 coin a cada R$ 10
+        const coinsEarned = Math.floor(jobPayment / COINS_PER_CURRENCY_UNIT);
         
         setJobs(prev => prev.map(j => j.id === activeJob.id ? { ...j, status: 'completed' } : j));
         setUser(prev => {
             const newStreak = prev.trampoCoins ? prev.trampoCoins.streak + 1 : 1;
-            const streakBonus = newStreak >= 30;
-            const actualCoins = streakBonus ? Math.floor(coinsEarned * 1.5) : coinsEarned;
+            const streakBonus = newStreak >= STREAK_BONUS_THRESHOLD;
+            const actualCoins = streakBonus ? Math.floor(coinsEarned * STREAK_BONUS_MULTIPLIER) : coinsEarned;
             
             return {
                 ...prev, 
@@ -377,7 +388,7 @@ const App: React.FC = () => {
         });
         setIsCheckedIn(false);
         setView('browse');
-        showToast(`Trabalho concluído! +${coinsEarned} TrampoCoins ganhos 🎉`, "success");
+        showToast(`Trabalho concluído! +${actualCoins} TrampoCoins ganhos 🎉`, "success");
     }
   };
 
@@ -1412,7 +1423,7 @@ const App: React.FC = () => {
                 <div>
                   <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Seu Saldo</p>
                   <h3 className="text-5xl font-black tracking-tighter">{user.trampoCoins.balance}</h3>
-                  <p className="text-xs opacity-70 mt-1">TrampoCoins = R$ {(user.trampoCoins.balance * 0.1).toFixed(2)}</p>
+                  <p className="text-xs opacity-70 mt-1">TrampoCoins = R$ {(user.trampoCoins.balance * COIN_TO_CURRENCY_RATE).toFixed(2)}</p>
                 </div>
               </div>
               
@@ -1428,9 +1439,13 @@ const App: React.FC = () => {
                   )}
                 </div>
                 <div className="mt-3 bg-white/30 h-2 rounded-full overflow-hidden">
-                  <div className="bg-white h-full rounded-full" style={{width: `${(user.trampoCoins.streak / 30) * 100}%`}}></div>
+                  <div className="bg-white h-full rounded-full" style={{width: `${Math.min((user.trampoCoins.streak / STREAK_BONUS_THRESHOLD) * 100, 100)}%`}}></div>
                 </div>
-                <p className="text-xs mt-2 opacity-80">{30 - user.trampoCoins.streak} dias para +50% bonus</p>
+                <p className="text-xs mt-2 opacity-80">
+                  {user.trampoCoins.streak >= STREAK_BONUS_THRESHOLD 
+                    ? 'Bonus ativo! Continue trabalhando para manter.' 
+                    : `${STREAK_BONUS_THRESHOLD - user.trampoCoins.streak} dias para +50% bonus`}
+                </p>
               </div>
             </div>
 
@@ -1467,20 +1482,23 @@ const App: React.FC = () => {
             {/* Resgatar */}
             <button 
               onClick={() => {
-                if (user.trampoCoins.balance >= 100) {
-                  showToast("100 TrampoCoins resgatados! R$ 10 adicionados à carteira", "success");
+                if (user.trampoCoins.balance >= COINS_REDEMPTION_THRESHOLD) {
+                  const redeemValue = COINS_REDEMPTION_THRESHOLD * COIN_TO_CURRENCY_RATE;
+                  showToast(`${COINS_REDEMPTION_THRESHOLD} TrampoCoins resgatados! R$ ${redeemValue.toFixed(2)} adicionados à carteira`, "success");
                   setUser(prev => prev.trampoCoins ? {
                     ...prev,
-                    wallet: { ...prev.wallet, balance: prev.wallet.balance + 10 },
-                    trampoCoins: { ...prev.trampoCoins, balance: prev.trampoCoins.balance - 100 }
+                    wallet: { ...prev.wallet, balance: prev.wallet.balance + redeemValue },
+                    trampoCoins: { ...prev.trampoCoins, balance: prev.trampoCoins.balance - COINS_REDEMPTION_THRESHOLD }
                   } : prev);
                 } else {
-                  showToast(`Você precisa de ${100 - user.trampoCoins.balance} coins para resgatar`, "error");
+                  showToast(`Você precisa de ${COINS_REDEMPTION_THRESHOLD - user.trampoCoins.balance} coins para resgatar`, "error");
                 }
               }}
-              disabled={user.trampoCoins.balance < 100}
-              className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest ${user.trampoCoins.balance >= 100 ? 'bg-slate-900 text-white shadow-xl active:scale-95' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+              disabled={user.trampoCoins.balance < COINS_REDEMPTION_THRESHOLD}
+              className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest ${user.trampoCoins.balance >= COINS_REDEMPTION_THRESHOLD ? 'bg-slate-900 text-white shadow-xl active:scale-95' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
             >
+              Resgatar {COINS_REDEMPTION_THRESHOLD} Coins = R$ {(COINS_REDEMPTION_THRESHOLD * COIN_TO_CURRENCY_RATE).toFixed(0)}
+            </button>
               Resgatar 100 Coins = R$ 10
             </button>
           </div>
@@ -1589,7 +1607,7 @@ const App: React.FC = () => {
                   <input type="number" placeholder="R$ 250,00" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-slate-900 focus:outline-indigo-500" />
                 </div>
                 <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                  <p className="text-xs text-amber-800"><strong>Taxa:</strong> 3,9% ao mês</p>
+                  <p className="text-xs text-amber-800"><strong>Taxa:</strong> {(CREDIT_FEE_RATE * 100).toFixed(1)}% ao mês</p>
                   <p className="text-xs text-amber-800 mt-1"><strong>Aprovação:</strong> Instantânea</p>
                 </div>
                 <button 
@@ -1671,7 +1689,7 @@ const App: React.FC = () => {
                   COPIAR
                 </button>
               </div>
-              <p className="text-sm mt-4 opacity-90">Ganhe R$ 20 por cada indicação!</p>
+              <p className="text-sm mt-4 opacity-90">Ganhe R$ {REFERRAL_BONUS_FREELANCER} por cada indicação!</p>
             </div>
 
             {/* Estatísticas */}
@@ -1725,12 +1743,12 @@ const App: React.FC = () => {
                 <p className="text-sm text-slate-600 mb-6">Acesse métricas avançadas, histórico completo e previsões com IA</p>
                 <button 
                   onClick={() => {
-                    showToast("Analytics Premium ativado! R$ 79/mês", "success");
+                    showToast(`Analytics Premium ativado! R$ ${ANALYTICS_PREMIUM_PRICE}/mês`, "success");
                     setUser(prev => ({ ...prev, analyticsAccess: 'premium' }));
                   }}
                   className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black shadow-xl"
                 >
-                  Assinar por R$ 79/mês
+                  Assinar por R$ {ANALYTICS_PREMIUM_PRICE}/mês
                 </button>
               </div>
             ) : (
