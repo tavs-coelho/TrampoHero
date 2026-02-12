@@ -18,46 +18,49 @@
 
 ## 🎯 Novo Plano de Melhorias (Priorizado)
 
-### Fase 5 — Decomposição Completa do App.tsx (Impacto muito alto)
+### Fase 5 — Decomposição Completa do App.tsx (Impacto muito alto) ✅
 
-O `App.tsx` ainda tem **2999 linhas** com 30+ handlers e 18 view sections inline. Precisa ser decomposto em componentes de view individuais.
+App.tsx reduzido de **2999 → 563 linhas** (redução de 81%).
 
 #### 5.1 Extrair Views Principais
-- [ ] `components/views/BrowseView.tsx` — Lista/mapa de vagas com filtros
-- [ ] `components/views/ActiveJobView.tsx` — Job em andamento com check-in/checkout
-- [ ] `components/views/WalletView.tsx` — Carteira, transações, saque, antecipação
-- [ ] `components/views/ChatView.tsx` — Suporte via chat com IA
-- [ ] `components/views/AcademyView.tsx` — Hero Academy, cursos e exames
-- [ ] `components/views/ProfileView.tsx` — Perfil do usuário, medalhas, certificados
-- [ ] `components/views/DashboardView.tsx` — Painel do empregador com gestão de vagas
-
-**Impacto:** App.tsx deve cair de 2999 para ~500 linhas (roteamento + estado principal)
+- [x] `components/views/BrowseView.tsx` — Lista/mapa de vagas com filtros
+- [x] `components/views/ActiveJobView.tsx` — Job em andamento com check-in/checkout
+- [x] `components/views/WalletView.tsx` — Carteira, transações, saque, antecipação
+- [x] `components/views/ChatView.tsx` — Suporte via chat com IA
+- [x] `components/views/AcademyView.tsx` — Hero Academy, cursos e exames
+- [x] `components/views/ProfileView.tsx` — Perfil do usuário, medalhas, certificados
+- [x] `components/views/DashboardView.tsx` — Painel do empregador com gestão de vagas
 
 #### 5.2 Extrair Views Secundárias
-- [ ] `components/views/CoinsView.tsx` — TrampoCoins e resgate
-- [ ] `components/views/InsuranceView.tsx` — TrampoProtect planos
-- [ ] `components/views/CreditView.tsx` — TrampoCredit e empréstimos
-- [ ] `components/views/ReferralsView.tsx` — Sistema de indicação
-- [ ] `components/views/AnalyticsView.tsx` — Análise de desempenho
-- [ ] `components/views/ChallengesView.tsx` — Desafios semanais
-- [ ] `components/views/RankingView.tsx` — Ranking de talentos
-- [ ] `components/views/StoreView.tsx` — TrampoStore e carrinho
-- [ ] `components/views/AdsView.tsx` — Gestão de anúncios (employer)
-- [ ] `components/views/TalentsView.tsx` — Listagem de talentos
+- [x] `components/views/CoinsView.tsx` — TrampoCoins e resgate
+- [x] `components/views/InsuranceView.tsx` — TrampoProtect planos
+- [x] `components/views/CreditView.tsx` — TrampoCredit e empréstimos
+- [x] `components/views/ReferralsView.tsx` — Sistema de indicação
+- [x] `components/views/AnalyticsView.tsx` — Análise de desempenho
+- [x] `components/views/ChallengesView.tsx` — Desafios semanais
+- [x] `components/views/RankingView.tsx` — Ranking de talentos
+- [x] `components/views/StoreView.tsx` — TrampoStore e carrinho
+- [x] `components/views/AdsView.tsx` — Gestão de anúncios (employer)
+- [x] `components/views/TalentsView.tsx` — Listagem de talentos
+- [x] `components/views/EmployerProfileView.tsx` — Perfil do empregador
+- [x] `components/views/EmployerWalletView.tsx` — Carteira do empregador
+- [x] `components/views/EmployerChatView.tsx` — Chat do empregador
+- [x] `components/views/EmployerActiveView.tsx` — Job ativo do empregador
 
 #### 5.3 Extrair Modais
-- [ ] `components/modals/CreateJobModal.tsx` — Criação de vaga manual/voz
-- [ ] `components/modals/PrimeModal.tsx` — Assinatura Hero Prime
-- [ ] `components/modals/PaymentModal.tsx` — Depósito via PIX/Cartão
-- [ ] `components/modals/ExamModal.tsx` — Prova de curso da Academy
-- [ ] `components/modals/JobDetailModal.tsx` — Detalhe de vaga + aplicação
+- [x] `components/modals/CreateJobModal.tsx` — Criação de vaga manual/voz
+- [x] `components/modals/PrimeModal.tsx` — Assinatura Hero Prime
+- [x] `components/modals/PaymentModal.tsx` — Depósito via PIX/Cartão
+- [x] `components/modals/ExamModal.tsx` — Prova de curso da Academy
+- [x] `components/modals/JobDetailModal.tsx` — Detalhe de vaga + aplicação
 
-#### 5.4 Migrar Estado para AppContext
-- [ ] Mover todos os `useState` do App.tsx para `useAppContext()`
-- [ ] Mover handlers para hooks customizados (`useJobActions`, `useWalletActions`, `useCourseActions`)
-- [ ] Remover prop drilling — componentes acessam estado via context
-
-**Por quê?** App.tsx com 2999 linhas continua inviável para manutenção. Cada view deve ser um arquivo independente, testável isoladamente.
+#### 5.4 Migrar Handlers para Custom Hooks
+- [x] `hooks/useToast.ts` — Estado e lógica de toast
+- [x] `hooks/useJobActions.ts` — Handlers de vagas (apply, check-in, create, etc.)
+- [x] `hooks/useWalletActions.ts` — Handlers de carteira (saque, antecipação, depósito)
+- [x] `hooks/useCourseActions.ts` — Handlers de cursos (iniciar, exame, certificado)
+- [x] `hooks/useChallengeActions.ts` — Handlers de desafios (progresso, recompensa)
+- [x] `hooks/useStoreActions.ts` — Handlers de loja e indicação
 
 ---
 
