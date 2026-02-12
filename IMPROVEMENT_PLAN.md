@@ -1,127 +1,154 @@
-# 🛠️ Plano de Melhorias — TrampoHero Pro
+# 🛠️ Plano de Melhorias V2 — TrampoHero Pro
 
 > **Data:** 12/02/2026  
 > **Status:** Aguardando aprovação antes da implementação  
-> **Objetivo:** Melhorias práticas e incrementais para levar o projeto ao próximo nível de qualidade e funcionalidade.
+> **Contexto:** Fases 1–3 do plano anterior foram implementadas com sucesso. Este é o novo plano de melhorias focado nas próximas etapas.
 
 ---
 
-## 📋 Resumo da Análise Atual
+## 📋 O Que Já Foi Feito (Plano V1)
 
-O TrampoHero Pro é uma plataforma promissora para o mercado de trabalho temporário no Brasil, com **documentação excelente**, **tipagem TypeScript abrangente** e um **conjunto amplo de funcionalidades no frontend**. No entanto, existem pontos críticos que precisam ser resolvidos para que o projeto possa evoluir de forma sustentável.
-
-### ✅ Pontos Fortes
-- Documentação completa (5 arquivos markdown)
-- Tipagem TypeScript bem definida (`types.ts` com 425 linhas)
-- Funcionalidades ricas no frontend (wallet, gamificação, cursos, etc.)
-- Backend com boas práticas de segurança (Helmet, bcrypt, rate limiting)
-- Estratégia de monetização bem pensada
-
-### ⚠️ Pontos Críticos Identificados
-- `App.tsx` monolítico com ~1542 linhas
-- Zero testes automatizados
-- Sem linting/formatação configurados
-- Backend com rotas mock (sem integração real com MongoDB)
-- Inconsistência na variável de ambiente da API Key do Gemini
-- Sem CI/CD configurado
+| Fase | Status | Resumo |
+|------|--------|--------|
+| 1 — Qualidade de Código | ✅ Concluído | ESLint + Prettier, variável de ambiente corrigida, Vitest + 22 testes |
+| 2 — Refatoração Frontend | ✅ Concluído | App.tsx: 3629→2999 linhas, 8 módulos extraídos, AppContext com useReducer |
+| 3 — Backend & Integração | ✅ Concluído | 5 modelos Mongoose, rotas reais (auth, jobs, users, wallet), apiService.ts, ErrorBoundary |
 
 ---
 
-## 🎯 Plano de Melhorias (Priorizado)
+## 🎯 Novo Plano de Melhorias (Priorizado)
 
-### Fase 1 — Qualidade de Código (Impacto imediato, baixo risco)
+### Fase 5 — Decomposição Completa do App.tsx (Impacto muito alto)
 
-#### 1.1 Configuração de Linting e Formatação
-- [x] Adicionar ESLint com regras para React + TypeScript
-- [x] Adicionar Prettier para formatação consistente
-- [x] Adicionar scripts `lint` e `format` no `package.json`
+O `App.tsx` ainda tem **2999 linhas** com 30+ handlers e 18 view sections inline. Precisa ser decomposto em componentes de view individuais.
 
-**Por quê?** Garante consistência no código e previne bugs comuns. É a base para todo o resto.
+#### 5.1 Extrair Views Principais
+- [ ] `components/views/BrowseView.tsx` — Lista/mapa de vagas com filtros
+- [ ] `components/views/ActiveJobView.tsx` — Job em andamento com check-in/checkout
+- [ ] `components/views/WalletView.tsx` — Carteira, transações, saque, antecipação
+- [ ] `components/views/ChatView.tsx` — Suporte via chat com IA
+- [ ] `components/views/AcademyView.tsx` — Hero Academy, cursos e exames
+- [ ] `components/views/ProfileView.tsx` — Perfil do usuário, medalhas, certificados
+- [ ] `components/views/DashboardView.tsx` — Painel do empregador com gestão de vagas
 
-#### 1.2 Correção da Variável de Ambiente
-- [x] Unificar o uso de `GEMINI_API_KEY` vs `API_KEY` em `vite.config.ts` e `services/geminiService.ts`
-- [x] Atualizar `.env.example` na raiz se necessário
+**Impacto:** App.tsx deve cair de 2999 para ~500 linhas (roteamento + estado principal)
 
-**Por quê?** Bug funcional — a integração com Gemini AI pode falhar silenciosamente.
+#### 5.2 Extrair Views Secundárias
+- [ ] `components/views/CoinsView.tsx` — TrampoCoins e resgate
+- [ ] `components/views/InsuranceView.tsx` — TrampoProtect planos
+- [ ] `components/views/CreditView.tsx` — TrampoCredit e empréstimos
+- [ ] `components/views/ReferralsView.tsx` — Sistema de indicação
+- [ ] `components/views/AnalyticsView.tsx` — Análise de desempenho
+- [ ] `components/views/ChallengesView.tsx` — Desafios semanais
+- [ ] `components/views/RankingView.tsx` — Ranking de talentos
+- [ ] `components/views/StoreView.tsx` — TrampoStore e carrinho
+- [ ] `components/views/AdsView.tsx` — Gestão de anúncios (employer)
+- [ ] `components/views/TalentsView.tsx` — Listagem de talentos
 
-#### 1.3 Configuração de Testes
-- [x] Instalar Vitest + @testing-library/react + jsdom
-- [x] Configurar `vitest.config.ts`
-- [x] Adicionar scripts `test` e `test:coverage` no `package.json`
-- [x] Criar testes iniciais para `services/geminiService.ts` e `services/pdfService.ts`
+#### 5.3 Extrair Modais
+- [ ] `components/modals/CreateJobModal.tsx` — Criação de vaga manual/voz
+- [ ] `components/modals/PrimeModal.tsx` — Assinatura Hero Prime
+- [ ] `components/modals/PaymentModal.tsx` — Depósito via PIX/Cartão
+- [ ] `components/modals/ExamModal.tsx` — Prova de curso da Academy
+- [ ] `components/modals/JobDetailModal.tsx` — Detalhe de vaga + aplicação
 
-**Por quê?** Sem testes, qualquer refatoração futura é arriscada.
+#### 5.4 Migrar Estado para AppContext
+- [ ] Mover todos os `useState` do App.tsx para `useAppContext()`
+- [ ] Mover handlers para hooks customizados (`useJobActions`, `useWalletActions`, `useCourseActions`)
+- [ ] Remover prop drilling — componentes acessam estado via context
 
----
-
-### Fase 2 — Refatoração do Frontend (Alta prioridade)
-
-#### 2.1 Decomposição do `App.tsx`
-Extrair componentes lógicos do arquivo monolítico:
-
-- [x] `data/constants.ts` — Constantes de monetização e configuração
-- [x] `data/mockData.ts` — Dados mockados (medalhas, cursos, vagas, etc.)
-- [x] `utils/helpers.ts` — Funções utilitárias (formatCurrency, formatDate)
-- [x] `components/Toast.tsx` — Componente de notificação
-- [x] `components/SplashScreen.tsx` — Tela de splash
-- [x] `components/Header.tsx` — Navegação e perfil do usuário
-- [x] `components/BottomNav.tsx` — Barra de navegação inferior
-- [x] `components/JobCard.tsx` — Card individual de vaga
-
-**Por quê?** Um arquivo de 3629 linhas é muito difícil de manter, debugar e revisar. A decomposição é essencial para a saúde do projeto.
-
-#### 2.2 Gerenciamento de Estado
-- [x] Criar `contexts/AppContext.tsx` com `useReducer` para estado centralizado
-- [x] Integrar AppProvider no `index.tsx`
-- [ ] Migrar App.tsx para usar `useAppContext()` (futuro — quando mais componentes precisarem de estado compartilhado)
-
-**Por quê?** O estado atual está todo concentrado em `App.tsx` com muitos `useState` interdependentes. `useReducer` dará mais previsibilidade.
+**Por quê?** App.tsx com 2999 linhas continua inviável para manutenção. Cada view deve ser um arquivo independente, testável isoladamente.
 
 ---
 
-### Fase 3 — Backend e Integração (Média prioridade)
+### Fase 6 — Cobertura de Testes (Alta prioridade)
 
-#### 3.1 Modelos do MongoDB
-- [x] Criar `backend/src/models/User.js` (Mongoose schema)
-- [x] Criar `backend/src/models/Job.js`
-- [x] Criar `backend/src/models/Transaction.js`
-- [x] Criar `backend/src/models/Course.js`
-- [x] Criar `backend/src/models/Certificate.js`
+Atualmente existem apenas **22 testes** (services). Nenhum componente React tem teste.
 
-**Por quê?** O backend não tem modelos de dados. As rotas existentes retornam dados mock. Sem modelos, não há persistência real.
+#### 6.1 Testes de Componentes
+- [ ] Testes para `Toast.tsx` — renderização, tipos, botão fechar
+- [ ] Testes para `SplashScreen.tsx` — renderização
+- [ ] Testes para `Header.tsx` — role switching, prime badge, navegação
+- [ ] Testes para `BottomNav.tsx` — navegação entre views, estado ativo
+- [ ] Testes para `JobCard.tsx` — renderização de dados, badge destaque, click
+- [ ] Testes para `ErrorBoundary.tsx` — captura de erros, botão retry
 
-#### 3.2 Integração Frontend ↔ Backend
-- [x] Criar `services/apiService.ts` — camada de abstração para chamadas HTTP
-- [x] Conectar MongoDB no `server.js` via Mongoose
-- [x] Atualizar rotas de autenticação para usar modelo User (register/login reais)
-- [x] Atualizar rotas de vagas para usar modelo Job (CRUD completo)
-- [x] Atualizar rotas de perfil para usar modelo User
-- [x] Atualizar rotas de wallet para usar modelos User + Transaction
+#### 6.2 Testes de Hooks e Context
+- [ ] Testes para `AppContext.tsx` — reducer actions, estado inicial, provider
+- [ ] Testes para `apiService.ts` — chamadas HTTP, token management, erros
 
-**Por quê?** Atualmente o frontend funciona 100% com dados mock/hardcoded. Para ser um produto real, precisa de persistência.
+#### 6.3 Testes de Integração
+- [ ] Testes E2E básicos com Playwright ou Cypress (fluxo principal: browse → apply → active)
+- [ ] Teste de fluxo de pagamento (wallet → deposit → withdraw)
 
-#### 3.3 Tratamento de Erros
-- [x] Criar componente `ErrorBoundary` para erros React
-- [x] Padronizar respostas de erro no backend (formato `{ success, error }` consistente)
-- [x] Integrar ErrorBoundary no `index.tsx`
+**Meta:** Atingir **60%+ de cobertura** de código
 
-**Por quê?** Erros não tratados resultam em tela branca para o usuário. Error boundaries e feedback visual são essenciais para UX.
+**Por quê?** Sem testes em componentes, refatorações futuras podem quebrar a UI silenciosamente. Testes de integração garantem que fluxos críticos funcionam.
 
 ---
 
-### Fase 4 — DevOps e Infraestrutura (Baixa prioridade, alto impacto a longo prazo)
+### Fase 7 — Backend Completo (Média prioridade)
 
-#### 4.1 CI/CD com GitHub Actions
-- [ ] Criar `.github/workflows/ci.yml` — Lint + Build + Test em PRs
-- [ ] Criar `.github/workflows/deploy.yml` — Deploy automático (Vercel/Netlify)
+4 rotas ainda usam mock data: `challenges.js`, `ranking.js`, `store.js`, `ads.js`
 
-**Por quê?** Automação previne regressões e garante que o código sempre compila e passa nos testes.
+#### 7.1 Modelos Faltantes
+- [ ] `backend/src/models/Challenge.js` — Desafios semanais
+- [ ] `backend/src/models/Product.js` — Produtos da TrampoStore
+- [ ] `backend/src/models/Order.js` — Pedidos da loja
+- [ ] `backend/src/models/Advertisement.js` — Campanhas de anúncios
 
-#### 4.2 Logging e Monitoramento
-- [ ] Adicionar Morgan para logs HTTP no backend
-- [ ] Adicionar Winston para logging estruturado
+#### 7.2 Atualizar Rotas Restantes
+- [ ] `routes/challenges.js` — CRUD com modelo Challenge, progresso por usuário
+- [ ] `routes/ranking.js` — Ranking calculado a partir de jobs completados
+- [ ] `routes/store.js` — Produtos e pedidos com modelos reais
+- [ ] `routes/ads.js` — Campanhas de anúncios com modelo Advertisement
 
-**Por quê?** Sem logs, é impossível diagnosticar problemas em produção.
+#### 7.3 Seeds e Fixtures
+- [ ] Criar `backend/src/seeds/seed.js` — Script para popular o banco com dados iniciais
+- [ ] Migrar dados de `data/mockData.ts` para seed script
+
+**Por quê?** Metade das rotas do backend ainda retornam dados hardcoded. Para consistência, todas devem usar Mongoose.
+
+---
+
+### Fase 8 — UX e Acessibilidade (Média prioridade)
+
+#### 8.1 Acessibilidade (a11y)
+- [ ] Adicionar `aria-label` em todos os botões com apenas ícone
+- [ ] Adicionar `role` e `aria-*` em modais e navigation
+- [ ] Garantir contraste mínimo WCAG 2.1 AA em textos pequenos
+- [ ] Adicionar suporte a navegação por teclado nos menus
+
+#### 8.2 Loading States
+- [ ] Criar componente `Skeleton.tsx` para loading de listas
+- [ ] Adicionar loading states em chamadas ao backend (apiService)
+- [ ] Adicionar indicador de "Carregando..." em views que buscam dados
+
+#### 8.3 Responsividade
+- [ ] Garantir que todas as views funcionam em telas de 320px a 1440px
+- [ ] Testar e ajustar layout em modo paisagem (mobile)
+
+**Por quê?** Acessibilidade é requisito legal (Lei 13.146/2015 no Brasil) e melhora a experiência para todos os usuários. Loading states evitam confusão do usuário ao esperar respostas do servidor.
+
+---
+
+### Fase 9 — Documentação e DX (Baixa prioridade)
+
+#### 9.1 Atualizar Documentação
+- [ ] Atualizar `README.md` — corrigir instrução de env var (`API_KEY` → `GEMINI_API_KEY`)
+- [ ] Documentar nova estrutura de componentes no `DEVELOPER_GUIDE.md`
+- [ ] Adicionar guia de contribuição para novos devs (`CONTRIBUTING.md` — atualizar)
+
+#### 9.2 Storybook
+- [ ] Configurar Storybook para visualização isolada de componentes
+- [ ] Criar stories para Toast, Header, BottomNav, JobCard, ErrorBoundary
+
+#### 9.3 TypeScript Strict
+- [ ] Habilitar `strict: true` no `tsconfig.json`
+- [ ] Corrigir erros de tipagem resultantes
+- [ ] Adicionar tipos explícitos em handlers que usam `any`
+
+**Por quê?** Documentação atualizada e ferramentas como Storybook aceleram o onboarding de novos desenvolvedores. TypeScript strict previne bugs em tempo de compilação.
 
 ---
 
@@ -129,24 +156,24 @@ Extrair componentes lógicos do arquivo monolítico:
 
 | Fase | Esforço | Risco | Impacto | Prioridade |
 |------|---------|-------|---------|------------|
-| 1 — Qualidade de Código | Baixo | Baixo | Alto | 🔴 Crítica |
-| 2 — Refatoração Frontend | Médio | Médio | Muito Alto | 🟠 Alta |
-| 3 — Backend & Integração | Alto | Médio | Muito Alto | 🟡 Média |
-| 4 — DevOps & Infra | Baixo | Baixo | Alto | 🟢 Baixa |
+| 5 — Decomposição App.tsx | Alto | Médio | Muito Alto | 🔴 Crítica |
+| 6 — Cobertura de Testes | Médio | Baixo | Alto | 🟠 Alta |
+| 7 — Backend Completo | Médio | Baixo | Médio | 🟡 Média |
+| 8 — UX e Acessibilidade | Médio | Baixo | Alto | 🟡 Média |
+| 9 — Documentação e DX | Baixo | Baixo | Médio | 🟢 Baixa |
 
 ---
 
 ## 🚦 Próximos Passos
 
-**Aguardando aprovação do plano.** Após aprovação, a implementação seguirá a ordem das fases (1 → 2 → 3 → 4), com commits incrementais e validação a cada etapa.
+**Aguardando aprovação do plano.** Após aprovação, a implementação seguirá a ordem das fases (5 → 6 → 7 → 8 → 9), com commits incrementais e validação a cada etapa.
 
 ### Perguntas para o Autor:
 1. **Deseja implementar todas as fases ou apenas algumas?**
-2. **Há preferência por começar pelo backend ou frontend?**
-3. **Qual é o framework de testes preferido?** (Vitest é a recomendação, mas Jest também é opção)
-4. **Pretende usar Mongoose (ODM) ou o driver nativo do MongoDB?**
-5. **Há interesse em adicionar Tailwind CSS para estilização dos componentes?**
+2. **Há prioridade em alguma fase específica?**
+3. **Deseja incluir testes E2E (Playwright/Cypress) ou apenas unitários/de componente?**
+4. **Tem interesse em Storybook para documentação de componentes?**
 
 ---
 
-> 💡 *Este plano foi elaborado com base na análise completa do repositório. Nenhuma implementação será feita antes da aprovação.*
+> 💡 *Este plano foi elaborado com base na análise do estado atual após as Fases 1–3. Nenhuma implementação será feita antes da aprovação.*
