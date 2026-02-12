@@ -10,6 +10,7 @@ import { SplashScreen } from './components/SplashScreen';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { JobCard } from './components/JobCard';
+import { ExamModal, PrimeModal, PaymentModal, CreateJobModal, JobDetailModal } from './components/modals';
 
 declare const L: any;
 
@@ -2565,432 +2566,81 @@ const App: React.FC = () => {
 
       {/* MODAL EXAME DE CURSO */}
       {showExamModal && currentCourse && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/90 backdrop-blur-md p-6 animate-in fade-in duration-300 overflow-y-auto">
-          <div className="bg-white w-full max-w-2xl rounded-[3rem] p-8 shadow-2xl relative my-8">
-            <button 
-              onClick={() => {
-                setShowExamModal(false);
-                setCurrentCourse(null);
-              }} 
-              className="absolute top-6 right-6 w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors text-xl"
-            >
-              &times;
-            </button>
-            
-            {!showExamResult ? (
-              <>
-                <div className="text-center mb-6">
-                  <div className="w-16 h-16 bg-indigo-100 rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                    <i className="fas fa-graduation-cap text-3xl text-indigo-600"></i>
-                  </div>
-                  <h2 className="text-2xl font-black text-slate-900 mb-2">{currentCourse.title}</h2>
-                  <p className="text-slate-500 text-sm mb-4">{currentCourse.description}</p>
-                  <div className="flex items-center justify-center gap-4 text-xs">
-                    <span className="bg-amber-50 text-amber-600 px-3 py-1 rounded-full font-bold">
-                      <i className="fas fa-clock mr-1"></i> {currentCourse.duration}
-                    </span>
-                    <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full font-bold">
-                      Nota mínima: {currentCourse.passingScore}%
-                    </span>
-                  </div>
-                </div>
-
-                {/* Progresso */}
-                <div className="mb-6">
-                  <div className="flex justify-between text-xs font-bold text-slate-600 mb-2">
-                    <span>Questão {currentQuestionIndex + 1} de {currentCourse.examQuestions.length}</span>
-                    <span>{Math.round(((currentQuestionIndex + 1) / currentCourse.examQuestions.length) * 100)}%</span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-indigo-600 transition-all duration-300"
-                      style={{ width: `${((currentQuestionIndex + 1) / currentCourse.examQuestions.length) * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
-
-                {/* Questão */}
-                <div className="bg-slate-50 rounded-2xl p-6 mb-6">
-                  <h3 className="font-black text-slate-900 text-lg mb-4">
-                    {currentCourse.examQuestions[currentQuestionIndex].question}
-                  </h3>
-                  <div className="space-y-3">
-                    {currentCourse.examQuestions[currentQuestionIndex].options.map((option, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleAnswerQuestion(index)}
-                        className={`w-full p-4 rounded-xl text-left transition-all ${
-                          userAnswers[currentQuestionIndex] === index
-                            ? 'bg-indigo-600 text-white shadow-lg'
-                            : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                            userAnswers[currentQuestionIndex] === index
-                              ? 'bg-white text-indigo-600'
-                              : 'bg-slate-100 text-slate-600'
-                          }`}>
-                            {String.fromCharCode(65 + index)}
-                          </div>
-                          <span className="font-medium text-sm">{option}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Botões de navegação */}
-                <div className="flex gap-3">
-                  <button
-                    onClick={handlePreviousQuestion}
-                    disabled={currentQuestionIndex === 0}
-                    className={`flex-1 py-4 rounded-xl font-bold text-sm uppercase tracking-wide transition-all ${
-                      currentQuestionIndex === 0
-                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                        : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                    }`}
-                  >
-                    <i className="fas fa-arrow-left mr-2"></i> Anterior
-                  </button>
-                  <button
-                    onClick={handleNextQuestion}
-                    disabled={userAnswers[currentQuestionIndex] === undefined}
-                    className={`flex-1 py-4 rounded-xl font-bold text-sm uppercase tracking-wide transition-all ${
-                      userAnswers[currentQuestionIndex] === undefined
-                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                        : currentQuestionIndex === currentCourse.examQuestions.length - 1
-                        ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg'
-                        : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
-                    }`}
-                  >
-                    {currentQuestionIndex === currentCourse.examQuestions.length - 1 ? (
-                      <>
-                        <i className="fas fa-check mr-2"></i> Finalizar
-                      </>
-                    ) : (
-                      <>
-                        Próxima <i className="fas fa-arrow-right ml-2"></i>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </>
-            ) : (
-              /* Resultado do Exame */
-              <div className="text-center">
-                <div className={`w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center ${
-                  examScore >= currentCourse.passingScore
-                    ? 'bg-emerald-100'
-                    : 'bg-red-100'
-                }`}>
-                  <i className={`fas text-5xl ${
-                    examScore >= currentCourse.passingScore
-                      ? 'fa-trophy text-emerald-600'
-                      : 'fa-times text-red-600'
-                  }`}></i>
-                </div>
-                
-                <h2 className="text-3xl font-black text-slate-900 mb-2">
-                  {examScore >= currentCourse.passingScore ? 'Parabéns!' : 'Não foi dessa vez'}
-                </h2>
-                
-                <p className="text-slate-600 mb-6">
-                  {examScore >= currentCourse.passingScore
-                    ? 'Você foi aprovado no curso e recebeu seu certificado!'
-                    : `Você precisa de ${currentCourse.passingScore}% para ser aprovado. Estude mais e tente novamente!`
-                  }
-                </p>
-                
-                <div className="bg-slate-50 rounded-2xl p-6 mb-6">
-                  <div className="text-6xl font-black text-slate-900 mb-2">{examScore}%</div>
-                  <p className="text-sm text-slate-600 font-bold">Sua pontuação</p>
-                </div>
-                
-                {examScore >= currentCourse.passingScore && generatedCertificate && (
-                  <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-6 mb-6">
-                    <i className="fas fa-certificate text-3xl text-indigo-600 mb-3"></i>
-                    <h3 className="font-black text-slate-900 mb-2">Certificado Emitido</h3>
-                    <p className="text-xs text-slate-600 mb-3">
-                      Certificado #{generatedCertificate.certificateNumber}
-                    </p>
-                    <p className="text-xs text-slate-500 mb-4">
-                      Emissor: {currentCourse.certificateIssuer}
-                    </p>
-                    <button
-                      onClick={() => handleDownloadCertificate(generatedCertificate)}
-                      className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-indigo-700 transition-all"
-                    >
-                      <i className="fas fa-download mr-2"></i> Baixar Certificado (PDF)
-                    </button>
-                  </div>
-                )}
-                
-                <button
-                  onClick={() => {
-                    setShowExamModal(false);
-                    setCurrentCourse(null);
-                    setShowExamResult(false);
-                  }}
-                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-wide hover:bg-slate-800 transition-all"
-                >
-                  Fechar
-                </button>
-                
-                {examScore < currentCourse.passingScore && (
-                  <button
-                    onClick={() => {
-                      setCurrentQuestionIndex(0);
-                      setUserAnswers([]);
-                      setShowExamResult(false);
-                      setGeneratedCertificate(null);
-                    }}
-                    className="w-full mt-3 py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-wide hover:bg-indigo-700 transition-all"
-                  >
-                    <i className="fas fa-redo mr-2"></i> Tentar Novamente
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+        <ExamModal
+          currentCourse={currentCourse}
+          currentQuestionIndex={currentQuestionIndex}
+          userAnswers={userAnswers}
+          showExamResult={showExamResult}
+          examScore={examScore}
+          generatedCertificate={generatedCertificate}
+          handleAnswerQuestion={handleAnswerQuestion}
+          handleNextQuestion={handleNextQuestion}
+          handlePreviousQuestion={handlePreviousQuestion}
+          handleDownloadCertificate={handleDownloadCertificate}
+          onClose={() => {
+            setShowExamModal(false);
+            setCurrentCourse(null);
+            setShowExamResult(false);
+          }}
+          onRetry={() => {
+            setCurrentQuestionIndex(0);
+            setUserAnswers([]);
+            setShowExamResult(false);
+            setGeneratedCertificate(null);
+          }}
+        />
       )}
 
       {/* MODAL HERO PRIME */}
       {showPrimeModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-indigo-900/90 backdrop-blur-md p-6 animate-in fade-in duration-300">
-            <div className="bg-white w-full max-w-sm rounded-[3rem] p-8 shadow-2xl relative overflow-hidden">
-                <button onClick={() => setShowPrimeModal(false)} className="absolute top-6 right-6 w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors">&times;</button>
-                
-                <div className="text-center mb-8">
-                    <div className="w-20 h-20 bg-amber-400 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg shadow-amber-200">
-                        <i className="fas fa-crown text-4xl text-white"></i>
-                    </div>
-                    <h2 className="text-2xl font-black text-slate-900">Hero Prime</h2>
-                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Acelere seus Ganhos</p>
-                </div>
-
-                <div className="space-y-4 mb-8">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0"><i className="fas fa-money-bill-transfer"></i></div>
-                        <div>
-                            <h4 className="font-bold text-slate-900 text-sm">Taxa Zero em Saques</h4>
-                            <p className="text-[10px] text-slate-500">Economize R$ 2,50 a cada saque PIX.</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0"><i className="fas fa-shield-halved"></i></div>
-                        <div>
-                            <h4 className="font-bold text-slate-900 text-sm">Seguro Acidentes</h4>
-                            <p className="text-[10px] text-slate-500">Cobertura de até R$ 20.000 em jobs.</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0"><i className="fas fa-bolt"></i></div>
-                        <div>
-                            <h4 className="font-bold text-slate-900 text-sm">Vagas VIP</h4>
-                            <p className="text-[10px] text-slate-500">Acesso a vagas de alto valor (+R$ 200).</p>
-                        </div>
-                    </div>
-                </div>
-
-                {user.isPrime ? (
-                    <button onClick={handleUnsubscribePrime} className="w-full py-4 bg-red-50 text-red-500 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-red-100 transition-colors">
-                        Cancelar Assinatura
-                    </button>
-                ) : (
-                    <button onClick={handleSubscribePrime} className="w-full py-5 bg-indigo-600 text-white rounded-3xl font-black uppercase tracking-widest shadow-xl shadow-indigo-200 active:scale-95 transition-all">
-                        Assinar por R$ 29,90/mês
-                    </button>
-                )}
-                
-                <p className="text-center text-[9px] text-slate-400 mt-4 font-bold opacity-60">Cancele quando quiser. Termos aplicáveis.</p>
-            </div>
-        </div>
+        <PrimeModal
+          user={user}
+          handleSubscribePrime={handleSubscribePrime}
+          handleUnsubscribePrime={handleUnsubscribePrime}
+          onClose={() => setShowPrimeModal(false)}
+        />
       )}
 
       {/* MODAL PAGAMENTO / DEPÓSITO */}
       {showPaymentModal && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/90 backdrop-blur-md p-6 animate-in fade-in duration-300">
-            <div className="bg-white w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl relative">
-                <div className="bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="font-black text-slate-900 text-lg">Adicionar Saldo</h3>
-                    <button onClick={() => setShowPaymentModal(false)} className="text-slate-400 hover:text-slate-600">&times;</button>
-                </div>
-                
-                <div className="p-6 space-y-6">
-                    <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-2">Valor do Depósito (R$)</label>
-                        <input 
-                            type="number" 
-                            value={depositAmount} 
-                            onChange={(e) => setDepositAmount(e.target.value)} 
-                            className="w-full p-4 bg-slate-50 rounded-2xl font-black text-2xl text-slate-900 focus:outline-indigo-500 border border-transparent focus:border-indigo-200 transition-all text-center" 
-                            placeholder="0,00" 
-                        />
-                    </div>
-
-                    <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
-                        <button onClick={() => setPaymentMethod('pix')} className={`flex-1 py-3 rounded-lg text-xs font-black uppercase transition-all ${paymentMethod === 'pix' ? 'bg-white shadow-md text-emerald-600' : 'text-slate-400'}`}>
-                            <i className="fas fa-qrcode mr-1"></i> PIX
-                        </button>
-                        <button onClick={() => setPaymentMethod('card')} className={`flex-1 py-3 rounded-lg text-xs font-black uppercase transition-all ${paymentMethod === 'card' ? 'bg-white shadow-md text-indigo-600' : 'text-slate-400'}`}>
-                            <i className="fas fa-credit-card mr-1"></i> Cartão
-                        </button>
-                    </div>
-
-                    {paymentMethod === 'pix' ? (
-                        <div className="text-center py-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                            <div className="w-40 h-40 bg-white border-2 border-dashed border-emerald-300 rounded-2xl mx-auto flex items-center justify-center mb-4">
-                                <i className="fas fa-qrcode text-6xl text-emerald-200"></i>
-                            </div>
-                            <p className="text-xs text-slate-500 font-medium mb-4">Escaneie o QR Code ou use o Copia e Cola.</p>
-                            <button onClick={() => showToast("Código PIX copiado!", "success")} className="text-emerald-600 text-xs font-black uppercase bg-emerald-50 px-4 py-2 rounded-lg hover:bg-emerald-100 transition-colors">
-                                <i className="fas fa-copy mr-1"></i> Copiar Código
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                            <div className="relative">
-                                <i className="fas fa-credit-card absolute left-4 top-4 text-slate-300"></i>
-                                <input placeholder="Número do Cartão" value={cardData.number} onChange={(e) => setCardData({...cardData, number: e.target.value})} className="w-full pl-10 p-3 bg-slate-50 rounded-xl text-sm font-bold text-slate-700 focus:outline-indigo-500" />
-                            </div>
-                            <div className="flex gap-3">
-                                <input placeholder="Validade (MM/AA)" value={cardData.expiry} onChange={(e) => setCardData({...cardData, expiry: e.target.value})} className="flex-1 p-3 bg-slate-50 rounded-xl text-sm font-bold text-slate-700 focus:outline-indigo-500" />
-                                <input placeholder="CVV" value={cardData.cvv} onChange={(e) => setCardData({...cardData, cvv: e.target.value})} className="w-20 p-3 bg-slate-50 rounded-xl text-sm font-bold text-slate-700 focus:outline-indigo-500" />
-                            </div>
-                            <input placeholder="Nome no Cartão" value={cardData.name} onChange={(e) => setCardData({...cardData, name: e.target.value})} className="w-full p-3 bg-slate-50 rounded-xl text-sm font-bold text-slate-700 focus:outline-indigo-500" />
-                        </div>
-                    )}
-
-                    <button 
-                        onClick={handleProcessPayment} 
-                        disabled={isProcessingPayment || !depositAmount}
-                        className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest text-white shadow-xl transition-all ${isProcessingPayment ? 'bg-slate-300 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-800 active:scale-95'}`}
-                    >
-                        {isProcessingPayment ? (
-                            <span className="flex items-center justify-center gap-2"><i className="fas fa-spinner fa-spin"></i> Processando...</span>
-                        ) : (
-                            `Confirmar ${paymentMethod === 'pix' ? 'Pagamento' : 'Depósito'}`
-                        )}
-                    </button>
-                </div>
-            </div>
-        </div>
+        <PaymentModal
+          depositAmount={depositAmount}
+          setDepositAmount={setDepositAmount}
+          paymentMethod={paymentMethod}
+          setPaymentMethod={setPaymentMethod}
+          cardData={cardData}
+          setCardData={setCardData}
+          isProcessingPayment={isProcessingPayment}
+          handleProcessPayment={handleProcessPayment}
+          showToast={showToast}
+          onClose={() => setShowPaymentModal(false)}
+        />
       )}
 
       {/* MODAL CRIAR VAGA */}
       {showCreateJobModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-            <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl animate-in slide-in-from-bottom-20 duration-300">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-black text-slate-900">Publicar Vaga</h3>
-                    <button onClick={() => setShowCreateJobModal(false)} className="w-10 h-10 bg-slate-50 rounded-full text-slate-400 hover:bg-slate-100">&times;</button>
-                </div>
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Título</label>
-                        <input value={newJobData.title} onChange={e => setNewJobData({...newJobData, title: e.target.value})} className="w-full p-3 bg-slate-50 rounded-xl font-bold text-slate-900 focus:outline-indigo-500" placeholder="Ex: Garçom para Jantar" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Valor (R$)</label>
-                            <input type="number" value={newJobData.payment} onChange={e => setNewJobData({...newJobData, payment: e.target.value})} className="w-full p-3 bg-slate-50 rounded-xl font-bold text-slate-900 focus:outline-indigo-500" placeholder="150" />
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Nicho</label>
-                            <select value={newJobData.niche} onChange={e => setNewJobData({...newJobData, niche: e.target.value as Niche})} className="w-full p-3 bg-slate-50 rounded-xl font-bold text-slate-900 focus:outline-indigo-500">
-                                {Object.values(Niche).map(n => <option key={n} value={n}>{n}</option>)}
-                            </select>
-                        </div>
-                    </div>
-                    <div>
-                        <div className="flex justify-between items-center mb-1">
-                            <label className="block text-[10px] font-black uppercase text-slate-400">Descrição</label>
-                            <button onClick={handleAutoDescription} disabled={isGeneratingDesc} className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg flex items-center gap-1">
-                                {isGeneratingDesc ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-magic"></i>} Gerar com IA
-                            </button>
-                        </div>
-                        <textarea value={newJobData.description} onChange={e => setNewJobData({...newJobData, description: e.target.value})} className="w-full p-3 bg-slate-50 rounded-xl font-medium text-sm text-slate-700 h-24 focus:outline-indigo-500" placeholder="Detalhes do serviço..."></textarea>
-                    </div>
-                    <button onClick={handleCreateJob} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">Publicar Agora</button>
-                </div>
-            </div>
-        </div>
+        <CreateJobModal
+          newJobData={newJobData}
+          setNewJobData={setNewJobData}
+          isGeneratingDesc={isGeneratingDesc}
+          handleAutoDescription={handleAutoDescription}
+          handleCreateJob={handleCreateJob}
+          onClose={() => setShowCreateJobModal(false)}
+        />
       )}
 
       {/* MODAL DETALHE VAGA */}
       {selectedJob && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-lg rounded-[4rem] p-12 shadow-2xl animate-in slide-in-from-bottom-20 duration-500 overflow-hidden relative">
-             {selectedJob.isBoosted && <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400 rotate-45 translate-x-16 -translate-y-16"></div>}
-             <div className="flex justify-between items-start mb-8">
-                <div>
-                   <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full">{selectedJob.niche}</span>
-                   <h3 className="text-4xl font-black mt-4 tracking-tighter leading-tight text-slate-900">{selectedJob.title}</h3>
-                </div>
-                <button onClick={() => setSelectedJob(null)} className="w-12 h-12 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center hover:text-slate-900 transition-colors">&times;</button>
-             </div>
-             
-             {user.role === 'employer' && selectedJob.employerId === user.id ? (
-                // --- VISUALIZAÇÃO DO EMPREGADOR (GESTÃO) ---
-                <div className="space-y-6">
-                    <div className="bg-slate-50 p-6 rounded-[2rem]">
-                        <div className="flex justify-between items-center mb-4">
-                            <h4 className="font-bold text-slate-900 text-sm">Candidatos (2)</h4>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">Aguardando</span>
-                        </div>
-                        <div className="space-y-3">
-                            <div className="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center font-black text-xs">JP</div>
-                                    <div>
-                                        <p className="font-bold text-xs text-slate-900">João Paulo</p>
-                                        <p className="text-[9px] text-amber-500 font-bold"><i className="fas fa-star"></i> 4.8</p>
-                                    </div>
-                                </div>
-                                <button onClick={() => handleApproveCandidate('João Paulo')} className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-[9px] font-black uppercase">Aprovar</button>
-                            </div>
-                            <div className="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center font-black text-xs">MA</div>
-                                    <div>
-                                        <p className="font-bold text-xs text-slate-900">Maria A.</p>
-                                        <p className="text-[9px] text-amber-500 font-bold"><i className="fas fa-star"></i> 5.0</p>
-                                    </div>
-                                </div>
-                                <button onClick={() => handleApproveCandidate('Maria A.')} className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-[9px] font-black uppercase">Aprovar</button>
-                            </div>
-                        </div>
-                    </div>
-                    <button onClick={() => handleCloseJob(selectedJob.id)} className="w-full py-4 bg-red-50 text-red-600 rounded-[2rem] font-black uppercase tracking-widest hover:bg-red-100 transition-colors">
-                        Encerrar Vaga
-                    </button>
-                </div>
-             ) : (
-                // --- VISUALIZAÇÃO DO FREELANCER (APLICAÇÃO) ---
-                <>
-                    <p className="text-slate-500 mb-10 text-base leading-relaxed font-medium">{selectedJob.description}</p>
-                    <div className="flex items-center justify-between p-8 bg-slate-50 rounded-[2.5rem] mb-10">
-                        <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pagamento</p><p className="text-3xl font-black text-indigo-600">R$ {selectedJob.payment}</p></div>
-                        <div className="text-right">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Min. Avaliação</p>
-                        <p className={`text-sm font-bold ${selectedJob.minRatingRequired && user.rating >= selectedJob.minRatingRequired ? 'text-emerald-500' : 'text-amber-500'}`}>
-                            <i className="fas fa-star mr-1"></i>
-                            {selectedJob.minRatingRequired || 'Todos'}
-                        </p>
-                        </div>
-                    </div>
-                    <div className="space-y-3">
-                        <button onClick={() => handleApply(selectedJob)} className="w-full py-6 bg-slate-900 text-white rounded-[2.5rem] font-black shadow-2xl active:scale-95 transition-all text-xl">Aceitar Trampo Hero</button>
-                        <button onClick={() => handleShare(selectedJob)} className="w-full py-4 bg-transparent text-indigo-600 font-bold text-sm uppercase tracking-widest hover:bg-indigo-50 rounded-[2.5rem] transition-colors">
-                            <i className="fas fa-share-alt mr-2"></i> Compartilhar Link
-                        </button>
-                    </div>
-                </>
-             )}
-          </div>
-        </div>
+        <JobDetailModal
+          job={selectedJob}
+          user={user}
+          isApplying={isApplying}
+          handleApply={handleApply}
+          handleShare={handleShare}
+          handleApproveCandidate={handleApproveCandidate}
+          handleCloseJob={handleCloseJob}
+          onClose={() => setSelectedJob(null)}
+        />
       )}
     </div>
   );
