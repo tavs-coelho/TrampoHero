@@ -1,29 +1,36 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Niche, Job, UserProfile, SubscriptionTier, Message, Course, Transaction, Invitation, Invoice, Certificate, WeeklyChallenge, TalentRanking, StoreProduct, StoreOrder, Advertisement, Referral } from './types';
-import { translateMessage, supportAssistant, getRecurrentSuggestion, generateVoiceJob, generateJobDescription } from './services/geminiService';
-import { generateContract, generateCertificate } from './services/pdfService';
-import { MAX_RECENT_ITEMS, COINS_PER_CURRENCY_UNIT, COIN_TO_CURRENCY_RATE, COINS_REDEMPTION_THRESHOLD, STREAK_BONUS_THRESHOLD, STREAK_BONUS_MULTIPLIER, CREDIT_FEE_RATE, REFERRAL_BONUS_FREELANCER, REFERRAL_BONUS_EMPLOYER, ANALYTICS_PREMIUM_PRICE, DELIVERY_DAYS, DELIVERY_DAYS_MS } from './data/constants';
-import { MEDALS_REPO, COURSES, INSURANCE_PLANS, TOP_TALENTS, WEEKLY_CHALLENGES, TALENT_RANKINGS, STORE_PRODUCTS, ADVERTISEMENTS, INITIAL_JOBS, INITIAL_USER } from './data/mockData';
-import { formatCurrency, formatDate } from './utils/helpers';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { Niche, Job, UserProfile, SubscriptionTier, Message, Course, Certificate, WeeklyChallenge, TalentRanking, StoreProduct, Advertisement } from './types';
+import { supportAssistant, getRecurrentSuggestion } from './services/geminiService';
+import { WEEKLY_CHALLENGES, TALENT_RANKINGS, STORE_PRODUCTS, ADVERTISEMENTS, INITIAL_JOBS, INITIAL_USER } from './data/mockData';
 import { Toast } from './components/Toast';
 import { SplashScreen } from './components/SplashScreen';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
-import { JobCard } from './components/JobCard';
 import { ExamModal, PrimeModal, PaymentModal, CreateJobModal, JobDetailModal } from './components/modals';
+import {
+  DashboardView, TalentsView, EmployerProfileView, EmployerWalletView, EmployerChatView, EmployerActiveView,
+  BrowseView, ActiveJobView, WalletView, AcademyView, ProfileView, ChatView,
+  CoinsView, InsuranceView, CreditView, ReferralsView, AnalyticsView, ChallengesView,
+  RankingView, StoreView, AdsView
+} from './components/views';
+import { useToast } from './hooks/useToast';
+import { useJobActions } from './hooks/useJobActions';
+import { useWalletActions } from './hooks/useWalletActions';
+import { useCourseActions } from './hooks/useCourseActions';
+import { useChallengeActions } from './hooks/useChallengeActions';
+import { useStoreActions } from './hooks/useStoreActions';
+import { ViewType } from './contexts/AppContext';
 
 declare const L: any;
 
-// --- APP PRINCIPAL ---
 const App: React.FC = () => {
-  // Estado com persistência básica
   const [user, setUser] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('trampoHeroUser');
     return saved ? JSON.parse(saved) : INITIAL_USER;
   });
 
   const [jobs, setJobs] = useState<Job[]>(INITIAL_JOBS);
-  const [view, setView] = useState<'browse' | 'wallet' | 'active' | 'chat' | 'dashboard' | 'academy' | 'profile' | 'talents' | 'coins' | 'insurance' | 'credit' | 'analytics' | 'contracts' | 'referrals' | 'challenges' | 'ranking' | 'store' | 'ads'>('browse');
+  const [view, setView] = useState<ViewType>('browse');
   const [browseMode, setBrowseMode] = useState<'list' | 'map'>('list');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -38,26 +45,21 @@ const App: React.FC = () => {
   const [inputText, setInputText] = useState('');
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [toast, setToast] = useState<{msg: string, type: 'success'|'error'|'info'} | null>(null);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
 
-  // Estados de Criação de Vaga
   const [showCreateJobModal, setShowCreateJobModal] = useState(false);
   const [newJobData, setNewJobData] = useState({ title: '', payment: '', niche: Niche.RESTAURANT, date: '', startTime: '', description: '' });
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
 
-  // Estado Modal Prime
   const [showPrimeModal, setShowPrimeModal] = useState(false);
 
-  // Estados de Pagamento (Gateway)
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card'>('pix');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [cardData, setCardData] = useState({ number: '', name: '', expiry: '', cvv: '' });
 
-  // Estados de Exame/Curso
   const [showExamModal, setShowExamModal] = useState(false);
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -66,12 +68,10 @@ const App: React.FC = () => {
   const [examScore, setExamScore] = useState(0);
   const [generatedCertificate, setGeneratedCertificate] = useState<Certificate | null>(null);
 
-  // Filtros
   const [filterNiche, setFilterNiche] = useState<string>('All');
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [filterDate, setFilterDate] = useState<string>('');
 
-  // Estados para novas features
   const [challenges, setChallenges] = useState<WeeklyChallenge[]>(WEEKLY_CHALLENGES);
   const [rankings, setRankings] = useState<TalentRanking[]>(TALENT_RANKINGS);
   const [storeProducts, setStoreProducts] = useState<StoreProduct[]>(STORE_PRODUCTS);
@@ -79,54 +79,60 @@ const App: React.FC = () => {
   const [advertisements, setAdvertisements] = useState<Advertisement[]>(ADVERTISEMENTS);
   const [isApplying, setIsApplying] = useState(false);
 
-  // Refs
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersLayerRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Efeitos
-  useEffect(() => {
-    setTimeout(() => setShowSplash(false), 2000);
-  }, []);
+  // --- Hooks ---
+  const { toast, showToast, clearToast } = useToast();
 
-  useEffect(() => {
-    localStorage.setItem('trampoHeroUser', JSON.stringify(user));
-  }, [user]);
-
-  // Persiste mensagens do chat
-  useEffect(() => {
-    localStorage.setItem('trampoHeroMessages', JSON.stringify(messages));
-  }, [messages]);
-
-  // Função helper para Toasts
-  const showToast = (msg: string, type: 'success'|'error'|'info' = 'info') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 4500); // Increased toast duration to 4.5 seconds for better readability
-  };
-
-  // Carregar Job via URL
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const jobId = params.get('jobId');
-    if (jobId) {
-      const job = jobs.find(j => j.id === jobId);
-      if (job) setSelectedJob(job);
-    }
-  }, []);
+  const { handleUpdateChallengeProgress, handleClaimChallengeReward } = useChallengeActions({
+    user, setUser, challenges, setChallenges, showToast
+  });
 
   const activeJob = useMemo(() => jobs.find(j => j.id === user.activeJobId), [jobs, user.activeJobId]);
-  
+
+  const {
+    handleApply, handleCheckIn, handleCheckout, handleShare,
+    handleCreateJob, handleAutoDescription, simulateVoiceCreate,
+    handleManageJob, handleCloseJob, handleApproveCandidate, handleInviteTalent
+  } = useJobActions({
+    user, setUser, jobs, setJobs, activeJob, selectedJob, setSelectedJob,
+    setView, isCheckedIn, setIsCheckedIn, isApplying, setIsApplying,
+    isRecording, setIsRecording, newJobData, setNewJobData,
+    isGeneratingDesc, setIsGeneratingDesc, setShowCreateJobModal,
+    setDepositAmount, setShowPaymentModal, showToast, handleUpdateChallengeProgress
+  });
+
+  const { handleWithdraw, handleAnticipate, handleOpenAddBalance, handleProcessPayment } = useWalletActions({
+    user, setUser, depositAmount, setDepositAmount, paymentMethod, cardData, setCardData,
+    setIsProcessingPayment, setShowPaymentModal, showToast
+  });
+
+  const {
+    handleStartCourse, handleAnswerQuestion, handleNextQuestion,
+    handlePreviousQuestion, finishExam, handleDownloadCertificate
+  } = useCourseActions({
+    user, setUser, currentCourse, setCurrentCourse, currentQuestionIndex, setCurrentQuestionIndex,
+    userAnswers, setUserAnswers, setShowExamResult, setExamScore,
+    setGeneratedCertificate, setShowExamModal, showToast
+  });
+
+  const { handleStoreCheckout, handleApplyReferralCode, handleCompleteReferral, handleShowInvoices } = useStoreActions({
+    user, setUser, jobs, cart, setCart, storeProducts, setView, showToast
+  });
+
+  // --- Computed values ---
   const sortedOpenJobs = useMemo(() => {
     let filtered = jobs.filter(j => j.status === 'open');
     if (filterNiche !== 'All') {
-        filtered = filtered.filter(j => j.niche === filterNiche);
+      filtered = filtered.filter(j => j.niche === filterNiche);
     }
-    // Ordenação: Boosted primeiro, depois valor maior
     return filtered.sort((a, b) => {
-        if (a.isBoosted && !b.isBoosted) return -1;
-        if (!a.isBoosted && b.isBoosted) return 1;
-        return b.payment - a.payment;
+      if (a.isBoosted && !b.isBoosted) return -1;
+      if (!a.isBoosted && b.isBoosted) return 1;
+      return b.payment - a.payment;
     });
   }, [jobs, filterNiche]);
 
@@ -139,18 +145,72 @@ const App: React.FC = () => {
     });
   }, [jobs, user.id, filterNiche, filterStatus, filterDate]);
 
+  // --- Local handlers (not extracted to hooks) ---
+  const handleSubscribePrime = useCallback(() => {
+    setUser(prev => ({ ...prev, isPrime: true, tier: SubscriptionTier.PRO }));
+    setShowPrimeModal(false);
+    showToast("Bem-vindo ao Hero Prime! Benefícios ativos.", "success");
+  }, [showToast]);
+
+  const handleUnsubscribePrime = useCallback(() => {
+    if (confirm("Tem certeza que deseja cancelar? Você perderá o seguro e taxas zero.")) {
+      setUser(prev => ({ ...prev, isPrime: false, tier: SubscriptionTier.FREE }));
+      setShowPrimeModal(false);
+      showToast("Assinatura cancelada com sucesso.", "info");
+    }
+  }, [showToast]);
+
+  const handleSendMessage = useCallback(async () => {
+    if (!inputText.trim()) return;
+    const newMessage: Message = { id: Date.now().toString(), senderId: user.id, text: inputText, timestamp: new Date().toISOString() };
+    setMessages(prev => [...prev, newMessage]);
+    setInputText('');
+
+    const fallbackMessage = user.role === 'employer'
+      ? "Olá! Sou o assistente TrampoHero para empregadores. Como posso ajudá-lo com suas vagas e contratações?"
+      : "Olá! Como posso ajudá-lo?";
+
+    const response = await supportAssistant(inputText);
+    setMessages(prev => [...prev, {
+      id: Date.now().toString(),
+      senderId: 'bot',
+      text: response || fallbackMessage,
+      timestamp: new Date().toISOString()
+    }]);
+  }, [inputText, user.id, user.role]);
+
+  // --- Effects ---
+  useEffect(() => {
+    setTimeout(() => setShowSplash(false), 2000);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('trampoHeroUser', JSON.stringify(user));
+  }, [user]);
+
+  useEffect(() => {
+    localStorage.setItem('trampoHeroMessages', JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const jobId = params.get('jobId');
+    if (jobId) {
+      const job = jobs.find(j => j.id === jobId);
+      if (job) setSelectedJob(job);
+    }
+  }, []);
+
   useEffect(() => {
     if (user.role === 'employer') {
       getRecurrentSuggestion("Alex Silva", 5).then(setAiSuggestion);
     }
   }, [user.role]);
 
-  // Scroll Chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Lógica do Mapa
   useEffect(() => {
     if (view === 'browse' && browseMode === 'map' && mapContainerRef.current) {
       if (!mapRef.current) {
@@ -192,18 +252,18 @@ const App: React.FC = () => {
 
         const btn = popupDiv.querySelector('.btn-details');
         if (btn) {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                setSelectedJob(job);
-            });
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setSelectedJob(job);
+          });
         }
 
         const marker = L.marker([job.coordinates.lat, job.coordinates.lng], { icon });
-        
+
         marker.bindPopup(popupDiv, {
-            closeButton: false,
-            className: 'hero-popup',
-            maxWidth: 260
+          closeButton: false,
+          className: 'hero-popup',
+          maxWidth: 260
         });
 
         if (markersLayerRef.current) {
@@ -217,2354 +277,212 @@ const App: React.FC = () => {
     }
   }, [view, browseMode, sortedOpenJobs]);
 
-  const handleApply = (job: Job) => {
-    if (isApplying) return; // Prevent duplicate submissions
-    if (user.activeJobId) {
-      showToast("Você já tem um trabalho ativo.", "error");
-      return;
-    }
-    
-    setIsApplying(true);
-    setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: 'applied' } : j));
-    setUser(prev => ({ ...prev, activeJobId: job.id, wallet: { ...prev.wallet, scheduled: prev.wallet.scheduled + job.payment } }));
-    setSelectedJob(null);
-    setView('active');
-    setIsCheckedIn(false);
-    showToast("Vaga aceita! Prepare-se para o trabalho.", "success");
-    
-    // Reset applying state after a short delay
-    setTimeout(() => setIsApplying(false), 1000);
-  };
-
-  const handleCheckIn = () => {
-    if (!activeJob) return;
-    showToast("Verificando localização GPS...", "info");
-    setTimeout(() => {
-      setIsCheckedIn(true);
-      generateContract(activeJob, user);
-      showToast(`Check-in confirmado! Contrato enviado para ${user.name.toLowerCase().replace(' ','')}@email.com`, "success");
-    }, 1500);
-  };
-  
-  const handleCheckout = () => {
-    if (!activeJob) return;
-    if (confirm("Confirmar finalização do serviço? Certifique-se de que o contratante está ciente.")) {
-        const jobPayment = activeJob.payment;
-        const coinsEarned = Math.floor(jobPayment / COINS_PER_CURRENCY_UNIT);
-        
-        // Calculate actual coins before state update to use in toast
-        const currentStreak = user.trampoCoins ? user.trampoCoins.streak + 1 : 1;
-        const streakBonus = currentStreak >= STREAK_BONUS_THRESHOLD;
-        const actualCoins = streakBonus ? Math.floor(coinsEarned * STREAK_BONUS_MULTIPLIER) : coinsEarned;
-        
-        setJobs(prev => prev.map(j => j.id === activeJob.id ? { ...j, status: 'completed' } : j));
-        setUser(prev => {
-            const newStreak = prev.trampoCoins ? prev.trampoCoins.streak + 1 : 1;
-            const streakBonus = newStreak >= STREAK_BONUS_THRESHOLD;
-            const actualCoins = streakBonus ? Math.floor(coinsEarned * STREAK_BONUS_MULTIPLIER) : coinsEarned;
-            
-            return {
-                ...prev, 
-                activeJobId: undefined,
-                history: [...prev.history, { jobId: activeJob.id, employerId: activeJob.employerId, date: new Date().toISOString().split('T')[0] }],
-                trampoCoins: prev.trampoCoins ? {
-                    ...prev.trampoCoins,
-                    balance: prev.trampoCoins.balance + actualCoins,
-                    earned: [...prev.trampoCoins.earned, {
-                        id: `tc-${Date.now()}`,
-                        type: 'coin_earned',
-                        amount: 0,
-                        date: new Date().toISOString().split('T')[0],
-                        description: `+${actualCoins} TrampoCoins${streakBonus ? ' (Streak Bonus +50%)' : ''}`,
-                        coins: actualCoins
-                    }],
-                    streak: newStreak,
-                    lastActivity: new Date().toISOString(),
-                    streakBonus
-                } : prev.trampoCoins
-            };
-        });
-        setIsCheckedIn(false);
-        setView('browse');
-        
-        // Update challenge progress for jobs completed
-        handleUpdateChallengeProgress('jobs_completed', 1);
-        
-        // Update streak challenge
-        handleUpdateChallengeProgress('streak_days', currentStreak);
-        
-        showToast(`Trabalho concluído! +${actualCoins} TrampoCoins ganhos 🎉`, "success");
-    }
-  };
-
-  const handleSubscribePrime = () => {
-      setUser(prev => ({ ...prev, isPrime: true, tier: SubscriptionTier.PRO }));
-      setShowPrimeModal(false);
-      showToast("Bem-vindo ao Hero Prime! Benefícios ativos.", "success");
-  };
-
-  const handleUnsubscribePrime = () => {
-      if(confirm("Tem certeza que deseja cancelar? Você perderá o seguro e taxas zero.")) {
-          setUser(prev => ({ ...prev, isPrime: false, tier: SubscriptionTier.FREE }));
-          setShowPrimeModal(false);
-          showToast("Assinatura cancelada com sucesso.", "info");
-      }
-  };
-
-  const handleWithdraw = () => {
-    if (user.wallet.balance <= 0) {
-      showToast("Saldo indisponível para saque.", "error");
-      return;
-    }
-    const pixKey = prompt("Digite sua chave PIX (CPF, Celular ou Email):");
-    if (!pixKey) return;
-    
-    // Validate PIX key format (basic validation for Brazilian formats)
-    const cpfRegex = /^\d{11}$/; // CPF: exactly 11 digits
-    const phoneRegex = /^\+?55\d{10,11}$/; // Brazilian phone: +55 followed by 10-11 digits
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/; // Standard email format
-    
-    const isValidPixKey = cpfRegex.test(pixKey.replace(/\D/g, '')) || 
-                         phoneRegex.test(pixKey.replace(/\D/g, '')) || 
-                         emailRegex.test(pixKey);
-    
-    if (!isValidPixKey) {
-      showToast("Chave PIX inválida. Use CPF (11 dígitos), celular (+55) ou e-mail válido.", "error");
-      return;
-    }
-    
-    const amountToWithdraw = user.wallet.balance;
-    const fee = user.isPrime ? 0 : 2.50; // Taxa de saque para não-Prime
-    
-    if (confirm(`Confirmar saque de R$ ${amountToWithdraw.toFixed(2)} para a chave PIX: ${pixKey}?\nTaxa: R$ ${fee.toFixed(2)} ${user.isPrime ? '(Prime: Isento)' : ''}`)) {
-        showToast("Processando transferência...", "info");
-        setTimeout(() => {
-            const newTransaction: Transaction = {
-                id: Date.now().toString(),
-                type: 'withdrawal',
-                amount: -(amountToWithdraw + fee),
-                date: new Date().toLocaleDateString('pt-BR'),
-                description: `Saque PIX (${pixKey})`,
-                fee: fee
-            };
-            setUser(prev => ({
-                ...prev,
-                wallet: { ...prev.wallet, balance: 0, transactions: [newTransaction, ...prev.wallet.transactions] }
-            }));
-            showToast("PIX realizado com sucesso!", "success");
-        }, 2000);
-    }
-  };
-
-  const handleAnticipate = () => {
-    // Taxa variável entre 3% e 5% para não-Prime, 0% para Prime
-    const randomFee = (Math.random() * (0.05 - 0.03) + 0.03); 
-    const feeRate = user.isPrime ? 0 : randomFee;
-    
-    const scheduled = user.wallet.scheduled;
-    if (scheduled <= 0) {
-        showToast("Você não possui saldo agendado para antecipar.", "info");
-        return;
-    }
-
-    const feeAmount = scheduled * feeRate;
-    const netAmount = scheduled - feeAmount;
-    const feePercentage = (feeRate * 100).toFixed(1);
-
-    if (confirm(`Hero Pay - Antecipação de Recebíveis\n\nDeseja antecipar seus ganhos da próxima semana?\n\nValor Bruto: R$ ${scheduled.toFixed(2)}\nTaxa (${feePercentage}%): -R$ ${feeAmount.toFixed(2)}\n\nValor Líquido a Receber: R$ ${netAmount.toFixed(2)}`)) {
-      const newTransaction: Transaction = {
-        id: Date.now().toString(), type: 'anticipation', amount: netAmount, date: new Date().toLocaleDateString('pt-BR'),
-        description: `Antecipação Hero Pay (${feePercentage}%)`, fee: feeAmount
-      };
-      setUser(prev => ({ 
-        ...prev, 
-        wallet: { 
-          ...prev.wallet, balance: prev.wallet.balance + netAmount, scheduled: 0, transactions: [newTransaction, ...prev.wallet.transactions]
-        } 
-      }));
-      showToast(`R$ ${netAmount.toFixed(2)} antecipados com sucesso!`, "success");
-    }
-  };
-
-  const handleShare = async (job: Job) => {
-    const shareUrl = `${window.location.origin}${window.location.pathname}?jobId=${job.id}`;
-    const shareData = { title: `TrampoHero: ${job.title}`, text: `Vaga de ${job.niche} pagando R$ ${job.payment}!`, url: shareUrl };
-    try {
-      if (navigator.share) await navigator.share(shareData);
-      else {
-        await navigator.clipboard.writeText(shareUrl);
-        showToast("Link copiado!", "success");
-      }
-    } catch (err) { console.error(err); }
-  };
-
-  const handleSendMessage = async () => {
-    if (!inputText.trim()) return;
-    const newMessage: Message = { id: Date.now().toString(), senderId: user.id, text: inputText, timestamp: new Date().toISOString() };
-    setMessages(prev => [...prev, newMessage]);
-    setInputText('');
-    
-    // Chat de suporte para ambos os papéis (freelancer e employer)
-    const fallbackMessage = user.role === 'employer' 
-      ? "Olá! Sou o assistente TrampoHero para empregadores. Como posso ajudá-lo com suas vagas e contratações?"
-      : "Olá! Como posso ajudá-lo?";
-    
-    const response = await supportAssistant(inputText);
-    setMessages(prev => [...prev, { 
-      id: Date.now().toString(), 
-      senderId: 'bot', 
-      text: response || fallbackMessage, 
-      timestamp: new Date().toISOString() 
-    }]);
-  };
-
-  const simulateVoiceCreate = async () => {
-    setIsRecording(true);
-    showToast("Ouvindo... Fale a vaga.", "info");
-    
-    setTimeout(async () => {
-      setIsRecording(false);
-      const res = await generateVoiceJob("Preciso de um ajudante de cozinha para hoje 19h pagando 150 reais");
-      if (res) {
-        const newJob: Job = {
-          id: Date.now().toString(), employerId: 'emp-1', title: res.title || "Vaga por Voz",
-          employer: 'Buffet Delícia', employerRating: 4.8, niche: res.niche || Niche.RESTAURANT,
-          location: 'Vila Madalena, SP', coordinates: { lat: -23.555, lng: -46.685 },
-          payment: res.payment || 150, paymentType: 'dia', description: 'Criada via assistente de voz.',
-          date: new Date().toISOString().split('T')[0], startTime: res.startTime || '19:00', status: 'open', minRatingRequired: 3.0
-        };
-        setJobs(prev => [newJob, ...prev]);
-        showToast("Vaga criada por voz!", "success");
-      } else {
-        showToast("Não entendi, tente novamente.", "error");
-      }
-    }, 2500);
-  };
-
-  // Funções de Criação de Vaga Manual
-  const handleAutoDescription = async () => {
-    if (!newJobData.title) return showToast("Digite um título primeiro", "error");
-    setIsGeneratingDesc(true);
-    const desc = await generateJobDescription(newJobData.title, newJobData.niche);
-    setNewJobData(prev => ({ ...prev, description: desc }));
-    setIsGeneratingDesc(false);
-  };
-
-  const handleCreateJob = () => {
-    if (!newJobData.title || !newJobData.payment) return showToast("Preencha título e valor.", "error");
-    
-    // Validate date is not in the past
-    // Compare dates at midnight in local timezone to avoid timezone issues
-    const jobDate = newJobData.date || new Date().toISOString().split('T')[0];
-    const today = new Date().toISOString().split('T')[0];
-    const jobDateObj = new Date(jobDate + 'T00:00:00');
-    const todayObj = new Date(today + 'T00:00:00');
-    
-    if (jobDateObj < todayObj) {
-      return showToast("Não é possível criar vagas com data passada.", "error");
-    }
-    
-    const newJob: Job = {
-        id: Date.now().toString(),
-        employerId: user.id,
-        title: newJobData.title,
-        employer: user.name,
-        employerRating: 5.0,
-        niche: newJobData.niche,
-        location: 'São Paulo, SP', // Mock
-        coordinates: { lat: -23.5505, lng: -46.6333 },
-        payment: parseFloat(newJobData.payment),
-        paymentType: 'dia',
-        description: newJobData.description || "Sem descrição.",
-        date: jobDate,
-        startTime: newJobData.startTime || "09:00",
-        status: 'open',
-        minRatingRequired: 0
-    };
-    setJobs(prev => [newJob, ...prev]);
-    setShowCreateJobModal(false);
-    showToast("Vaga publicada com sucesso!", "success");
-    setNewJobData({ title: '', payment: '', niche: Niche.RESTAURANT, date: '', startTime: '', description: '' });
-  };
-
-  // --- NOVAS FUNÇÕES PARA FUNCIONALIDADES FALTANTES ---
-  const handleInviteTalent = (talentName: string, talentId?: string) => {
-      // Cria novo convite e adiciona ao perfil do usuário
-      // Gera ID único usando crypto API se disponível, ou fallback robusto
-      const generateUniqueId = () => {
-        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-          return crypto.randomUUID();
-        }
-        // Fallback robusto: timestamp + performance.now() para melhor unicidade
-        const timestamp = Date.now();
-        const performanceTime = typeof performance !== 'undefined' ? performance.now() : Math.random() * 10000;
-        const randomPart = Math.random().toString(36).slice(2);
-        return `inv-${timestamp}-${performanceTime.toFixed(0)}-${randomPart}`;
-      };
-      
-      const newInvitation: Invitation = {
-          id: generateUniqueId(),
-          talentName: talentName,
-          talentId: talentId || `talent-${generateUniqueId()}`, // Usa ID fornecido ou gera novo (melhor fornecer ID existente)
-          jobId: selectedJob?.id,
-          jobTitle: selectedJob?.title || "Vaga Geral",
-          status: 'pending',
-          sentDate: new Date().toLocaleDateString('pt-BR')
-      };
-      
-      setUser(prev => ({
-          ...prev,
-          invitations: [...(prev.invitations || []), newInvitation]
-      }));
-      
-      showToast(`Convite enviado para ${talentName}! Você pode acompanhar na aba "Convites".`, "success");
-  };
-
-  const handleManageJob = (job: Job) => {
-      setSelectedJob(job);
-  };
-
-  const handleCloseJob = (jobId: string) => {
-      if(confirm("Deseja encerrar esta vaga? Nenhuma nova candidatura será aceita.")) {
-          setJobs(prev => prev.map(j => j.id === jobId ? {...j, status: 'completed' } : j));
-          setSelectedJob(null);
-          showToast("Vaga encerrada com sucesso.", "success");
-      }
-  }
-
-  // --- LÓGICA DE APROVAÇÃO E PAGAMENTO DE CANDIDATOS ---
-  const handleApproveCandidate = (candidateName: string) => {
-    // 1. Verificar qual vaga está selecionada
-    if (!selectedJob) return;
-
-    // 2. Verificar saldo do empregador
-    if (user.wallet.balance < selectedJob.payment) {
-        if(confirm(`Saldo insuficiente para aprovar ${candidateName}.\nValor do Serviço: R$ ${selectedJob.payment.toFixed(2)}\nSeu Saldo: R$ ${user.wallet.balance.toFixed(2)}\n\nDeseja recarregar sua carteira agora?`)) {
-            setDepositAmount((selectedJob.payment - user.wallet.balance + 10).toString()); // Sugere valor faltante + margem
-            setShowPaymentModal(true);
-        }
-        return;
-    }
-
-    // 3. Confirmar contratação e Debitar
-    if(confirm(`Confirmar contratação de ${candidateName}?\n\nSerá debitado R$ ${selectedJob.payment.toFixed(2)} da sua carteira e retido em Escrow até a conclusão do serviço.`)) {
-        // Debita do empregador
-        const newTransaction: Transaction = {
-            id: Date.now().toString(),
-            type: 'job_payment',
-            amount: -selectedJob.payment,
-            date: new Date().toLocaleDateString('pt-BR'),
-            description: `Contratação: ${candidateName} (${selectedJob.title})`
-        };
-
-        setUser(prev => ({
-            ...prev,
-            wallet: {
-                ...prev.wallet,
-                balance: prev.wallet.balance - selectedJob.payment,
-                transactions: [newTransaction, ...prev.wallet.transactions]
-            }
-        }));
-
-        // Atualiza status da vaga
-        setJobs(prev => prev.map(j => j.id === selectedJob.id ? {...j, status: 'ongoing'} : j));
-        setSelectedJob(null);
-        showToast(`${candidateName} contratado! Valor retido em segurança.`, "success");
-    }
-  };
-
-  const handleOpenAddBalance = () => {
-    setDepositAmount('');
-    setShowPaymentModal(true);
-  };
-
-  const handleProcessPayment = () => {
-      const amount = parseFloat(depositAmount);
-      if (isNaN(amount) || amount <= 0) {
-          showToast("Valor inválido.", "error");
-          return;
-      }
-
-      if (paymentMethod === 'card') {
-         if (cardData.number.length < 13 || !cardData.name || !cardData.cvv) {
-             showToast("Dados do cartão incompletos.", "error");
-             return;
-         }
-         
-         // Validate CVV (3-4 digits)
-         if (cardData.cvv.length < 3 || cardData.cvv.length > 4 || !/^\d+$/.test(cardData.cvv)) {
-             showToast("CVV inválido. Use 3 ou 4 dígitos.", "error");
-             return;
-         }
-         
-         // Validate expiry date format (MM/YY)
-         if (!cardData.expiry || !/^\d{2}\/\d{2}$/.test(cardData.expiry)) {
-             showToast("Data de validade inválida. Use MM/AA.", "error");
-             return;
-         }
-         
-         // Check if expiry date is in the future
-         const [month, year] = cardData.expiry.split('/').map(Number);
-         const currentDate = new Date();
-         const currentMonth = currentDate.getMonth() + 1;
-         
-         // Convert 2-digit year to 4-digit (assuming 20xx for years 00-99)
-         const fullYear = year < 100 ? 2000 + year : year;
-         const currentFullYear = currentDate.getFullYear();
-         
-         if (fullYear < currentFullYear || (fullYear === currentFullYear && month < currentMonth)) {
-             showToast("Cartão vencido. Verifique a data de validade.", "error");
-             return;
-         }
-      }
-
-      setIsProcessingPayment(true);
-      
-      // Simulação de delay de rede
-      setTimeout(() => {
-          setIsProcessingPayment(false);
-          const newTransaction: Transaction = {
-              id: Date.now().toString(),
-              type: 'deposit',
-              amount: amount,
-              date: new Date().toLocaleDateString('pt-BR'),
-              description: `Depósito via ${paymentMethod === 'pix' ? 'PIX' : 'Cartão'}`
-          };
-
-          setUser(prev => ({
-              ...prev,
-              wallet: {
-                  ...prev.wallet,
-                  balance: prev.wallet.balance + amount,
-                  transactions: [newTransaction, ...prev.wallet.transactions]
-              }
-          }));
-
-          setShowPaymentModal(false);
-          showToast(`Depósito de R$ ${amount.toFixed(2)} confirmado!`, "success");
-          setDepositAmount('');
-          setCardData({ number: '', name: '', expiry: '', cvv: '' });
-      }, 2000);
-  };
-
-  const handleShowInvoices = () => {
-    // Gera notas fiscais para jobs completados se ainda não existirem
-    const completedJobs = jobs.filter(j => j.status === 'completed' && j.employerId === user.id);
-    const existingInvoiceJobIds = (user.invoices || []).map(inv => inv.jobId);
-    
-    // Gera invoices para jobs que ainda não tem
-    const newInvoices: Invoice[] = completedJobs
-      .filter(job => !existingInvoiceJobIds.includes(job.id))
-      .map(job => ({
-        id: `inv-${job.id}`,
-        jobId: job.id,
-        jobTitle: job.title,
-        amount: job.payment,
-        date: new Date().toLocaleDateString('pt-BR')
-        // downloadUrl removido - será implementado com geração real de PDF
-      }));
-    
-    if (newInvoices.length > 0) {
-      setUser(prev => ({
-        ...prev,
-        invoices: [...(prev.invoices || []), ...newInvoices]
-      }));
-      showToast(`${newInvoices.length} nota(s) fiscal(is) gerada(s) com sucesso!`, "success");
-    } else if ((user.invoices || []).length > 0) {
-      showToast(`Você tem ${user.invoices.length} nota(s) fiscal(is) disponível(is).`, "info");
-    } else {
-      showToast("Nenhum trabalho concluído para gerar notas fiscais.", "info");
-    }
-    
-    // Mostra painel de invoices
-    setView('profile');
-  };
-
-  const handleStartCourse = (course: Course) => {
-     // Verifica se já tem o curso
-     if(user.medals.find(m => m.id === course.badgeId)) {
-         showToast("Você já completou este curso!", "info");
-         return;
-     }
-
-     // Se for curso pago, poderia verificar pagamento aqui
-     if(course.price && course.price > 0) {
-         showToast("Compra de cursos em desenvolvimento. Em breve!", "info");
-         return;
-     }
-
-     // Inicia o curso - abre o modal de exame
-     setCurrentCourse(course);
-     setCurrentQuestionIndex(0);
-     setUserAnswers([]);
-     setShowExamResult(false);
-     setGeneratedCertificate(null);
-     setShowExamModal(true);
-     showToast(`Leia o material (ebook será adicionado) e faça a prova!`, "info");
-  };
-
-  const handleAnswerQuestion = (answerIndex: number) => {
-    const newAnswers = [...userAnswers];
-    newAnswers[currentQuestionIndex] = answerIndex;
-    setUserAnswers(newAnswers);
-  };
-
-  const handleNextQuestion = () => {
-    if (!currentCourse) return;
-    
-    if (currentQuestionIndex < currentCourse.examQuestions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      // Última pergunta - calcular resultado
-      finishExam();
-    }
-  };
-
-  const handlePreviousQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
-    }
-  };
-
-  const finishExam = () => {
-    if (!currentCourse) return;
-    
-    // Calcula pontuação
-    let correctAnswers = 0;
-    currentCourse.examQuestions.forEach((question, index) => {
-      if (userAnswers[index] === question.correctAnswer) {
-        correctAnswers++;
-      }
-    });
-    
-    const score = Math.round((correctAnswers / currentCourse.examQuestions.length) * 100);
-    setExamScore(score);
-    
-    const passed = score >= currentCourse.passingScore;
-    
-    if (passed) {
-      // Gera certificado
-      const certificate: Certificate = {
-        id: `cert-${Date.now()}`,
-        userId: user.id,
-        userName: user.name,
-        courseId: currentCourse.id,
-        courseTitle: currentCourse.title,
-        issuer: currentCourse.certificateIssuer,
-        issueDate: new Date().toISOString().split('T')[0],
-        score: score,
-        certificateNumber: `TH-${Date.now().toString(36).toUpperCase()}`
-      };
-      
-      // Armazena certificado para exibição no resultado
-      setGeneratedCertificate(certificate);
-      
-      // Adiciona medalha
-      const medal = MEDALS_REPO.find(m => m.id === currentCourse.badgeId);
-      
-      // Atualiza usuário
-      setUser(prev => ({
-        ...prev,
-        medals: medal ? [...prev.medals, medal] : prev.medals,
-        certificates: [...(prev.certificates || []), certificate],
-        courseProgress: [
-          ...(prev.courseProgress || []),
-          {
-            courseId: currentCourse.id,
-            userId: user.id,
-            startedAt: new Date().toISOString(),
-            completedAt: new Date().toISOString(),
-            examScore: score,
-            examAttempts: 1,
-            passed: true,
-            certificateId: certificate.id
-          }
-        ]
-      }));
-      
-      showToast(`Parabéns! Você foi aprovado com ${score}%!`, "success");
-    } else {
-      setGeneratedCertificate(null);
-      showToast(`Você obteve ${score}%. Nota mínima: ${currentCourse.passingScore}%`, "error");
-    }
-    
-    setShowExamResult(true);
-  };
-
-  const handleDownloadCertificate = (certificate: Certificate) => {
-    try {
-      showToast("Gerando certificado em PDF...", "info");
-      setTimeout(() => {
-        generateCertificate(certificate);
-        showToast("Certificado baixado com sucesso!", "success");
-      }, 500);
-    } catch (error) {
-      console.error("Error generating certificate:", error);
-      showToast("Erro ao gerar certificado. Tente novamente.", "error");
-    }
-  };
-
-  // --- REFERRAL SYSTEM ---
-  const handleApplyReferralCode = (referralCode: string) => {
-    // Simulate checking referral code
-    if (!referralCode || referralCode.length < 5) {
-      showToast("Código de indicação inválido.", "error");
-      return;
-    }
-    
-    // In a real implementation, this would check against database
-    // For now, we'll accept any code that's not the user's own
-    if (referralCode === user.referralCode) {
-      showToast("Você não pode usar seu próprio código de indicação.", "error");
-      return;
-    }
-    
-    // Create a referral record
-    // Note: In production, the referrerId should be looked up from the database
-    // using the referral code. Using a placeholder here for demo purposes.
-    const newReferral: Referral = {
-      id: `ref-${Date.now()}`,
-      referrerId: `PENDING_LOOKUP_${referralCode}`, // TODO: Lookup actual user ID in production
-      referredId: user.id,
-      referredRole: user.role,
-      status: 'pending',
-      reward: user.role === 'freelancer' ? REFERRAL_BONUS_FREELANCER : REFERRAL_BONUS_EMPLOYER,
-      createdDate: new Date().toISOString()
-    };
-    
-    // Update user with referral info
-    setUser(prev => ({
-      ...prev,
-      referrals: [...(prev.referrals || []), newReferral]
-    }));
-    
-    showToast(`Código aplicado! Ganhe R$ ${newReferral.reward} no seu primeiro trabalho!`, "success");
-  };
-  
-  const handleCompleteReferral = (referralId: string) => {
-    // Called when user completes their first job
-    setUser(prev => {
-      const referral = prev.referrals?.find(r => r.id === referralId);
-      if (!referral || referral.status !== 'pending') return prev;
-      
-      const updatedReferrals = (prev.referrals || []).map(r =>
-        r.id === referralId ? { ...r, status: 'completed' as const, completedDate: new Date().toISOString() } : r
-      );
-      
-      // Add bonus to wallet
-      const newTransaction: Transaction = {
-        id: `ref-bonus-${Date.now()}`,
-        type: 'referral_bonus',
-        amount: referral.reward,
-        date: new Date().toLocaleDateString('pt-BR'),
-        description: `Bônus de Indicação`
-      };
-      
-      return {
-        ...prev,
-        referrals: updatedReferrals,
-        wallet: {
-          ...prev.wallet,
-          balance: prev.wallet.balance + referral.reward,
-          transactions: [newTransaction, ...prev.wallet.transactions]
-        }
-      };
-    });
-    
-    showToast("Bônus de indicação creditado! 🎉", "success");
-  };
-
-  // --- STORE CHECKOUT ---
-  const handleStoreCheckout = () => {
-    if (cart.length === 0) {
-      showToast("Carrinho vazio. Adicione produtos primeiro.", "error");
-      return;
-    }
-    
-    // Calculate total
-    let total = 0;
-    const orderItems = cart.map(item => {
-      const product = storeProducts.find(p => p.id === item.productId);
-      if (product) {
-        total += product.price * item.quantity;
-        return {
-          productId: item.productId,
-          name: product.name,
-          quantity: item.quantity,
-          price: product.price
-        };
-      }
-      return null;
-    }).filter(Boolean);
-    
-    // Check if user has enough balance
-    if (user.wallet.balance < total) {
-      showToast(`Saldo insuficiente. Você precisa de R$ ${(total - user.wallet.balance).toFixed(2)} a mais.`, "error");
-      return;
-    }
-    
-    if (confirm(`Confirmar compra de ${cart.length} itens?\nTotal: R$ ${total.toFixed(2)}`)) {
-      // Create order and transaction
-      const newOrder: StoreOrder = {
-        id: `order-${Date.now()}`,
-        userId: user.id,
-        items: orderItems as any[],
-        total: total,
-        status: 'confirmed',
-        orderDate: new Date().toISOString(),
-        // DELIVERY_DAYS represents calendar days (not business days)
-        deliveryDate: new Date(Date.now() + DELIVERY_DAYS_MS).toISOString().split('T')[0],
-        trackingCode: `TH${Date.now().toString().slice(-8)}`
-      };
-      
-      const newTransaction: Transaction = {
-        id: `store-${Date.now()}`,
-        type: 'withdrawal',
-        amount: -total,
-        date: new Date().toLocaleDateString('pt-BR'),
-        description: `Compra TrampoStore - ${cart.length} itens`
-      };
-      
-      setUser(prev => ({
-        ...prev,
-        wallet: {
-          ...prev.wallet,
-          balance: prev.wallet.balance - total,
-          transactions: [newTransaction, ...prev.wallet.transactions]
-        }
-      }));
-      
-      setCart([]);
-      showToast(`Pedido confirmado! Rastreio: ${newOrder.trackingCode}`, "success");
-    }
-  };
-
-  // --- WEEKLY CHALLENGES ---
-  const handleUpdateChallengeProgress = (challengeType: 'jobs_completed' | 'referrals' | 'streak_days' | 'rating_maintained', increment: number = 1) => {
-    setChallenges(prev => prev.map(challenge => {
-      if (challenge.requirement.type === challengeType && challenge.isActive && !challenge.isCompleted) {
-        const newCurrent = challenge.requirement.current + increment;
-        const isNowCompleted = newCurrent >= challenge.requirement.target;
-        
-        // If challenge is completed, give reward
-        if (isNowCompleted && !challenge.isCompleted) {
-          handleClaimChallengeReward(challenge);
-        }
-        
-        return {
-          ...challenge,
-          requirement: {
-            ...challenge.requirement,
-            current: Math.min(newCurrent, challenge.requirement.target)
-          },
-          isCompleted: isNowCompleted
-        };
-      }
-      return challenge;
-    }));
-  };
-  
-  const handleClaimChallengeReward = (challenge: WeeklyChallenge) => {
-    if (challenge.reward.type === 'cash') {
-      const amount = typeof challenge.reward.value === 'number' ? challenge.reward.value : 0;
-      const newTransaction: Transaction = {
-        id: `challenge-${Date.now()}`,
-        type: 'deposit',
-        amount: amount,
-        date: new Date().toLocaleDateString('pt-BR'),
-        description: `Desafio Completado: ${challenge.title}`
-      };
-      
-      setUser(prev => ({
-        ...prev,
-        wallet: {
-          ...prev.wallet,
-          balance: prev.wallet.balance + amount,
-          transactions: [newTransaction, ...prev.wallet.transactions]
-        }
-      }));
-      
-      showToast(`🎉 Desafio completado! +R$ ${amount} na carteira!`, "success");
-    } else if (challenge.reward.type === 'coins') {
-      const coins = typeof challenge.reward.value === 'number' ? challenge.reward.value : 0;
-      setUser(prev => ({
-        ...prev,
-        trampoCoins: prev.trampoCoins ? {
-          ...prev.trampoCoins,
-          balance: prev.trampoCoins.balance + coins,
-          earned: [...prev.trampoCoins.earned, {
-            id: `challenge-${Date.now()}`,
-            type: 'coin_earned',
-            amount: 0,
-            date: new Date().toISOString().split('T')[0],
-            description: `Desafio: ${challenge.title}`,
-            coins: coins
-          }]
-        } : prev.trampoCoins
-      }));
-      
-      showToast(`🎉 Desafio completado! +${coins} TrampoCoins!`, "success");
-    } else if (challenge.reward.type === 'medal') {
-      // Award special medal
-      const medalId = typeof challenge.reward.value === 'string' ? challenge.reward.value : 'm-challenge';
-      const medal = MEDALS_REPO.find(m => m.id === medalId) || {
-        id: medalId,
-        name: 'Desafio Completado',
-        icon: 'fa-trophy',
-        color: 'text-amber-500',
-        description: challenge.title
-      };
-      
-      setUser(prev => ({
-        ...prev,
-        medals: [...prev.medals, medal]
-      }));
-      
-      showToast(`🏆 Desafio completado! Nova medalha desbloqueada!`, "success");
-    }
-  };
-
-
+  // --- Render ---
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-['Inter'] pb-24">
       {showSplash && <SplashScreen />}
-      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      {toast && <Toast message={toast.msg} type={toast.type} onClose={clearToast} />}
 
-      {/* Header com Navegação para Perfil */}
       <Header user={user} setView={setView} setShowPrimeModal={setShowPrimeModal} setUser={setUser} />
 
       <main className="flex-1 max-w-2xl mx-auto w-full p-4">
         {user.role === 'employer' ? (
           <div className="space-y-6 animate-in fade-in duration-500">
-            {view === 'dashboard' || view === 'browse' ? (
-              <>
-                <header className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-black text-slate-900">Painel de Controle</h2>
-                  <div className="flex gap-2">
-                    <button onClick={simulateVoiceCreate} className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all ${isRecording ? 'bg-red-500 animate-pulse text-white' : 'bg-slate-900 text-white hover:bg-slate-800'}`}>
-                      <i className={`fas ${isRecording ? 'fa-microphone' : 'fa-microphone-lines'}`}></i>
-                    </button>
-                    <button onClick={() => setShowCreateJobModal(true)} className="bg-indigo-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg hover:bg-indigo-700 transition-colors"><i className="fas fa-plus"></i></button>
-                  </div>
-                </header>
-
-                {/* Dashboard Stats */}
-                <div className="grid grid-cols-3 gap-3 mb-8">
-                   <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-center">
-                       <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Vagas Ativas</p>
-                       <p className="text-xl font-black text-indigo-600">{filteredEmployerJobs.filter(j => j.status === 'open').length}</p>
-                   </div>
-                   <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-center">
-                       <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Candidatos</p>
-                       <p className="text-xl font-black text-emerald-500">12</p>
-                   </div>
-                   <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-center">
-                       <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Em Andamento</p>
-                       <p className="text-xl font-black text-amber-500">{filteredEmployerJobs.filter(j => j.status === 'ongoing').length}</p>
-                   </div>
-                </div>
-
-                {/* Talentos em Destaque (Carrossel) */}
-                <div className="mb-8">
-                   <div className="flex justify-between items-end mb-4 px-2">
-                      <h3 className="font-black text-xs uppercase tracking-widest text-slate-400">Talentos na Região</h3>
-                      <button onClick={() => setView('talents')} className="text-[10px] font-bold text-indigo-600">Ver todos</button>
-                   </div>
-                   <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-                      {TOP_TALENTS.slice(0, 4).map(talent => (
-                          <div key={talent.id} className="min-w-[140px] bg-white p-4 rounded-[1.5rem] border border-slate-100 shadow-sm flex flex-col items-center relative">
-                             <div className="w-12 h-12 bg-slate-100 rounded-full mb-2 flex items-center justify-center font-black text-slate-500 text-sm">
-                                {talent.name.split(' ').map(n=>n[0]).join('')}
-                             </div>
-                             <h4 className="font-bold text-slate-900 text-xs mb-1 text-center line-clamp-1">{talent.name}</h4>
-                             <p className="text-[10px] text-slate-500 mb-2">{talent.role}</p>
-                             <div className="flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-full mb-3">
-                                <i className="fas fa-star text-[8px] text-amber-400"></i>
-                                <span className="text-[9px] font-bold text-amber-600">{talent.rating}</span>
-                             </div>
-                             <button onClick={() => handleInviteTalent(talent.name, talent.id)} className="w-full py-1.5 bg-slate-900 text-white rounded-lg text-[9px] font-bold uppercase active:scale-95 transition-transform">Convidar</button>
-                          </div>
-                      ))}
-                   </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-black text-xs uppercase tracking-widest text-slate-400 px-2">Gerenciar Minhas Vagas</h3>
-                  {filteredEmployerJobs.length === 0 ? (
-                    <div className="text-center py-10 opacity-50 bg-white rounded-[2rem] border border-dashed border-slate-200">
-                        <i className="fas fa-folder-open text-4xl mb-2 text-slate-300"></i>
-                        <p className="text-xs font-bold text-slate-400">Nenhuma vaga criada.</p>
-                        <button onClick={() => setShowCreateJobModal(true)} className="mt-4 text-[10px] font-black text-indigo-600 uppercase">Criar Primeira Vaga</button>
-                    </div>
-                  ) : (
-                    filteredEmployerJobs.map(job => (
-                        <div key={job.id} onClick={() => handleManageJob(job)} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer flex justify-between items-center active:scale-[0.99]">
-                           <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                    <span className={`w-2 h-2 rounded-full ${job.status === 'open' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                                    <h4 className="font-bold text-slate-800 text-sm">{job.title}</h4>
-                                </div>
-                                <p className="text-[10px] text-slate-400">{new Date(job.date).toLocaleDateString('pt-BR')} • {job.paymentType === 'dia' ? 'Diária' : 'Total'}</p>
-                           </div>
-                           <div className="text-right">
-                                <p className="font-black text-slate-900 text-sm">R$ {job.payment}</p>
-                                <button className="text-[9px] font-bold text-indigo-600 uppercase mt-1">Gerenciar</button>
-                           </div>
-                        </div>
-                    ))
-                  )}
-                </div>
-              </>
-            ) : view === 'talents' ? (
-                <div className="space-y-6 animate-in fade-in duration-500">
-                    <div className="flex items-center gap-4 mb-2">
-                        <button onClick={() => setView('dashboard')} className="w-10 h-10 bg-white border rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 transition-colors"><i className="fas fa-arrow-left"></i></button>
-                        <h2 className="text-2xl font-black text-slate-900">Talentos Disponíveis</h2>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        {TOP_TALENTS.map(talent => (
-                            <div key={talent.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center text-center">
-                                <div className="w-16 h-16 bg-slate-100 rounded-full mb-3 flex items-center justify-center font-black text-slate-500 text-lg">
-                                    {talent.name.split(' ').map(n=>n[0]).join('')}
-                                </div>
-                                <h4 className="font-bold text-slate-900 text-sm mb-1">{talent.name}</h4>
-                                <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded-full text-slate-500 font-bold mb-2 uppercase">{talent.niche}</span>
-                                <div className="flex items-center gap-1 mb-4">
-                                    <i className="fas fa-star text-xs text-amber-400"></i>
-                                    <span className="text-xs font-bold text-slate-700">{talent.rating}</span>
-                                </div>
-                                <button onClick={() => handleInviteTalent(talent.name, talent.id)} className="w-full py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-transform">Convidar</button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            ) : view === 'profile' ? (
-                <div className="space-y-6 animate-in fade-in duration-500">
-                    <div className="bg-white p-8 rounded-[3rem] text-center border border-slate-100 shadow-lg">
-                        <div className="w-24 h-24 bg-indigo-100 rounded-full mx-auto mb-4 overflow-hidden border-4 border-white shadow-xl flex items-center justify-center">
-                            <i className="fas fa-building text-3xl text-indigo-600"></i>
-                        </div>
-                        <h2 className="text-2xl font-black text-slate-900">{user.name}</h2>
-                        <p className="text-indigo-600 font-bold text-sm mb-4"><i className="fas fa-check-circle mr-1"></i> Empresa Verificada</p>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-slate-50 p-4 rounded-2xl">
-                                <p className="text-[10px] text-slate-400 font-black uppercase">Reputação</p>
-                                <p className="text-xl font-black text-slate-900"><i className="fas fa-star text-amber-400 mr-1"></i> 5.0</p>
-                            </div>
-                            <div className="bg-slate-50 p-4 rounded-2xl">
-                                <p className="text-[10px] text-slate-400 font-black uppercase">Vagas Criadas</p>
-                                <p className="text-xl font-black text-slate-900">{filteredEmployerJobs.length}</p>
-                            </div>
-                        </div>
-                        <div className="mt-4 bg-slate-900 p-4 rounded-2xl text-white">
-                             <p className="text-[10px] opacity-60 font-black uppercase">Total Investido em Talentos</p>
-                             <p className="text-2xl font-black">R$ 4.250,00</p>
-                        </div>
-                    </div>
-                </div>
-            ) : view === 'wallet' ? (
-                <div className="space-y-6 animate-in fade-in duration-500">
-                   <header className="mb-2">
-                      <h2 className="text-2xl font-black text-slate-900">Carteira Corporativa</h2>
-                   </header>
-                   <div className="bg-slate-900 p-8 rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
-                       <div className="absolute top-0 right-0 p-8 opacity-10"><i className="fas fa-building-columns text-9xl"></i></div>
-                       <p className="text-[10px] font-bold opacity-60 uppercase mb-2 tracking-widest">Saldo Disponível para Contratação</p>
-                       <h2 className="text-5xl font-black mb-8 tracking-tighter">R$ {user.wallet.balance.toFixed(2)}</h2>
-                       <div className="flex gap-3 relative z-10">
-                           <button onClick={handleOpenAddBalance} className="flex-1 bg-white text-slate-900 py-4 rounded-2xl font-black text-xs uppercase shadow-lg hover:bg-slate-100 active:scale-95 transition-all">Adicionar Saldo</button>
-                           <button onClick={handleShowInvoices} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black text-xs uppercase shadow-lg hover:bg-indigo-700 active:scale-95 transition-all">Notas Fiscais</button>
-                       </div>
-                   </div>
-
-                   <div className="px-2">
-                       <h4 className="font-black text-slate-900 text-sm mb-4 uppercase tracking-widest opacity-40">Histórico de Pagamentos</h4>
-                       <div className="space-y-3">
-                           <div className="bg-white p-4 rounded-2xl border border-slate-100 flex justify-between items-center shadow-sm">
-                               <div className="flex items-center gap-3">
-                                   <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center"><i className="fas fa-arrow-up"></i></div>
-                                   <div>
-                                       <p className="font-bold text-slate-800 text-sm">Pgto. Mariana Costa</p>
-                                       <p className="text-[10px] text-slate-400">Ontem às 18:30</p>
-                                   </div>
-                               </div>
-                               <p className="font-black text-slate-900">- R$ 180,00</p>
-                           </div>
-                           <div className="bg-white p-4 rounded-2xl border border-slate-100 flex justify-between items-center shadow-sm">
-                               <div className="flex items-center gap-3">
-                                   <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center"><i className="fas fa-plus"></i></div>
-                                   <div>
-                                       <p className="font-bold text-slate-800 text-sm">Recarga via PIX</p>
-                                       <p className="text-[10px] text-slate-400">20/10/2023</p>
-                                   </div>
-                               </div>
-                               <p className="font-black text-emerald-600">+ R$ 5.000,00</p>
-                           </div>
-                       </div>
-                   </div>
-                </div>
-            ) : view === 'chat' ? (
-                <div className="flex flex-col h-[calc(100vh-12rem)] animate-in fade-in duration-500">
-                    <div className="flex items-center gap-4 mb-6 border-b pb-4">
-                        <button onClick={() => setView('dashboard')} className="w-10 h-10 bg-white border rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 transition-colors"><i className="fas fa-arrow-left"></i></button>
-                        <div>
-                             <h2 className="font-black text-slate-900">Suporte Empresarial</h2>
-                             <p className="text-[10px] font-bold text-indigo-600 uppercase">Prioridade Alta</p>
-                        </div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-                        {messages.length === 0 && (
-                            <div className="text-center mt-10 opacity-40">
-                                <i className="fas fa-headset text-4xl mb-2"></i>
-                                <p className="text-xs font-bold">Olá! Como posso ajudar sua empresa hoje?</p>
-                            </div>
-                        )}
-                        {messages.map(m => (
-                            <div key={m.id} className={`flex flex-col ${m.senderId === user.id ? 'items-end' : 'items-start'}`}>
-                                <div className={`p-4 rounded-[1.8rem] max-w-[85%] text-sm font-medium ${m.senderId === user.id ? 'bg-slate-900 text-white' : 'bg-white border shadow-sm'}`}>
-                                    {m.text}
-                                </div>
-                            </div>
-                        ))}
-                        <div ref={messagesEndRef} />
-                    </div>
-                    <div className="mt-6 flex gap-3 bg-white p-3 rounded-[2.5rem] shadow-xl border border-slate-100">
-                        <input value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} className="flex-1 px-4 bg-transparent focus:outline-none text-sm font-medium" placeholder="Digite sua dúvida..." />
-                        <button onClick={handleSendMessage} className="w-12 h-12 bg-slate-900 text-white rounded-full flex items-center justify-center hover:bg-slate-700 transition-colors"><i className="fas fa-paper-plane"></i></button>
-                    </div>
-                </div>
-            ) : view === 'active' ? (
-                 <div className="flex flex-col items-center justify-center h-[60vh] text-center p-6 animate-in fade-in duration-500">
-                    <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6">
-                        <i className="fas fa-users-viewfinder text-4xl text-slate-300"></i>
-                    </div>
-                    <h3 className="text-xl font-black text-slate-900 mb-2">Monitoramento de Jobs</h3>
-                    <p className="text-slate-400 text-sm mb-8">Acompanhe aqui o status em tempo real dos freelancers contratados.</p>
-                    <button onClick={() => setView('dashboard')} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black shadow-xl hover:bg-slate-800 transition-colors">
-                        Voltar ao Painel
-                    </button>
-                </div>
-            ) : null}
+            {(view === 'dashboard' || view === 'browse') && (
+              <DashboardView
+                user={user}
+                filteredEmployerJobs={filteredEmployerJobs}
+                filterNiche={filterNiche}
+                setFilterNiche={setFilterNiche}
+                filterStatus={filterStatus}
+                setFilterStatus={setFilterStatus}
+                filterDate={filterDate}
+                setFilterDate={setFilterDate}
+                handleManageJob={handleManageJob}
+                simulateVoiceCreate={simulateVoiceCreate}
+                isRecording={isRecording}
+                setShowCreateJobModal={setShowCreateJobModal}
+                aiSuggestion={aiSuggestion}
+                handleShowInvoices={handleShowInvoices}
+                handleOpenAddBalance={handleOpenAddBalance}
+                handleInviteTalent={handleInviteTalent}
+                setView={setView}
+              />
+            )}
+            {view === 'talents' && (
+              <TalentsView
+                handleInviteTalent={handleInviteTalent}
+                setView={setView}
+              />
+            )}
+            {view === 'profile' && (
+              <EmployerProfileView
+                user={user}
+                filteredEmployerJobs={filteredEmployerJobs}
+              />
+            )}
+            {view === 'wallet' && (
+              <EmployerWalletView
+                user={user}
+                handleWithdraw={handleWithdraw}
+                handleOpenAddBalance={handleOpenAddBalance}
+                handleShowInvoices={handleShowInvoices}
+              />
+            )}
+            {view === 'chat' && (
+              <EmployerChatView
+                user={user}
+                messages={messages}
+                inputText={inputText}
+                setInputText={setInputText}
+                handleSendMessage={handleSendMessage}
+                messagesEndRef={messagesEndRef}
+                setView={setView}
+              />
+            )}
+            {view === 'active' && (
+              <EmployerActiveView setView={setView} />
+            )}
           </div>
         ) : (
-          /* FREELANCER CONTENT */
           <>
             {view === 'browse' && (
-              <div className="space-y-6 animate-in fade-in duration-500">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-black text-slate-900">Freelas Próximos</h2>
-                  <div className="flex gap-2">
-                    <button onClick={() => setBrowseMode(m => m === 'list' ? 'map' : 'list')} className="w-10 h-10 bg-white border rounded-xl flex items-center justify-center text-slate-600 shadow-sm hover:bg-slate-50 transition-colors">
-                      <i className={`fas ${browseMode === 'list' ? 'fa-map' : 'fa-list'}`}></i>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Filtros de Categoria (Pills) */}
-                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                    <button onClick={() => setFilterNiche('All')} className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all ${filterNiche === 'All' ? 'bg-slate-900 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200'}`}>Todos</button>
-                    {Object.values(Niche).map(n => (
-                        <button key={n} onClick={() => setFilterNiche(n)} className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all ${filterNiche === n ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200'}`}>
-                            {n}
-                        </button>
-                    ))}
-                </div>
-
-                {browseMode === 'map' ? (
-                  <div className="relative h-[500px] w-full mb-6">
-                    <div ref={mapContainerRef} className="h-full w-full shadow-2xl rounded-[3rem] border-4 border-white overflow-hidden z-0"></div>
-                    <div className="absolute top-4 right-4 z-[1] bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-lg border border-white text-[10px] font-black text-slate-400 uppercase tracking-widest pointer-events-none">
-                      Clique nos ícones
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid gap-4">
-                    {!user.isPrime && (
-                      <div onClick={() => setShowPrimeModal(true)} className="bg-indigo-600 p-6 rounded-[2.5rem] text-white shadow-xl cursor-pointer relative overflow-hidden group hover:shadow-2xl transition-all">
-                        <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:scale-110 transition-transform"><i className="fas fa-crown text-5xl"></i></div>
-                        <h3 className="text-lg font-black mb-1">Seja Hero Prime</h3>
-                        <p className="text-xs opacity-80 mb-4">Saque grátis, seguro e vagas VIP.</p>
-                        <span className="text-[10px] font-bold uppercase bg-white/20 px-3 py-1 rounded-full group-hover:bg-white group-hover:text-indigo-600 transition-colors">Assinar agora</span>
-                      </div>
-                    )}
-                    {sortedOpenJobs.length === 0 ? (
-                        <div className="text-center py-20 opacity-50">
-                            <i className="fas fa-search text-4xl mb-4"></i>
-                            <p className="font-bold">Nenhum bico encontrado nesta categoria.</p>
-                        </div>
-                    ) : (
-                        sortedOpenJobs.map(job => (
-                        <JobCard key={job.id} job={job} onClick={setSelectedJob} />
-                        ))
-                    )}
-                  </div>
-                )}
-              </div>
+              <BrowseView
+                sortedOpenJobs={sortedOpenJobs}
+                browseMode={browseMode}
+                setBrowseMode={setBrowseMode}
+                filterNiche={filterNiche}
+                setFilterNiche={setFilterNiche}
+                setSelectedJob={setSelectedJob}
+                mapContainerRef={mapContainerRef}
+                user={user}
+                setView={setView}
+                setShowPrimeModal={setShowPrimeModal}
+              />
             )}
-            
             {view === 'active' && (
-              activeJob ? (
-                <div className="space-y-6 animate-in fade-in duration-500">
-                    <header>
-                        <h2 className="text-2xl font-black text-slate-900">Job em Andamento</h2>
-                        <p className="text-slate-500 text-sm">Realize o check-in para iniciar.</p>
-                    </header>
-                    <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-100 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-2 bg-indigo-600"></div>
-                        <h3 className="text-2xl font-black text-slate-800 mb-2">{activeJob.title}</h3>
-                        <p className="text-slate-400 text-sm mb-6 flex items-center gap-2"><i className="fas fa-map-marker-alt text-indigo-500"></i> {activeJob.location}</p>
-                        
-                        <div className="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-100">
-                            <div className="flex justify-between items-center mb-4">
-                                <span className="text-xs font-bold text-slate-500 uppercase">Status</span>
-                                <span className={`text-xs font-black uppercase px-3 py-1 rounded-full ${isCheckedIn ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
-                                    {isCheckedIn ? 'Em Progresso' : 'Aguardando Chegada'}
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs font-bold text-slate-500 uppercase">Horário</span>
-                                <span className="text-lg font-black text-slate-800">{activeJob.startTime}</span>
-                            </div>
-                        </div>
-
-                        {!isCheckedIn ? (
-                            <button onClick={handleCheckIn} className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-lg shadow-lg shadow-indigo-200 active:scale-95 transition-all flex items-center justify-center gap-3">
-                                <i className="fas fa-map-pin"></i> Realizar Check-in
-                            </button>
-                        ) : (
-                            <div className="text-center space-y-4">
-                                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                                    <i className="fas fa-check-circle text-4xl text-emerald-500 mb-2"></i>
-                                    <p className="font-bold text-emerald-700">Check-in Realizado</p>
-                                    <p className="text-xs text-emerald-600 mt-1">Contrato enviado por e-mail.</p>
-                                </div>
-                                <button onClick={handleCheckout} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm shadow-lg active:scale-95 transition-all">
-                                    Finalizar Job (Checkout)
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-[60vh] text-center p-6 animate-in fade-in duration-500">
-                    <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6">
-                        <i className="fas fa-briefcase text-4xl text-slate-300"></i>
-                    </div>
-                    <h3 className="text-xl font-black text-slate-900 mb-2">Sem Job Ativo</h3>
-                    <p className="text-slate-400 text-sm mb-8">Você não aceitou nenhum trabalho ainda. Explore as vagas disponíveis!</p>
-                    <button onClick={() => setView('browse')} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black shadow-xl hover:bg-slate-800 transition-colors">
-                        Procurar Vagas
-                    </button>
-                </div>
-              )
+              <ActiveJobView
+                activeJob={activeJob}
+                isCheckedIn={isCheckedIn}
+                handleCheckIn={handleCheckIn}
+                handleCheckout={handleCheckout}
+                setView={setView}
+              />
             )}
-
             {view === 'wallet' && (
-              <div className="space-y-6 animate-in fade-in duration-500">
-                <div className="bg-slate-900 p-10 rounded-[4rem] text-white shadow-2xl relative overflow-hidden">
-                   <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-500/20 blur-3xl rounded-full"></div>
-                   <p className="text-[10px] font-black opacity-40 uppercase tracking-[0.2em] mb-2">Saldo Total</p>
-                   <h3 className="text-6xl font-black mb-10 tracking-tighter">R$ {user.wallet.balance.toFixed(2)}</h3>
-                   <div className="flex gap-4">
-                      <button onClick={handleWithdraw} className="flex-1 py-5 bg-white text-slate-900 rounded-[2rem] font-black text-xs shadow-lg active:scale-95 transition-transform">Sacar via PIX</button>
-                      <button onClick={() => setShowPrimeModal(true)} className={`flex-1 py-5 rounded-[2rem] font-black text-xs transition-colors ${user.isPrime ? 'bg-indigo-600/50 text-white' : 'bg-indigo-600 text-white shadow-indigo-400 shadow-lg'}`}>
-                        {user.isPrime ? 'Hero Prime Ativo' : 'Hero Prime'}
-                      </button>
-                   </div>
-                </div>
-                
-                {/* HERO PAY CARD */}
-                <div className="bg-gradient-to-r from-indigo-900 to-slate-900 p-8 rounded-[3rem] border border-slate-800 shadow-xl relative overflow-hidden">
-                   <div className="absolute top-0 right-0 p-6 opacity-10"><i className="fas fa-bolt text-8xl text-amber-400"></i></div>
-                   <div className="flex justify-between items-center mb-6 relative z-10">
-                      <div>
-                         <h4 className="font-black text-xl text-white italic tracking-tighter"><i className="fas fa-bolt text-amber-400 mr-2"></i>HERO PAY</h4>
-                         <p className="text-[10px] text-slate-300">Receba seus agendamentos agora.</p>
-                      </div>
-                      <span className={`text-[9px] font-black px-3 py-1 rounded-full ${user.isPrime ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-slate-900'}`}>
-                         {user.isPrime ? 'TAXA ZERO' : 'TAXA 3% - 5%'}
-                      </span>
-                   </div>
-                   <div className="flex justify-between items-end relative z-10">
-                      <div>
-                         <p className="text-slate-400 text-xs mb-1 uppercase tracking-widest font-bold">Saldo Agendado</p>
-                         <p className="text-3xl font-black text-white">R$ {user.wallet.scheduled.toFixed(2)}</p>
-                      </div>
-                      <button onClick={handleAnticipate} disabled={user.wallet.scheduled === 0} className={`px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${user.wallet.scheduled === 0 ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-amber-400 text-slate-900 hover:bg-amber-300 shadow-lg shadow-amber-900/50 active:scale-95'}`}>
-                         Antecipar
-                      </button>
-                   </div>
-                </div>
-
-                {/* Histórico de Transações */}
-                <div className="px-4">
-                  <h4 className="font-black text-sm text-slate-900 mb-4">Histórico Recente</h4>
-                  <div className="space-y-3">
-                    {user.wallet.transactions.length === 0 ? (
-                      <p className="text-xs text-slate-400 text-center py-4">Nenhuma transação.</p>
-                    ) : (
-                      user.wallet.transactions.map(t => (
-                        <div key={t.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex justify-between items-center shadow-sm">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${
-                              t.type === 'anticipation' ? 'bg-amber-500' :
-                              t.type === 'job_payment' ? 'bg-emerald-500' : 
-                              t.type === 'withdrawal' ? 'bg-red-500' : 'bg-slate-400'
-                            }`}>
-                              <i className={`fas ${
-                                t.type === 'anticipation' ? 'fa-bolt' :
-                                t.type === 'job_payment' ? 'fa-briefcase' : 
-                                t.type === 'withdrawal' ? 'fa-university' : 'fa-arrow-down'
-                              }`}></i>
-                            </div>
-                            <div>
-                              <p className="font-bold text-slate-800 text-xs">{t.description}</p>
-                              <p className="text-[10px] text-slate-400">{t.date}</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className={`font-black text-sm ${t.amount > 0 ? 'text-emerald-600' : 'text-slate-900'}`}>
-                              {t.amount > 0 ? '+' : ''} R$ {t.amount.toFixed(2)}
-                            </p>
-                            {t.fee !== undefined && (
-                                <p className={`text-[9px] font-bold ${t.fee === 0 ? 'text-emerald-500' : 'text-amber-600'}`}>
-                                    Taxa: R$ {t.fee.toFixed(2)} {t.fee === 0 ? '(Prime)' : ''}
-                                </p>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
+              <WalletView
+                user={user}
+                handleWithdraw={handleWithdraw}
+                handleAnticipate={handleAnticipate}
+                setShowPrimeModal={setShowPrimeModal}
+                setView={setView}
+              />
             )}
-
             {view === 'academy' && (
-              <div className="space-y-6 animate-in fade-in duration-500">
-                <header>
-                  <h2 className="text-2xl font-black text-slate-900">Hero Academy</h2>
-                  <p className="text-slate-500 text-sm mb-4">Capacite-se com cursos gratuitos da plataforma e certificados reconhecidos.</p>
-                  
-                  {/* Filtro por nicho */}
-                  <div className="flex gap-2 overflow-x-auto pb-2">
-                    <button 
-                      onClick={() => setFilterNiche('All')}
-                      className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
-                        filterNiche === 'All' 
-                          ? 'bg-slate-900 text-white' 
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      Todos
-                    </button>
-                    {Object.values(Niche).map(niche => (
-                      <button 
-                        key={niche}
-                        onClick={() => setFilterNiche(niche)}
-                        className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
-                          filterNiche === niche 
-                            ? 'bg-indigo-600 text-white' 
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        {niche}
-                      </button>
-                    ))}
-                  </div>
-                </header>
-
-                {/* Cursos agrupados por nicho */}
-                <div className="space-y-6">
-                  {Object.values(Niche).map(niche => {
-                    const nicheCourses = COURSES.filter(c => 
-                      c.niche === niche && (filterNiche === 'All' || filterNiche === niche)
-                    );
-                    
-                    if (nicheCourses.length === 0) return null;
-                    
-                    return (
-                      <div key={niche}>
-                        <h3 className="text-lg font-black text-slate-800 mb-3 flex items-center gap-2">
-                          <i className={`fas ${
-                            niche === Niche.RESTAURANT ? 'fa-utensils' :
-                            niche === Niche.CONSTRUCTION ? 'fa-hard-hat' :
-                            niche === Niche.EVENTS ? 'fa-calendar-check' :
-                            'fa-spray-can'
-                          } text-indigo-600`}></i>
-                          {niche}
-                        </h3>
-                        <div className="grid gap-4">
-                          {nicheCourses.map(course => {
-                            const isCompleted = user.medals.find(m => m.id === course.badgeId);
-                            return (
-                              <div 
-                                key={course.id} 
-                                className={`bg-white p-6 rounded-[2.5rem] border transition-all ${
-                                  isCompleted 
-                                    ? 'border-emerald-200 shadow-sm' 
-                                    : 'border-slate-100 shadow-sm hover:shadow-md'
-                                }`}
-                              >
-                                <div className="flex justify-between items-start mb-3">
-                                  <div className="flex gap-2 flex-wrap">
-                                    <span className="bg-amber-50 text-amber-600 text-[8px] font-black px-2 py-1 rounded uppercase tracking-widest">
-                                      <i className="fas fa-clock mr-1"></i> {course.duration}
-                                    </span>
-                                    {course.price && course.price > 0 ? (
-                                      <span className="bg-indigo-50 text-indigo-600 text-[8px] font-black px-2 py-1 rounded uppercase tracking-widest">
-                                        R$ {course.price}
-                                      </span>
-                                    ) : (
-                                      <span className="bg-emerald-50 text-emerald-600 text-[8px] font-black px-2 py-1 rounded uppercase tracking-widest">
-                                        GRÁTIS
-                                      </span>
-                                    )}
-                                    <span className="bg-slate-100 text-slate-600 text-[8px] font-black px-2 py-1 rounded uppercase tracking-widest">
-                                      {course.level === 'basic' ? 'Básico' : 
-                                       course.level === 'intermediate' ? 'Intermediário' : 
-                                       course.level === 'advanced' ? 'Avançado' : 'Certificação'}
-                                    </span>
-                                    <span className="bg-purple-50 text-purple-600 text-[8px] font-black px-2 py-1 rounded uppercase tracking-widest">
-                                      <i className="fas fa-question-circle mr-1"></i> {course.examQuestions.length} questões
-                                    </span>
-                                  </div>
-                                  <i className={`fas ${MEDALS_REPO.find(m => m.id === course.badgeId)?.icon || 'fa-award'} ${
-                                    isCompleted ? 'text-emerald-500' : 'text-slate-200'
-                                  } text-2xl`}></i>
-                                </div>
-                                <h4 className="font-black text-slate-800 text-lg mb-1">{course.title}</h4>
-                                <p className="text-xs text-slate-400 mb-3">{course.description}</p>
-                                {!course.provider && (
-                                  <p className="text-[9px] text-indigo-600 font-bold mb-3">
-                                    <i className="fas fa-certificate mr-1"></i>Emissor: {course.certificateIssuer}
-                                  </p>
-                                )}
-                                {course.provider && (
-                                  <p className="text-[9px] text-indigo-600 font-bold mb-3">
-                                    <i className="fas fa-graduation-cap mr-1"></i>Parceiro: {course.provider}
-                                  </p>
-                                )}
-                                <button 
-                                  onClick={() => handleStartCourse(course)} 
-                                  className={`w-full py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
-                                    isCompleted
-                                      ? 'bg-emerald-50 text-emerald-600 cursor-default'
-                                      : course.price && course.price > 0 
-                                      ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md'
-                                      : 'bg-slate-900 text-white hover:bg-slate-800 shadow-md'
-                                  }`}
-                                  disabled={!!isCompleted}
-                                >
-                                  {isCompleted ? (
-                                    <>
-                                      <i className="fas fa-check-circle mr-2"></i>Concluído
-                                    </>
-                                  ) : course.price && course.price > 0 ? (
-                                    <>
-                                      <i className="fas fa-shopping-cart mr-2"></i>Comprar Curso
-                                    </>
-                                  ) : (
-                                    <>
-                                      <i className="fas fa-play mr-2"></i>Iniciar Curso
-                                    </>
-                                  )}
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Info sobre ebooks */}
-                <div className="bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-6 text-center">
-                  <i className="fas fa-book-open text-3xl text-indigo-600 mb-3"></i>
-                  <h3 className="font-black text-slate-900 mb-2">Material de Estudo</h3>
-                  <p className="text-xs text-slate-600">
-                    Em breve, ebooks interativos estarão disponíveis para complementar seu aprendizado antes das provas!
-                  </p>
-                </div>
-              </div>
+              <AcademyView
+                user={user}
+                handleStartCourse={handleStartCourse}
+                filterNiche={filterNiche}
+                setFilterNiche={setFilterNiche}
+              />
             )}
-
             {view === 'profile' && (
-              <div className="space-y-6 animate-in fade-in duration-500">
-                <div className="bg-white p-8 rounded-[3rem] text-center border border-slate-100 shadow-lg">
-                    <div className="w-24 h-24 bg-slate-200 rounded-full mx-auto mb-4 overflow-hidden border-4 border-white shadow-xl flex items-center justify-center">
-                        <div className="w-full h-full flex items-center justify-center bg-slate-900 text-white text-3xl font-black">{user.name.charAt(0)}</div>
-                    </div>
-                    <h2 className="text-2xl font-black text-slate-900">{user.name}</h2>
-                    <p className="text-indigo-600 font-bold text-sm mb-4">{user.tier} Member</p>
-                    
-                    {user.isPrime && (
-                        <div className="mb-6 bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center justify-between">
-                            <div className="text-left">
-                                <p className="text-[10px] font-black text-emerald-600 uppercase">Seguro de Vida Ativo</p>
-                                <p className="text-xs font-bold text-slate-700">Cobertura até R$ 20.000</p>
-                            </div>
-                            <i className="fas fa-shield-halved text-emerald-500 text-xl"></i>
-                        </div>
-                    )}
-
-                    <div className="flex justify-center gap-2 mb-6">
-                        {user.medals.map(m => (
-                            <div key={m.id} title={m.name} className="w-8 h-8 rounded-full bg-slate-50 border flex items-center justify-center text-slate-400">
-                                <i className={`fas ${m.icon} ${m.color}`}></i>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-slate-50 p-4 rounded-2xl">
-                            <p className="text-[10px] text-slate-400 font-black uppercase">Reputação</p>
-                            <p className="text-xl font-black text-slate-900"><i className="fas fa-star text-amber-400 mr-1"></i> {user.rating}</p>
-                        </div>
-                        <div className="bg-slate-50 p-4 rounded-2xl">
-                            <p className="text-[10px] text-slate-400 font-black uppercase">Jobs</p>
-                            <p className="text-xl font-black text-slate-900">{user.history.length}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Seção de Convites Enviados (Apenas para Empregadores) */}
-                {user.role === 'employer' && (user.invitations || []).length > 0 && (
-                  <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
-                    <h3 className="font-black text-slate-900 text-lg mb-4 flex items-center gap-2">
-                      <i className="fas fa-envelope text-indigo-600"></i>
-                      Convites Enviados
-                    </h3>
-                    <div className="space-y-3">
-                      {user.invitations.slice(0, MAX_RECENT_ITEMS).map(inv => (
-                        <div key={inv.id} className="bg-slate-50 p-4 rounded-xl flex justify-between items-center">
-                          <div>
-                            <p className="font-bold text-slate-800 text-sm">{inv.talentName}</p>
-                            <p className="text-[10px] text-slate-400">{inv.jobTitle} • {inv.sentDate}</p>
-                          </div>
-                          <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${
-                            inv.status === 'accepted' ? 'bg-emerald-100 text-emerald-700' :
-                            inv.status === 'declined' ? 'bg-red-100 text-red-700' :
-                            'bg-amber-100 text-amber-700'
-                          }`}>
-                            {inv.status === 'accepted' ? 'Aceito' : inv.status === 'declined' ? 'Recusado' : 'Pendente'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Seção de Notas Fiscais (Apenas para Empregadores) */}
-                {user.role === 'employer' && (user.invoices || []).length > 0 && (
-                  <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
-                    <h3 className="font-black text-slate-900 text-lg mb-4 flex items-center gap-2">
-                      <i className="fas fa-file-invoice text-indigo-600"></i>
-                      Notas Fiscais
-                    </h3>
-                    <div className="space-y-3">
-                      {user.invoices.slice(0, MAX_RECENT_ITEMS).map(invoice => (
-                        <div key={invoice.id} className="bg-slate-50 p-4 rounded-xl flex justify-between items-center">
-                          <div>
-                            <p className="font-bold text-slate-800 text-sm">{invoice.jobTitle}</p>
-                            <p className="text-[10px] text-slate-400">{invoice.date}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-black text-slate-900 text-sm">R$ {invoice.amount.toFixed(2)}</p>
-                            <button 
-                              onClick={() => {
-                                showToast(`Gerando PDF da nota fiscal ${invoice.id}...`, "info");
-                                setTimeout(() => {
-                                  showToast("PDF gerado! Download iniciado.", "success");
-                                }, 1500);
-                              }}
-                              className="text-[9px] font-bold text-indigo-600 hover:underline cursor-pointer"
-                            >
-                              <i className="fas fa-file-pdf mr-1"></i>Gerar PDF
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Seção de Certificados */}
-                {(user.certificates || []).length > 0 && (
-                  <div className="bg-white p-6 rounded-[2.5rem] border border-indigo-100 shadow-sm">
-                    <h3 className="font-black text-slate-900 text-lg mb-4 flex items-center gap-2">
-                      <i className="fas fa-certificate text-indigo-600"></i>
-                      Meus Certificados
-                    </h3>
-                    <div className="space-y-3">
-                      {user.certificates.map(cert => (
-                        <div key={cert.id} className="bg-gradient-to-r from-indigo-50 to-purple-50 p-5 rounded-2xl border-2 border-indigo-200">
-                          <div className="flex items-start gap-4">
-                            <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                              <i className="fas fa-award text-white text-xl"></i>
-                            </div>
-                            <div className="flex-1">
-                              <h4 className="font-black text-slate-900 text-sm mb-1">{cert.courseTitle}</h4>
-                              <p className="text-[10px] text-slate-600 mb-2">
-                                <i className="fas fa-building mr-1"></i>{cert.issuer}
-                              </p>
-                              <div className="flex items-center gap-3 text-[9px] text-slate-500">
-                                <span><i className="fas fa-calendar mr-1"></i>{cert.issueDate}</span>
-                                <span><i className="fas fa-star mr-1 text-amber-500"></i>{cert.score}%</span>
-                                <span className="font-mono bg-white px-2 py-0.5 rounded">#{cert.certificateNumber}</span>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => handleDownloadCertificate(cert)}
-                              className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-[9px] font-bold hover:bg-indigo-700 transition-colors"
-                            >
-                              <i className="fas fa-download mr-1"></i>PDF
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Menu de Novas Funcionalidades */}
-                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
-                  <h3 className="font-black text-slate-900 text-lg mb-4 flex items-center gap-2">
-                    <i className="fas fa-sparkles text-indigo-600"></i>
-                    Recursos Exclusivos
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => setView('coins')} className="p-4 bg-amber-50 rounded-xl text-left hover:bg-amber-100 transition-colors">
-                      <i className="fas fa-coins text-amber-500 text-xl mb-2"></i>
-                      <p className="text-xs font-black text-slate-900">TrampoCoins</p>
-                      <p className="text-[9px] text-slate-500">Fidelidade</p>
-                    </button>
-                    <button onClick={() => setView('insurance')} className="p-4 bg-emerald-50 rounded-xl text-left hover:bg-emerald-100 transition-colors">
-                      <i className="fas fa-shield-check text-emerald-500 text-xl mb-2"></i>
-                      <p className="text-xs font-black text-slate-900">TrampoProtect</p>
-                      <p className="text-[9px] text-slate-500">Seguro</p>
-                    </button>
-                    <button onClick={() => setView('credit')} className="p-4 bg-indigo-50 rounded-xl text-left hover:bg-indigo-100 transition-colors">
-                      <i className="fas fa-hand-holding-dollar text-indigo-500 text-xl mb-2"></i>
-                      <p className="text-xs font-black text-slate-900">TrampoCredit</p>
-                      <p className="text-[9px] text-slate-500">Adiantamento</p>
-                    </button>
-                    <button onClick={() => setView('referrals')} className="p-4 bg-pink-50 rounded-xl text-left hover:bg-pink-100 transition-colors">
-                      <i className="fas fa-user-plus text-pink-500 text-xl mb-2"></i>
-                      <p className="text-xs font-black text-slate-900">Indique</p>
-                      <p className="text-[9px] text-slate-500">Ganhe R$ 20</p>
-                    </button>
-                    <button onClick={() => setView('analytics')} className="p-4 bg-blue-50 rounded-xl text-left hover:bg-blue-100 transition-colors">
-                      <i className="fas fa-chart-line text-blue-500 text-xl mb-2"></i>
-                      <p className="text-xs font-black text-slate-900">Analytics</p>
-                      <p className="text-[9px] text-slate-500">Métricas</p>
-                    </button>
-                    <button onClick={() => setView('challenges')} className="p-4 bg-orange-50 rounded-xl text-left hover:bg-orange-100 transition-colors">
-                      <i className="fas fa-fire text-orange-500 text-xl mb-2"></i>
-                      <p className="text-xs font-black text-slate-900">Desafios</p>
-                      <p className="text-[9px] text-slate-500">Semanal</p>
-                    </button>
-                    <button onClick={() => setView('ranking')} className="p-4 bg-purple-50 rounded-xl text-left hover:bg-purple-100 transition-colors">
-                      <i className="fas fa-trophy text-purple-500 text-xl mb-2"></i>
-                      <p className="text-xs font-black text-slate-900">Ranking</p>
-                      <p className="text-[9px] text-slate-500">Top Heroes</p>
-                    </button>
-                    <button onClick={() => setView('store')} className="p-4 bg-cyan-50 rounded-xl text-left hover:bg-cyan-100 transition-colors">
-                      <i className="fas fa-shopping-bag text-cyan-500 text-xl mb-2"></i>
-                      <p className="text-xs font-black text-slate-900">Loja</p>
-                      <p className="text-[9px] text-slate-500">EPIs & Mais</p>
-                    </button>
-                    {user.role === 'employer' && (
-                      <button onClick={() => setView('ads')} className="p-4 bg-rose-50 rounded-xl text-left hover:bg-rose-100 transition-colors">
-                        <i className="fas fa-bullhorn text-rose-500 text-xl mb-2"></i>
-                        <p className="text-xs font-black text-slate-900">Anúncios</p>
-                        <p className="text-[9px] text-slate-500">TrampoAds</p>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <button onClick={() => setView('academy')} className="w-full py-4 bg-slate-900 text-white rounded-[2rem] font-black uppercase tracking-widest shadow-lg">
-                    Ir para Hero Academy
-                </button>
-              </div>
+              <ProfileView
+                user={user}
+                setView={setView}
+                handleDownloadCertificate={handleDownloadCertificate}
+                showToast={showToast}
+              />
             )}
-
             {view === 'chat' && (
-              <div className="flex flex-col h-[calc(100vh-12rem)] animate-in fade-in duration-500">
-                 <div className="flex items-center gap-4 mb-6 border-b pb-4">
-                    <button onClick={() => setView('browse')} className="w-10 h-10 bg-white border rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 transition-colors"><i className="fas fa-arrow-left"></i></button>
-                    <h2 className="font-black text-slate-900">Suporte Hero IA</h2>
-                 </div>
-                 <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-                    {messages.length === 0 && (
-                        <div className="text-center mt-10 opacity-40">
-                            <i className="fas fa-robot text-4xl mb-2"></i>
-                            <p className="text-xs font-bold">Olá! Como posso ajudar?</p>
-                        </div>
-                    )}
-                    {messages.map(m => (
-                      <div key={m.id} className={`flex flex-col ${m.senderId === user.id ? 'items-end' : 'items-start'}`}>
-                        <div className={`p-4 rounded-[1.8rem] max-w-[85%] text-sm font-medium ${m.senderId === user.id ? 'bg-indigo-600 text-white' : 'bg-white border shadow-sm'}`}>
-                          {m.text}
-                        </div>
-                      </div>
-                    ))}
-                    <div ref={messagesEndRef} />
-                 </div>
-                 <div className="mt-6 flex gap-3 bg-white p-3 rounded-[2.5rem] shadow-xl border border-slate-100">
-                    <input value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} className="flex-1 px-4 bg-transparent focus:outline-none text-sm font-medium" placeholder="Digite sua mensagem..." />
-                    <button onClick={handleSendMessage} className="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 transition-colors"><i className="fas fa-paper-plane"></i></button>
-                 </div>
-              </div>
+              <ChatView
+                user={user}
+                messages={messages}
+                inputText={inputText}
+                setInputText={setInputText}
+                handleSendMessage={handleSendMessage}
+                messagesEndRef={messagesEndRef}
+                setView={setView}
+              />
+            )}
+            {view === 'coins' && user.trampoCoins && (
+              <CoinsView
+                user={user}
+                setUser={setUser}
+                showToast={showToast}
+                setView={setView}
+              />
+            )}
+            {view === 'insurance' && (
+              <InsuranceView
+                user={user}
+                setUser={setUser}
+                showToast={showToast}
+                setView={setView}
+              />
+            )}
+            {view === 'credit' && (
+              <CreditView
+                user={user}
+                setUser={setUser}
+                showToast={showToast}
+                setView={setView}
+              />
+            )}
+            {view === 'referrals' && (
+              <ReferralsView
+                user={user}
+                handleApplyReferralCode={handleApplyReferralCode}
+                handleCompleteReferral={handleCompleteReferral}
+                showToast={showToast}
+                setView={setView}
+              />
+            )}
+            {view === 'analytics' && (
+              <AnalyticsView
+                user={user}
+                setUser={setUser}
+                showToast={showToast}
+                setView={setView}
+              />
+            )}
+            {view === 'challenges' && (
+              <ChallengesView
+                challenges={challenges}
+                setView={setView}
+              />
+            )}
+            {view === 'ranking' && (
+              <RankingView
+                rankings={rankings}
+                user={user}
+                setView={setView}
+              />
+            )}
+            {view === 'store' && (
+              <StoreView
+                storeProducts={storeProducts}
+                cart={cart}
+                setCart={setCart}
+                handleStoreCheckout={handleStoreCheckout}
+                showToast={showToast}
+                setView={setView}
+              />
+            )}
+            {view === 'ads' && user.role === 'employer' && (
+              <AdsView
+                user={user}
+                advertisements={advertisements}
+                showToast={showToast}
+                setView={setView}
+              />
             )}
           </>
         )}
-
-        {/* ==================== FEATURE 1: TRAMPOCOINS VIEW ==================== */}
-        {view === 'coins' && user.trampoCoins && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            <header className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">TrampoCoins</h2>
-                <p className="text-slate-500 text-sm">Sistema de fidelidade e recompensas</p>
-              </div>
-              <button onClick={() => setView('wallet')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900"><i className="fas fa-times"></i></button>
-            </header>
-
-            {/* Saldo de Coins */}
-            <div className="bg-gradient-to-br from-amber-400 to-amber-600 p-10 rounded-[4rem] text-white shadow-2xl relative overflow-hidden">
-              <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 blur-3xl rounded-full"></div>
-              <div className="flex items-center gap-3 mb-4">
-                <i className="fas fa-coins text-4xl"></i>
-                <div>
-                  <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Seu Saldo</p>
-                  <h3 className="text-5xl font-black tracking-tighter">{user.trampoCoins.balance}</h3>
-                  <p className="text-xs opacity-70 mt-1">TrampoCoins = R$ {(user.trampoCoins.balance * COIN_TO_CURRENCY_RATE).toFixed(2)}</p>
-                </div>
-              </div>
-              
-              {/* Streak Bonus */}
-              <div className="mt-6 bg-white/20 p-4 rounded-2xl backdrop-blur-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wider">Streak Atual</p>
-                    <p className="text-2xl font-black">{user.trampoCoins.streak} dias 🔥</p>
-                  </div>
-                  {user.trampoCoins.streakBonus && (
-                    <span className="bg-emerald-500 text-white text-xs font-black px-3 py-1 rounded-full">+50% BONUS</span>
-                  )}
-                </div>
-                <div className="mt-3 bg-white/30 h-2 rounded-full overflow-hidden">
-                  <div className="bg-white h-full rounded-full" style={{width: `${Math.min((user.trampoCoins.streak / STREAK_BONUS_THRESHOLD) * 100, 100)}%`}}></div>
-                </div>
-                <p className="text-xs mt-2 opacity-80">
-                  {user.trampoCoins.streak >= STREAK_BONUS_THRESHOLD 
-                    ? 'Bonus ativo! Continue trabalhando para manter.' 
-                    : `${STREAK_BONUS_THRESHOLD - user.trampoCoins.streak} dias para +50% bonus`}
-                </p>
-              </div>
-            </div>
-
-            {/* Como Funciona */}
-            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
-              <h3 className="font-black text-slate-900 text-lg mb-4 flex items-center gap-2">
-                <i className="fas fa-lightbulb text-amber-500"></i> Como Ganhar Coins
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl">
-                  <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center font-black">1</div>
-                  <div className="flex-1">
-                    <p className="font-bold text-slate-800 text-sm">Trabalhe e Ganhe</p>
-                    <p className="text-xs text-slate-500">1 coin a cada R$ 10 trabalhados</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl">
-                  <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-black">2</div>
-                  <div className="flex-1">
-                    <p className="font-bold text-slate-800 text-sm">Mantenha o Streak</p>
-                    <p className="text-xs text-slate-500">30 dias = +50% bonus em coins</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl">
-                  <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center font-black">3</div>
-                  <div className="flex-1">
-                    <p className="font-bold text-slate-800 text-sm">Resgate Descontos</p>
-                    <p className="text-xs text-slate-500">100 coins = R$ 10 de desconto</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Resgatar */}
-            <button 
-              onClick={() => {
-                if (user.trampoCoins.balance >= COINS_REDEMPTION_THRESHOLD) {
-                  const redeemValue = COINS_REDEMPTION_THRESHOLD * COIN_TO_CURRENCY_RATE;
-                  showToast(`${COINS_REDEMPTION_THRESHOLD} TrampoCoins resgatados! R$ ${redeemValue.toFixed(2)} adicionados à carteira`, "success");
-                  setUser(prev => prev.trampoCoins ? {
-                    ...prev,
-                    wallet: { ...prev.wallet, balance: prev.wallet.balance + redeemValue },
-                    trampoCoins: { ...prev.trampoCoins, balance: prev.trampoCoins.balance - COINS_REDEMPTION_THRESHOLD }
-                  } : prev);
-                } else {
-                  showToast(`Você precisa de ${COINS_REDEMPTION_THRESHOLD - user.trampoCoins.balance} coins para resgatar`, "error");
-                }
-              }}
-              disabled={user.trampoCoins.balance < COINS_REDEMPTION_THRESHOLD}
-              className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest ${user.trampoCoins.balance >= COINS_REDEMPTION_THRESHOLD ? 'bg-slate-900 text-white shadow-xl active:scale-95' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
-            >
-              Resgatar {COINS_REDEMPTION_THRESHOLD} Coins = R$ {(COINS_REDEMPTION_THRESHOLD * COIN_TO_CURRENCY_RATE).toFixed(0)}
-            </button>
-              Resgatar 100 Coins = R$ 10
-            </button>
-          </div>
-        )}
-
-        {/* ==================== FEATURE 3: INSURANCE VIEW ==================== */}
-        {view === 'insurance' && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            <header className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">TrampoProtect</h2>
-                <p className="text-slate-500 text-sm">Seguro para freelancers</p>
-              </div>
-              <button onClick={() => setView('wallet')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900"><i className="fas fa-times"></i></button>
-            </header>
-
-            {/* Status do Seguro */}
-            {user.insurance ? (
-              <div className="bg-emerald-50 p-6 rounded-[2.5rem] border-2 border-emerald-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center">
-                    <i className="fas fa-shield-check text-white text-xl"></i>
-                  </div>
-                  <div>
-                    <h3 className="font-black text-emerald-900">Protegido</h3>
-                    <p className="text-sm text-emerald-700">Plano ativo até {user.insurance.nextBillingDate}</p>
-                  </div>
-                </div>
-                <button className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm">Gerenciar Plano</button>
-              </div>
-            ) : (
-              <>
-                {/* Plano Freelancer */}
-                <div className="bg-white p-6 rounded-[2.5rem] border-2 border-indigo-200 shadow-lg">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-black text-xl text-slate-900">Plano Freelancer</h3>
-                    <span className="text-2xl font-black text-indigo-600">R$ 19,90<span className="text-sm text-slate-400">/mês</span></span>
-                  </div>
-                  <div className="space-y-2 mb-6">
-                    <div className="flex items-center gap-2 text-sm">
-                      <i className="fas fa-check-circle text-emerald-500"></i>
-                      <span>Acidentes de trabalho até R$ 10.000</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <i className="fas fa-check-circle text-emerald-500"></i>
-                      <span>Furto de equipamentos até R$ 3.000</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <i className="fas fa-check-circle text-emerald-500"></i>
-                      <span>Responsabilidade civil até R$ 5.000</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <i className="fas fa-check-circle text-emerald-500"></i>
-                      <span>Auxílio-doença R$ 50/dia</span>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      showToast("Seguro TrampoProtect contratado com sucesso!", "success");
-                      setUser(prev => ({
-                        ...prev,
-                        insurance: {
-                          type: 'freelancer',
-                          plan: INSURANCE_PLANS.freelancer,
-                          startDate: new Date().toISOString(),
-                          nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                          isActive: true,
-                          claims: []
-                        }
-                      }));
-                    }}
-                    className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase shadow-lg active:scale-95"
-                  >
-                    Contratar Agora
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ==================== FEATURE 6: TRAMPOCREDIT VIEW ==================== */}
-        {view === 'credit' && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            <header className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">TrampoCredit</h2>
-                <p className="text-slate-500 text-sm">Adiantamento salarial rápido</p>
-              </div>
-              <button onClick={() => setView('wallet')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900"><i className="fas fa-times"></i></button>
-            </header>
-
-            {/* Limite Disponível */}
-            <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-8 rounded-[3rem] text-white shadow-2xl">
-              <p className="text-xs font-bold opacity-70 uppercase tracking-widest mb-2">Limite Disponível</p>
-              <h3 className="text-5xl font-black mb-4">R$ 500,00</h3>
-              <p className="text-sm opacity-80">Baseado no seu histórico de trabalho</p>
-            </div>
-
-            {/* Solicitar Crédito */}
-            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
-              <h3 className="font-black text-slate-900 text-lg mb-4">Solicitar Adiantamento</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs font-bold text-slate-400 uppercase block mb-2">Valor</label>
-                  <input type="number" placeholder="R$ 250,00" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-slate-900 focus:outline-indigo-500" />
-                </div>
-                <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                  <p className="text-xs text-amber-800"><strong>Taxa:</strong> {(CREDIT_FEE_RATE * 100).toFixed(1)}% ao mês</p>
-                  <p className="text-xs text-amber-800 mt-1"><strong>Aprovação:</strong> Instantânea</p>
-                </div>
-                <button 
-                  onClick={() => showToast("Solicitação de crédito enviada! Aprovação em instantes.", "success")}
-                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase shadow-lg active:scale-95"
-                >
-                  Solicitar Agora
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ==================== FEATURE 8: REFERRALS VIEW ==================== */}
-        {view === 'referrals' && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            <header className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">Indique e Ganhe</h2>
-                <p className="text-slate-500 text-sm">Programa de indicações</p>
-              </div>
-              <button onClick={() => setView('wallet')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900"><i className="fas fa-times"></i></button>
-            </header>
-
-            {/* Código de Indicação */}
-            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-8 rounded-[3rem] text-white shadow-2xl">
-              <p className="text-xs font-bold opacity-80 uppercase tracking-widest mb-2">Seu Código</p>
-              <div className="flex items-center justify-between bg-white/20 p-4 rounded-2xl backdrop-blur-sm">
-                <span className="text-2xl font-black tracking-wider">{user.referralCode}</span>
-                <button 
-                  onClick={() => {
-                    navigator.clipboard.writeText(user.referralCode || '');
-                    showToast("Código copiado!", "success");
-                  }}
-                  className="bg-white text-indigo-600 px-4 py-2 rounded-xl text-xs font-black"
-                >
-                  COPIAR
-                </button>
-              </div>
-              <p className="text-sm mt-4 opacity-90">Ganhe R$ {REFERRAL_BONUS_FREELANCER} por cada indicação!</p>
-            </div>
-
-            {/* Estatísticas */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white p-6 rounded-2xl border border-slate-100 text-center">
-                <p className="text-3xl font-black text-indigo-600 mb-1">5</p>
-                <p className="text-xs text-slate-500 font-bold">Indicações</p>
-              </div>
-              <div className="bg-white p-6 rounded-2xl border border-slate-100 text-center">
-                <p className="text-3xl font-black text-emerald-600 mb-1">R$ 100</p>
-                <p className="text-xs text-slate-500 font-bold">Ganhos</p>
-              </div>
-            </div>
-
-            {/* Como Funciona */}
-            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100">
-              <h3 className="font-black text-slate-900 text-lg mb-4">Como Funciona</h3>
-              <ol className="space-y-3 text-sm">
-                <li className="flex gap-3">
-                  <span className="font-black text-indigo-600">1.</span>
-                  <span>Compartilhe seu código com amigos</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="font-black text-indigo-600">2.</span>
-                  <span>Eles se cadastram com seu código</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="font-black text-indigo-600">3.</span>
-                  <span>Vocês dois ganham após o 1º trabalho</span>
-                </li>
-              </ol>
-            </div>
-          </div>
-        )}
-
-        {/* ==================== FEATURE 10: ANALYTICS VIEW ==================== */}
-        {view === 'analytics' && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            <header className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">Analytics Premium</h2>
-                <p className="text-slate-500 text-sm">Insights sobre seus trabalhos</p>
-              </div>
-              <button onClick={() => setView('wallet')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900"><i className="fas fa-times"></i></button>
-            </header>
-
-            {user.analyticsAccess === 'free' ? (
-              <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-8 rounded-[3rem] border-2 border-amber-200 text-center">
-                <i className="fas fa-chart-line text-5xl text-amber-600 mb-4"></i>
-                <h3 className="font-black text-xl text-slate-900 mb-2">Upgrade para Premium</h3>
-                <p className="text-sm text-slate-600 mb-6">Acesse métricas avançadas, histórico completo e previsões com IA</p>
-                <button 
-                  onClick={() => {
-                    showToast(`Analytics Premium ativado! R$ ${ANALYTICS_PREMIUM_PRICE}/mês`, "success");
-                    setUser(prev => ({ ...prev, analyticsAccess: 'premium' }));
-                  }}
-                  className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black shadow-xl"
-                >
-                  Assinar por R$ {ANALYTICS_PREMIUM_PRICE}/mês
-                </button>
-              </div>
-            ) : (
-              <>
-                {/* Métricas */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white p-6 rounded-2xl border border-slate-100">
-                    <p className="text-xs text-slate-500 font-bold mb-1">Total Ganho</p>
-                    <p className="text-3xl font-black text-emerald-600">R$ 3.450</p>
-                  </div>
-                  <div className="bg-white p-6 rounded-2xl border border-slate-100">
-                    <p className="text-xs text-slate-500 font-bold mb-1">Jobs Completos</p>
-                    <p className="text-3xl font-black text-indigo-600">24</p>
-                  </div>
-                  <div className="bg-white p-6 rounded-2xl border border-slate-100">
-                    <p className="text-xs text-slate-500 font-bold mb-1">Média/Job</p>
-                    <p className="text-3xl font-black text-purple-600">R$ 143</p>
-                  </div>
-                  <div className="bg-white p-6 rounded-2xl border border-slate-100">
-                    <p className="text-xs text-slate-500 font-bold mb-1">Retenção</p>
-                    <p className="text-3xl font-black text-amber-600">85%</p>
-                  </div>
-                </div>
-
-                {/* Gráfico Simulado */}
-                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100">
-                  <h3 className="font-black text-slate-900 mb-4">Ganhos dos Últimos 30 Dias</h3>
-                  <div className="flex items-end gap-2 h-32">
-                    {[120, 180, 150, 200, 160, 220, 190].map((h, i) => (
-                      <div key={i} className="flex-1 bg-indigo-200 rounded-t" style={{height: `${h/2.5}px`}}></div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ==================== NEW FEATURE: WEEKLY CHALLENGES ==================== */}
-        {view === 'challenges' && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            <header className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">🔥 Desafios Semanais</h2>
-                <p className="text-slate-500 text-sm">Complete desafios e ganhe recompensas</p>
-              </div>
-              <button onClick={() => setView('browse')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900"><i className="fas fa-times"></i></button>
-            </header>
-
-            {/* Active Challenges */}
-            <div className="space-y-4">
-              {challenges.filter(c => c.isActive && !c.isCompleted).map(challenge => (
-                <div key={challenge.id} className="bg-white p-6 rounded-[2.5rem] border-2 border-slate-100 hover:border-indigo-200 transition-all">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="font-black text-lg text-slate-900 mb-1">{challenge.title}</h3>
-                      <p className="text-sm text-slate-600">{challenge.description}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-2xl">
-                      <i className={`fas ${challenge.icon}`}></i>
-                    </div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="mb-4">
-                    <div className="flex justify-between text-xs font-bold text-slate-600 mb-2">
-                      <span>{challenge.requirement.current} / {challenge.requirement.target}</span>
-                      <span>{Math.round((challenge.requirement.current / challenge.requirement.target) * 100)}%</span>
-                    </div>
-                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full transition-all duration-500"
-                        style={{width: `${(challenge.requirement.current / challenge.requirement.target) * 100}%`}}
-                      ></div>
-                    </div>
-                  </div>
-
-                  {/* Reward */}
-                  <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                    <span className="text-xs text-slate-500 font-bold">Recompensa:</span>
-                    <span className="px-4 py-2 bg-amber-50 text-amber-600 rounded-xl font-black text-sm">
-                      {challenge.reward.type === 'cash' && `R$ ${challenge.reward.value}`}
-                      {challenge.reward.type === 'coins' && `${challenge.reward.value} Coins`}
-                      {challenge.reward.type === 'medal' && '🏆 Medalha Exclusiva'}
-                    </span>
-                  </div>
-
-                  {/* Time Remaining */}
-                  <div className="mt-3 text-xs text-slate-400 text-center">
-                    Termina em {Math.ceil((new Date(challenge.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} dias
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Completed Challenges */}
-            {challenges.filter(c => c.isCompleted).length > 0 && (
-              <div>
-                <h3 className="font-black text-slate-900 mb-3">✅ Completados</h3>
-                <div className="space-y-3">
-                  {challenges.filter(c => c.isCompleted).map(challenge => (
-                    <div key={challenge.id} className="bg-slate-50 p-4 rounded-2xl opacity-70">
-                      <p className="font-bold text-sm">{challenge.title}</p>
-                      <p className="text-xs text-slate-500">Recompensa recebida!</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ==================== NEW FEATURE: TALENT RANKING ==================== */}
-        {view === 'ranking' && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            <header className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">🏆 Ranking de Talentos</h2>
-                <p className="text-slate-500 text-sm">Top freelancers da semana</p>
-              </div>
-              <button onClick={() => setView('browse')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900"><i className="fas fa-times"></i></button>
-            </header>
-
-            {/* Filter by Niche */}
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              <button className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold whitespace-nowrap">Todos</button>
-              {Object.values(Niche).map(niche => (
-                <button key={niche} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold whitespace-nowrap hover:border-indigo-300">
-                  {niche}
-                </button>
-              ))}
-            </div>
-
-            {/* Rankings List */}
-            <div className="space-y-3">
-              {rankings.map((talent, index) => (
-                <div 
-                  key={talent.userId} 
-                  className={`bg-white p-5 rounded-[2rem] border-2 transition-all ${
-                    index < 3 ? 'border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50' : 'border-slate-100'
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    {/* Rank Badge */}
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black ${
-                      index === 0 ? 'bg-amber-400 text-white' :
-                      index === 1 ? 'bg-slate-300 text-white' :
-                      index === 2 ? 'bg-orange-400 text-white' :
-                      'bg-slate-100 text-slate-600'
-                    }`}>
-                      {talent.badge || `#${talent.rank}`}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-black text-slate-900">{talent.userName}</h3>
-                        {talent.userId === user.id && (
-                          <span className="px-2 py-1 bg-indigo-100 text-indigo-600 rounded-lg text-xs font-bold">Você</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-500">{talent.niche}</p>
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className="text-xs font-bold text-slate-600">
-                          ⭐ {talent.rating.toFixed(1)}
-                        </span>
-                        <span className="text-xs font-bold text-slate-600">
-                          📊 {talent.weeklyJobs} jobs/semana
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Score */}
-                    <div className="text-right">
-                      <p className="text-2xl font-black text-indigo-600">{talent.score}</p>
-                      <p className="text-xs text-slate-400">pontos</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Your Position */}
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-[2.5rem] text-white">
-              <p className="text-xs font-bold opacity-80 uppercase tracking-widest mb-2">Sua Posição</p>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-4xl font-black mb-1">#{rankings.find(r => r.userId === user.id)?.rank || '-'}</p>
-                  <p className="text-sm opacity-90">Continue assim para subir no ranking!</p>
-                </div>
-                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl backdrop-blur-sm">
-                  🎯
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ==================== NEW FEATURE: TRAMPOSTORE ==================== */}
-        {view === 'store' && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            <header className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">🛒 TrampoStore</h2>
-                <p className="text-slate-500 text-sm">Uniformes, EPIs e ferramentas</p>
-              </div>
-              <div className="flex gap-2">
-                <button 
-                  onClick={handleStoreCheckout}
-                  className="w-10 h-10 bg-indigo-100 rounded-xl text-indigo-600 hover:bg-indigo-200 relative"
-                >
-                  <i className="fas fa-shopping-cart"></i>
-                  {cart.length > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center font-bold">
-                      {cart.length}
-                    </span>
-                  )}
-                </button>
-                <button onClick={() => setView('browse')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900">
-                  <i className="fas fa-times"></i>
-                </button>
-              </div>
-            </header>
-
-            {/* Categories */}
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              <button className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold whitespace-nowrap">Todos</button>
-              <button className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold whitespace-nowrap">Uniformes</button>
-              <button className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold whitespace-nowrap">EPIs</button>
-              <button className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold whitespace-nowrap">Ferramentas</button>
-              <button className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold whitespace-nowrap">Acessórios</button>
-            </div>
-
-            {/* Products Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              {storeProducts.map(product => (
-                <div key={product.id} className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden hover:shadow-lg transition-all">
-                  {/* Product Image */}
-                  <div className="aspect-square bg-slate-100 flex items-center justify-center relative">
-                    <i className="fas fa-box text-4xl text-slate-300"></i>
-                    {product.originalPrice && (
-                      <span className="absolute top-2 right-2 px-2 py-1 bg-red-500 text-white rounded-lg text-xs font-bold">
-                        -{Math.round((1 - product.price / product.originalPrice) * 100)}%
-                      </span>
-                    )}
-                    {!product.inStock && (
-                      <span className="absolute inset-0 bg-slate-900/70 flex items-center justify-center text-white font-bold text-xs">
-                        Esgotado
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Product Info */}
-                  <div className="p-4">
-                    <h3 className="font-bold text-sm text-slate-900 mb-1 line-clamp-2">{product.name}</h3>
-                    
-                    {/* Rating */}
-                    <div className="flex items-center gap-1 mb-2">
-                      <span className="text-amber-500 text-xs">⭐</span>
-                      <span className="text-xs font-bold text-slate-600">{product.rating}</span>
-                      <span className="text-xs text-slate-400">({product.reviewCount})</span>
-                    </div>
-
-                    {/* Price */}
-                    <div className="mb-3">
-                      {product.originalPrice && (
-                        <p className="text-xs text-slate-400 line-through">R$ {product.originalPrice.toFixed(2)}</p>
-                      )}
-                      <p className="text-lg font-black text-indigo-600">R$ {product.price.toFixed(2)}</p>
-                    </div>
-
-                    {/* Add to Cart Button */}
-                    <button
-                      onClick={() => {
-                        if (product.inStock) {
-                          setCart(prev => {
-                            const existingItem = prev.find(item => item.productId === product.id);
-                            if (existingItem) {
-                              return prev.map(item => 
-                                item.productId === product.id 
-                                  ? { ...item, quantity: item.quantity + 1 }
-                                  : item
-                              );
-                            }
-                            return [...prev, { productId: product.id, quantity: 1 }];
-                          });
-                          showToast('Adicionado ao carrinho!', 'success');
-                        }
-                      }}
-                      disabled={!product.inStock}
-                      className={`w-full py-2 rounded-xl text-xs font-bold transition-all ${
-                        product.inStock 
-                          ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
-                          : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                      }`}
-                    >
-                      {product.inStock ? 'Adicionar' : 'Indisponível'}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Free Shipping Banner */}
-            <div className="bg-emerald-50 p-4 rounded-2xl border-2 border-emerald-200 text-center">
-              <p className="font-bold text-emerald-700">
-                <i className="fas fa-truck mr-2"></i>
-                Frete GRÁTIS acima de R$ 150
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* ==================== NEW FEATURE: TRAMPOADS ==================== */}
-        {view === 'ads' && user.role === 'employer' && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            <header className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">📢 TrampoAds</h2>
-                <p className="text-slate-500 text-sm">Anuncie para freelancers</p>
-              </div>
-              <button onClick={() => setView('dashboard')} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900"><i className="fas fa-times"></i></button>
-            </header>
-
-            {/* Ad Stats Overview */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 text-center">
-                <p className="text-2xl font-black text-indigo-600 mb-1">2</p>
-                <p className="text-xs text-slate-500 font-bold">Campanhas Ativas</p>
-              </div>
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 text-center">
-                <p className="text-2xl font-black text-amber-600 mb-1">57.7k</p>
-                <p className="text-xs text-slate-500 font-bold">Impressões</p>
-              </div>
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 text-center">
-                <p className="text-2xl font-black text-emerald-600 mb-1">1.1k</p>
-                <p className="text-xs text-slate-500 font-bold">Cliques</p>
-              </div>
-            </div>
-
-            {/* Active Campaigns */}
-            <div>
-              <h3 className="font-black text-slate-900 mb-3">Campanhas Ativas</h3>
-              <div className="space-y-4">
-                {advertisements.filter(ad => ad.isActive).map(ad => (
-                  <div key={ad.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-100">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className={`px-3 py-1 rounded-lg text-xs font-bold ${
-                            ad.type === 'banner' ? 'bg-blue-100 text-blue-600' :
-                            ad.type === 'sponsored_post' ? 'bg-purple-100 text-purple-600' :
-                            ad.type === 'push_notification' ? 'bg-green-100 text-green-600' :
-                            'bg-red-100 text-red-600'
-                          }`}>
-                            {ad.type === 'banner' && '🎨 Banner'}
-                            {ad.type === 'sponsored_post' && '📱 Post Patrocinado'}
-                            {ad.type === 'push_notification' && '🔔 Push'}
-                            {ad.type === 'video_preroll' && '🎥 Vídeo'}
-                          </span>
-                          <span className="px-2 py-1 bg-emerald-100 text-emerald-600 rounded-lg text-xs font-bold">
-                            Ativo
-                          </span>
-                        </div>
-                        <h3 className="font-black text-lg text-slate-900 mb-1">{ad.content.title}</h3>
-                        <p className="text-sm text-slate-600">{ad.content.description}</p>
-                      </div>
-                    </div>
-
-                    {/* Ad Metrics */}
-                    <div className="grid grid-cols-4 gap-3 mb-4">
-                      <div>
-                        <p className="text-xs text-slate-500 mb-1">Budget</p>
-                        <p className="text-sm font-black text-slate-900">R$ {ad.budget}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500 mb-1">Gasto</p>
-                        <p className="text-sm font-black text-amber-600">R$ {ad.spent}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500 mb-1">Impressões</p>
-                        <p className="text-sm font-black text-indigo-600">{(ad.impressions / 1000).toFixed(1)}k</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500 mb-1">CTR</p>
-                        <p className="text-sm font-black text-emerald-600">{((ad.clicks / ad.impressions) * 100).toFixed(1)}%</p>
-                      </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full"
-                        style={{width: `${(ad.spent / ad.budget) * 100}%`}}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Create Campaign Button */}
-            <button 
-              onClick={() => showToast('Campanha criada com sucesso!', 'success')}
-              className="w-full py-5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-[2rem] font-black shadow-xl hover:shadow-2xl transition-all"
-            >
-              <i className="fas fa-plus mr-2"></i>
-              Criar Nova Campanha
-            </button>
-
-            {/* Pricing Info */}
-            <div className="bg-slate-50 p-6 rounded-[2.5rem]">
-              <h3 className="font-black text-slate-900 mb-4">💰 Preços</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Banner no Feed</span>
-                  <span className="font-bold">R$ 500/semana</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Post Patrocinado</span>
-                  <span className="font-bold">R$ 300/post</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Push Notification</span>
-                  <span className="font-bold">R$ 0,15/envio</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Vídeo Pre-roll</span>
-                  <span className="font-bold">R$ 2.000/semana</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </main>
 
-      {/* Nav Bottom */}
       <BottomNav user={user} view={view} setView={setView} />
 
-      {/* MODAL EXAME DE CURSO */}
       {showExamModal && currentCourse && (
         <ExamModal
           currentCourse={currentCourse}
@@ -2591,7 +509,6 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* MODAL HERO PRIME */}
       {showPrimeModal && (
         <PrimeModal
           user={user}
@@ -2601,7 +518,6 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* MODAL PAGAMENTO / DEPÓSITO */}
       {showPaymentModal && (
         <PaymentModal
           depositAmount={depositAmount}
@@ -2617,7 +533,6 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* MODAL CRIAR VAGA */}
       {showCreateJobModal && (
         <CreateJobModal
           newJobData={newJobData}
@@ -2629,7 +544,6 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* MODAL DETALHE VAGA */}
       {selectedJob && (
         <JobDetailModal
           job={selectedJob}
