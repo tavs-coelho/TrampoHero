@@ -7,6 +7,9 @@ import { MEDALS_REPO, COURSES, INSURANCE_PLANS, TOP_TALENTS, WEEKLY_CHALLENGES, 
 import { formatCurrency, formatDate } from './utils/helpers';
 import { Toast } from './components/Toast';
 import { SplashScreen } from './components/SplashScreen';
+import { Header } from './components/Header';
+import { BottomNav } from './components/BottomNav';
+import { JobCard } from './components/JobCard';
 
 declare const L: any;
 
@@ -1027,36 +1030,7 @@ const App: React.FC = () => {
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* Header com Navegação para Perfil */}
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-40 px-6 h-16 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3" onClick={() => setView('browse')}>
-          <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg cursor-pointer hover:bg-slate-800 transition-colors">
-            <i className="fas fa-bolt text-indigo-400"></i>
-          </div>
-          <div className="cursor-pointer">
-            <span className="font-black text-lg tracking-tighter block leading-none">TrampoHero</span>
-            <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-widest">PRO Version</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          {user.role === 'freelancer' && (
-             user.isPrime ? (
-                <div onClick={() => setShowPrimeModal(true)} className="bg-indigo-600 text-white flex items-center gap-1 text-[8px] font-black px-3 py-1.5 rounded-full animate-pulse shadow-lg shadow-indigo-300 cursor-pointer">
-                    <i className="fas fa-crown"></i> PRIME ATIVO
-                </div>
-              ) : (
-                <div onClick={() => setShowPrimeModal(true)} className="text-slate-300 hover:text-amber-500 cursor-pointer transition-colors">
-                    <i className="fas fa-crown text-xl"></i>
-                </div>
-              )
-          )}
-          <div onClick={() => setView('profile')} className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center cursor-pointer hover:bg-slate-200 transition-colors">
-             <i className="fas fa-user text-slate-500 text-xs"></i>
-          </div>
-          <button onClick={() => setUser(prev => ({ ...prev, role: prev.role === 'freelancer' ? 'employer' : 'freelancer' }))} className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border bg-white text-slate-500 border-slate-200 hover:bg-slate-50 transition-colors">
-            {user.role === 'freelancer' ? 'Modo Empresa' : 'Modo Freelancer'}
-          </button>
-        </div>
-      </nav>
+      <Header user={user} setView={setView} setShowPrimeModal={setShowPrimeModal} setUser={setUser} />
 
       <main className="flex-1 max-w-2xl mx-auto w-full p-4">
         {user.role === 'employer' ? (
@@ -1320,18 +1294,7 @@ const App: React.FC = () => {
                         </div>
                     ) : (
                         sortedOpenJobs.map(job => (
-                        <div key={job.id} onClick={() => setSelectedJob(job)} className={`bg-white p-6 rounded-[3rem] border transition-all cursor-pointer relative active:scale-[0.98] ${job.isBoosted ? 'border-amber-400 shadow-amber-100 shadow-xl' : 'border-slate-100 shadow-sm hover:shadow-md'}`}>
-                            {job.isBoosted && <div className="absolute -top-3 left-8 bg-amber-400 text-white text-[8px] font-black px-3 py-1 rounded-full shadow-lg uppercase tracking-widest"><i className="fas fa-bolt mr-1"></i> Destaque</div>}
-                            <div className="flex justify-between items-start mb-2">
-                            <span className="text-[10px] font-black text-indigo-500 uppercase">{job.niche}</span>
-                            <p className="font-black text-slate-900 text-lg">R$ {job.payment}</p>
-                            </div>
-                            <h3 className="font-bold text-slate-800 text-lg leading-tight">{job.title}</h3>
-                            <div className="flex items-center gap-3 mt-3">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase"><i className="fas fa-building mr-1"></i> {job.employer}</p>
-                            {job.isEscrowGuaranteed && <span className="text-[8px] text-emerald-600 font-black uppercase flex items-center gap-1"><i className="fas fa-shield-check"></i> Seguro</span>}
-                            </div>
-                        </div>
+                        <JobCard key={job.id} job={job} onClick={setSelectedJob} />
                         ))
                     )}
                   </div>
@@ -2598,24 +2561,7 @@ const App: React.FC = () => {
       </main>
 
       {/* Nav Bottom */}
-      <div className="fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-xl border-t border-slate-100 h-20 flex items-center justify-around px-8 z-50">
-        <button onClick={() => setView(user.role === 'employer' ? 'dashboard' : 'browse')} className={`flex flex-col items-center transition-transform active:scale-95 ${view === 'browse' || view === 'dashboard' ? 'text-indigo-600 scale-110' : 'text-slate-300'}`}>
-          <i className="fas fa-compass text-xl mb-1"></i>
-          <span className="text-[8px] font-black uppercase tracking-widest">Início</span>
-        </button>
-        <button onClick={() => setView('active')} className={`flex flex-col items-center transition-transform active:scale-95 ${view === 'active' ? 'text-indigo-600 scale-110' : 'text-slate-300'}`}>
-          <i className="fas fa-briefcase text-xl mb-1"></i>
-          <span className="text-[8px] font-black uppercase tracking-widest">Job Ativo</span>
-        </button>
-        <button onClick={() => setView('wallet')} className={`flex flex-col items-center transition-transform active:scale-95 ${view === 'wallet' ? 'text-indigo-600 scale-110' : 'text-slate-300'}`}>
-          <i className="fas fa-wallet text-xl mb-1"></i>
-          <span className="text-[8px] font-black uppercase tracking-widest">Carteira</span>
-        </button>
-        <button onClick={() => setView('chat')} className={`flex flex-col items-center transition-transform active:scale-95 ${view === 'chat' ? 'text-indigo-600 scale-110' : 'text-slate-300'}`}>
-          <i className="fas fa-headset text-xl mb-1"></i>
-          <span className="text-[8px] font-black uppercase tracking-widest">Suporte</span>
-        </button>
-      </div>
+      <BottomNav user={user} view={view} setView={setView} />
 
       {/* MODAL EXAME DE CURSO */}
       {showExamModal && currentCourse && (

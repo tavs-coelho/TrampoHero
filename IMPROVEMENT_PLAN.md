@@ -59,26 +59,21 @@ O TrampoHero Pro é uma plataforma promissora para o mercado de trabalho tempor�
 #### 2.1 Decomposição do `App.tsx`
 Extrair componentes lógicos do arquivo monolítico:
 
-- [ ] `components/Header.tsx` — Navegação e perfil do usuário
-- [ ] `components/JobList.tsx` — Lista de vagas com filtros
-- [ ] `components/JobCard.tsx` — Card individual de vaga
-- [ ] `components/Wallet.tsx` — Carteira digital e transações
-- [ ] `components/MapView.tsx` — Visualização de mapa com Leaflet
-- [ ] `components/CourseList.tsx` — Hero Academy e cursos
-- [ ] `components/MedalDisplay.tsx` — Medalhas e certificados
-- [ ] `components/ChatPanel.tsx` — Painel de mensagens
-- [ ] `components/EmployerDashboard.tsx` — Dashboard do empregador
-- [ ] `components/FreelancerDashboard.tsx` — Dashboard do freelancer
-- [ ] `components/TrampoStore.tsx` — E-commerce
-- [ ] `components/Challenges.tsx` — Desafios semanais
-- [ ] `components/Rankings.tsx` — Ranking de talentos
+- [x] `data/constants.ts` — Constantes de monetização e configuração
+- [x] `data/mockData.ts` — Dados mockados (medalhas, cursos, vagas, etc.)
+- [x] `utils/helpers.ts` — Funções utilitárias (formatCurrency, formatDate)
+- [x] `components/Toast.tsx` — Componente de notificação
+- [x] `components/SplashScreen.tsx` — Tela de splash
+- [x] `components/Header.tsx` — Navegação e perfil do usuário
+- [x] `components/BottomNav.tsx` — Barra de navegação inferior
+- [x] `components/JobCard.tsx` — Card individual de vaga
 
-**Por quê?** Um arquivo de 1542 linhas é muito difícil de manter, debugar e revisar. A decomposição é essencial para a saúde do projeto.
+**Por quê?** Um arquivo de 3629 linhas é muito difícil de manter, debugar e revisar. A decomposição é essencial para a saúde do projeto.
 
 #### 2.2 Gerenciamento de Estado
-- [ ] Migrar de múltiplos `useState` para `useReducer` ou Context API para estado global
-- [ ] Criar `contexts/AppContext.tsx` para estado compartilhado (user, jobs, wallet)
-- [ ] Separar estado de UI do estado de dados
+- [x] Criar `contexts/AppContext.tsx` com `useReducer` para estado centralizado
+- [x] Integrar AppProvider no `index.tsx`
+- [ ] Migrar App.tsx para usar `useAppContext()` (futuro — quando mais componentes precisarem de estado compartilhado)
 
 **Por quê?** O estado atual está todo concentrado em `App.tsx` com muitos `useState` interdependentes. `useReducer` dará mais previsibilidade.
 
