@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate, authorize } from '../middleware/auth.js';
 import Job from '../models/Job.js';
+import User from '../models/User.js';
 
 const router = express.Router();
 
@@ -45,15 +46,25 @@ router.get('/:id', async (req, res) => {
 router.post('/', authenticate, authorize('employer'), async (req, res) => {
   try {
     const { title, payment, niche, location, coordinates, description, date, startTime, paymentType, isBoosted, isEscrowGuaranteed, minRatingRequired } = req.body;
-    
+
+    // Fetch employer name from user document
+    const employer = await User.findById(req.user.id);
+    if (!employer) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    if (!coordinates || typeof coordinates.lat !== 'number' || typeof coordinates.lng !== 'number') {
+      return res.status(400).json({ success: false, error: 'Valid coordinates (lat, lng) are required' });
+    }
+
     const job = await Job.create({
       employerId: req.user.id,
       title,
-      employer: req.user.name || 'Employer',
+      employer: employer.name,
       payment,
       niche,
       location,
-      coordinates: coordinates || { lat: -23.5505, lng: -46.6333 },
+      coordinates,
       description,
       date,
       startTime,

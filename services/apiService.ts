@@ -66,15 +66,22 @@ class ApiService {
     }
   }
 
+  private handleAuthResponse(result: ApiResponse<unknown>): void {
+    if (result.success) {
+      const token = (result as unknown as { token: string }).token;
+      if (token) {
+        this.setToken(token);
+      }
+    }
+  }
+
   // Auth
   async register(email: string, password: string, name: string, role: string, niche?: string) {
     const result = await this.request<{ token: string; user: { id: string; email: string; name: string; role: string } }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, name, role, niche }),
     });
-    if (result.success && result.data) {
-      this.setToken((result as { token: string }).token || (result.data as unknown as { token: string }).token);
-    }
+    this.handleAuthResponse(result);
     return result;
   }
 
@@ -83,9 +90,7 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    if (result.success && result.data) {
-      this.setToken((result as { token: string }).token || (result.data as unknown as { token: string }).token);
-    }
+    this.handleAuthResponse(result);
     return result;
   }
 

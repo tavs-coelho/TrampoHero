@@ -3,6 +3,8 @@ import { authenticate } from '../middleware/auth.js';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
 
+const WITHDRAWAL_FEE = parseFloat(process.env.WITHDRAWAL_FEE || '2.50');
+
 const router = express.Router();
 
 // @route   GET /api/wallet/balance
@@ -78,7 +80,7 @@ router.post('/withdraw', authenticate, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Insufficient balance' });
     }
 
-    const fee = user.isPrime ? 0 : 2.50;
+    const fee = user.isPrime ? 0 : WITHDRAWAL_FEE;
 
     // Create transaction
     const transaction = await Transaction.create({

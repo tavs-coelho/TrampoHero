@@ -41,7 +41,9 @@ const certificateSchema = new mongoose.Schema({
 // Generate certificate number before saving
 certificateSchema.pre('save', function(next) {
   if (!this.certificateNumber) {
-    this.certificateNumber = `TH-${Date.now().toString(36).toUpperCase()}`;
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    this.certificateNumber = `TH-${timestamp}-${random}`;
   }
   next();
 });
