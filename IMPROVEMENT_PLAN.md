@@ -82,26 +82,28 @@ Extrair componentes lógicos do arquivo monolítico:
 ### Fase 3 — Backend e Integração (Média prioridade)
 
 #### 3.1 Modelos do MongoDB
-- [ ] Criar `backend/src/models/User.js` (Mongoose schema)
-- [ ] Criar `backend/src/models/Job.js`
-- [ ] Criar `backend/src/models/Transaction.js`
-- [ ] Criar `backend/src/models/Course.js`
-- [ ] Criar `backend/src/models/Certificate.js`
+- [x] Criar `backend/src/models/User.js` (Mongoose schema)
+- [x] Criar `backend/src/models/Job.js`
+- [x] Criar `backend/src/models/Transaction.js`
+- [x] Criar `backend/src/models/Course.js`
+- [x] Criar `backend/src/models/Certificate.js`
 
 **Por quê?** O backend não tem modelos de dados. As rotas existentes retornam dados mock. Sem modelos, não há persistência real.
 
 #### 3.2 Integração Frontend ↔ Backend
-- [ ] Criar `services/apiService.ts` — camada de abstração para chamadas HTTP
-- [ ] Implementar endpoints reais de autenticação (login/registro)
-- [ ] Conectar listagem de vagas ao backend
-- [ ] Conectar wallet/transações ao backend
+- [x] Criar `services/apiService.ts` — camada de abstração para chamadas HTTP
+- [x] Conectar MongoDB no `server.js` via Mongoose
+- [x] Atualizar rotas de autenticação para usar modelo User (register/login reais)
+- [x] Atualizar rotas de vagas para usar modelo Job (CRUD completo)
+- [x] Atualizar rotas de perfil para usar modelo User
+- [x] Atualizar rotas de wallet para usar modelos User + Transaction
 
 **Por quê?** Atualmente o frontend funciona 100% com dados mock/hardcoded. Para ser um produto real, precisa de persistência.
 
 #### 3.3 Tratamento de Erros
-- [ ] Criar componente `ErrorBoundary` para erros React
-- [ ] Padronizar respostas de erro no backend (formato consistente)
-- [ ] Adicionar tratamento de erros de rede no frontend (loading states, retry logic)
+- [x] Criar componente `ErrorBoundary` para erros React
+- [x] Padronizar respostas de erro no backend (formato `{ success, error }` consistente)
+- [x] Integrar ErrorBoundary no `index.tsx`
 
 **Por quê?** Erros não tratados resultam em tela branca para o usuário. Error boundaries e feedback visual são essenciais para UX.
 

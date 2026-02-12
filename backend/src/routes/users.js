@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
+import User from '../models/User.js';
 
 const router = express.Router();
 
@@ -8,10 +9,13 @@ const router = express.Router();
 // @access  Private
 router.get('/profile', authenticate, async (req, res) => {
   try {
-    // TODO: Get user from database
-    res.json({ success: true, data: { id: req.user.id } });
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    res.json({ success: true, data: user });
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
@@ -20,10 +24,21 @@ router.get('/profile', authenticate, async (req, res) => {
 // @access  Private
 router.put('/profile', authenticate, async (req, res) => {
   try {
-    // TODO: Update user in database
-    res.json({ success: true, message: 'Profile updated' });
+    const allowedFields = ['name', 'bio', 'niche'];
+    const updates = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    }
+
+    const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true, runValidators: true });
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    res.json({ success: true, data: user });
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
