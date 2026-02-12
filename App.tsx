@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Niche, Job, UserProfile, SubscriptionTier, Message, Medal, Course, Transaction, Invitation, Invoice, TrampoCoin, InsurancePlan, UltraPlan, CourseQuestion, CourseProgress, Certificate, WeeklyChallenge, TalentRanking, StoreProduct, StoreOrder, Advertisement, Referral } from './types';
+import { Niche, Job, UserProfile, SubscriptionTier, Message, Course, Transaction, Invitation, Invoice, Certificate, WeeklyChallenge, TalentRanking, StoreProduct, StoreOrder, Advertisement, Referral } from './types';
 import { translateMessage, supportAssistant, getRecurrentSuggestion, generateVoiceJob, generateJobDescription } from './services/geminiService';
 import { generateContract, generateCertificate } from './services/pdfService';
 import { MAX_RECENT_ITEMS, COINS_PER_CURRENCY_UNIT, COIN_TO_CURRENCY_RATE, COINS_REDEMPTION_THRESHOLD, STREAK_BONUS_THRESHOLD, STREAK_BONUS_MULTIPLIER, CREDIT_FEE_RATE, REFERRAL_BONUS_FREELANCER, REFERRAL_BONUS_EMPLOYER, ANALYTICS_PREMIUM_PRICE, DELIVERY_DAYS, DELIVERY_DAYS_MS } from './data/constants';
