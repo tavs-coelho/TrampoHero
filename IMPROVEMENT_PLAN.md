@@ -32,23 +32,23 @@ O TrampoHero Pro é uma plataforma promissora para o mercado de trabalho tempor�
 ### Fase 1 — Qualidade de Código (Impacto imediato, baixo risco)
 
 #### 1.1 Configuração de Linting e Formatação
-- [ ] Adicionar ESLint com regras para React + TypeScript
-- [ ] Adicionar Prettier para formatação consistente
-- [ ] Adicionar scripts `lint` e `format` no `package.json`
+- [x] Adicionar ESLint com regras para React + TypeScript
+- [x] Adicionar Prettier para formatação consistente
+- [x] Adicionar scripts `lint` e `format` no `package.json`
 
 **Por quê?** Garante consistência no código e previne bugs comuns. É a base para todo o resto.
 
 #### 1.2 Correção da Variável de Ambiente
-- [ ] Unificar o uso de `GEMINI_API_KEY` vs `API_KEY` em `vite.config.ts` e `services/geminiService.ts`
-- [ ] Atualizar `.env.example` na raiz se necessário
+- [x] Unificar o uso de `GEMINI_API_KEY` vs `API_KEY` em `vite.config.ts` e `services/geminiService.ts`
+- [x] Atualizar `.env.example` na raiz se necessário
 
 **Por quê?** Bug funcional — a integração com Gemini AI pode falhar silenciosamente.
 
 #### 1.3 Configuração de Testes
-- [ ] Instalar Vitest + @testing-library/react + jsdom
-- [ ] Configurar `vitest.config.ts`
-- [ ] Adicionar scripts `test` e `test:coverage` no `package.json`
-- [ ] Criar testes iniciais para `services/geminiService.ts` e `services/pdfService.ts`
+- [x] Instalar Vitest + @testing-library/react + jsdom
+- [x] Configurar `vitest.config.ts`
+- [x] Adicionar scripts `test` e `test:coverage` no `package.json`
+- [x] Criar testes iniciais para `services/geminiService.ts` e `services/pdfService.ts`
 
 **Por quê?** Sem testes, qualquer refatoração futura é arriscada.
 
