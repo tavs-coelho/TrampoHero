@@ -99,25 +99,25 @@ Atualmente existem apenas **22 testes** (services). Nenhum componente React tem 
 
 ---
 
-### Fase 7 — Backend Completo (Média prioridade)
+### Fase 7 — Backend Completo (Média prioridade) ✅
 
-4 rotas ainda usam mock data: `challenges.js`, `ranking.js`, `store.js`, `ads.js`
+Todas as rotas agora usam modelos Mongoose reais. Nenhum mock data restante no backend.
 
 #### 7.1 Modelos Faltantes
-- [ ] `backend/src/models/Challenge.js` — Desafios semanais
-- [ ] `backend/src/models/Product.js` — Produtos da TrampoStore
-- [ ] `backend/src/models/Order.js` — Pedidos da loja
-- [ ] `backend/src/models/Advertisement.js` — Campanhas de anúncios
+- [x] `backend/src/models/Challenge.js` — Desafios semanais com participantes e progresso
+- [x] `backend/src/models/Product.js` — Produtos da TrampoStore com categorias e niches
+- [x] `backend/src/models/Order.js` — Pedidos da loja com itens, total e status
+- [x] `backend/src/models/Advertisement.js` — Campanhas de anúncios com targeting e analytics
 
 #### 7.2 Atualizar Rotas Restantes
-- [ ] `routes/challenges.js` — CRUD com modelo Challenge, progresso por usuário
-- [ ] `routes/ranking.js` — Ranking calculado a partir de jobs completados
-- [ ] `routes/store.js` — Produtos e pedidos com modelos reais
-- [ ] `routes/ads.js` — Campanhas de anúncios com modelo Advertisement
+- [x] `routes/challenges.js` — GET challenges com progresso por usuário, POST progress, POST claim (com recompensas reais)
+- [x] `routes/ranking.js` — Ranking calculado dinamicamente a partir de jobs completados (score = rating×100 + monthlyJobs×10 + weeklyJobs×5)
+- [x] `routes/store.js` — Produtos (GET com filtros), pedidos (POST com validação de estoque, GET histórico)
+- [x] `routes/ads.js` — CRUD completo, feed para freelancers (com incremento de impressões), click tracking, analytics com CTR
 
 #### 7.3 Seeds e Fixtures
-- [ ] Criar `backend/src/seeds/seed.js` — Script para popular o banco com dados iniciais
-- [ ] Migrar dados de `data/mockData.ts` para seed script
+- [x] `backend/src/seeds/seed.js` — Script para popular o banco com 9 users, 3 jobs, 3 challenges, 6 products, 2 ads
+- [x] Script `npm run seed` adicionado ao `backend/package.json`
 
 **Por quê?** Metade das rotas do backend ainda retornam dados hardcoded. Para consistência, todas devem usar Mongoose.
 
