@@ -3,9 +3,13 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // env must be imported first so missing vars cause an early exit
 import { env } from './config/env.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -86,6 +90,9 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/kyc', kycRoutes);
+
+// Serve generated PDF contracts for download
+app.use('/api/contracts', express.static(path.join(__dirname, '..', 'contracts')));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
