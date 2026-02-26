@@ -1,6 +1,6 @@
 
 import { Job } from "../types";
-import { env } from "./env";
+import { env } from "../src/config/env";
 
 /**
  * Internal helper — calls the server-side AI proxy.

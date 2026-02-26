@@ -2,13 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
-import mongoose from 'mongoose';
+import morgan from 'morgan';
 
-// Load env vars before importing config that reads them
-dotenv.config();
-
-import { validateEnv } from './config/env.js';
+// env must be imported first so missing vars cause an early exit
+import { env } from './config/env.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -21,11 +18,9 @@ import storeRoutes from './routes/store.js';
 import adsRoutes from './routes/ads.js';
 import aiRoutes from './routes/ai.js';
 
-// Validate env — exits with a clear message if required vars are missing
-const env = validateEnv();
+import mongoose from 'mongoose';
 
 const app = express();
-const PORT = env.PORT;
 
 // Connect to MongoDB
 const connectDB = async () => {
@@ -43,6 +38,9 @@ connectDB();
 // Security middleware
 app.use(helmet());
 
+// Request logging (concise in production, verbose in development)
+app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -55,32 +53,18 @@ app.use('/api/', limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Request logging middleware (minimal, no external dependency)
-app.use((req, res, next) => {
-  const start = Date.now();
-  res.on('finish', () => {
-    const ms = Date.now() - start;
-    const level = res.statusCode >= 500 ? '❌' : res.statusCode >= 400 ? '⚠️ ' : '✅';
-    console.log(`${level}  ${req.method} ${req.url} ${res.statusCode} ${ms}ms`);
-  });
-  next();
-});
-
-// CORS — supports comma-separated ALLOWED_ORIGINS env var for staging + prod
-const allowedOrigins = [
-  env.FRONTEND_URL,
-  ...(env.ALLOWED_ORIGINS ? env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()) : []),
-].filter(Boolean);
-
+// CORS – allow-list driven by ALLOWED_ORIGINS env variable
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (e.g. mobile apps, curl, Postman)
+    // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    console.warn(`[CORS] Blocked origin: ${origin}`);
+    if (env.ALLOWED_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+    console.warn(`[CORS] Blocked request from origin: ${origin}`);
     callback(new Error('Not allowed by CORS'));
   },
-  credentials: true,
+  credentials: true
 }));
 
 // API Routes
@@ -109,20 +93,20 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Error handler
+// Centralized error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.status || 500).json({
     error: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    ...(env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 TrampoHero API Server running on port ${PORT}`);
+app.listen(env.PORT, () => {
+  console.log(`🚀 TrampoHero API Server running on port ${env.PORT}`);
   console.log(`📡 Environment: ${env.NODE_ENV}`);
-  console.log(`🌐 Allowed origins: ${allowedOrigins.join(', ')}`);
+  console.log(`🌐 Allowed origins: ${env.ALLOWED_ORIGINS.join(', ')}`);
 });
 
 export default app;
