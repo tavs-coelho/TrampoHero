@@ -23,6 +23,7 @@ import adsRoutes from './routes/ads.js';
 import aiRoutes from './routes/ai.js';
 import uploadsRoutes from './routes/uploads.js';
 import notificationsRoutes from './routes/notifications.js';
+import referralRoutes from './routes/referral.js';
 
 import mongoose from 'mongoose';
 
@@ -88,6 +89,7 @@ app.use('/api/ads', adsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/referral', referralRoutes);
 
 // Serve generated PDF contracts for download
 app.use('/api/contracts', express.static(path.join(__dirname, '..', 'contracts')));
