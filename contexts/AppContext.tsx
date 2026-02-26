@@ -38,7 +38,8 @@ export type ViewType =
   | 'challenges'
   | 'ranking'
   | 'store'
-  | 'ads';
+  | 'ads'
+  | 'kyc';
 
 export interface AppState {
   user: UserProfile;

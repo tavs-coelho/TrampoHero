@@ -19,6 +19,7 @@ import adsRoutes from './routes/ads.js';
 import aiRoutes from './routes/ai.js';
 import uploadsRoutes from './routes/uploads.js';
 import notificationsRoutes from './routes/notifications.js';
+import kycRoutes from './routes/kyc.js';
 
 import mongoose from 'mongoose';
 
@@ -84,6 +85,7 @@ app.use('/api/ads', adsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/kyc', kycRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

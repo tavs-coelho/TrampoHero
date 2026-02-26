@@ -32,6 +32,7 @@ import {
   EmployerProfileView,
   ProfileView,
   DashboardView,
+  KycView,
 } from '../index';
 
 describe('BrowseView', () => {
@@ -590,5 +591,81 @@ describe('DashboardView', () => {
       />
     );
     expect(screen.getByText('Criar Primeira Vaga')).toBeInTheDocument();
+  });
+});
+
+describe('KycView', () => {
+  it('renders KYC heading', () => {
+    render(
+      <KycView
+        user={createMockUser()}
+        setUser={vi.fn()}
+        showToast={vi.fn()}
+        setView={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Verificação de Conta')).toBeInTheDocument();
+  });
+
+  it('shows upload form when status is not_submitted', () => {
+    render(
+      <KycView
+        user={createMockUser({ kyc: { status: 'not_submitted' } })}
+        setUser={vi.fn()}
+        showToast={vi.fn()}
+        setView={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Anexar Documentos')).toBeInTheDocument();
+  });
+
+  it('shows pending message when status is pending', () => {
+    render(
+      <KycView
+        user={createMockUser({ kyc: { status: 'pending', submittedAt: '2026-01-01T00:00:00Z' } })}
+        setUser={vi.fn()}
+        showToast={vi.fn()}
+        setView={vi.fn()}
+      />
+    );
+    // "Em Análise" appears in both the status badge and the pending state heading
+    expect(screen.getAllByText('Em Análise').length).toBeGreaterThan(0);
+  });
+
+  it('shows approved message when status is approved', () => {
+    render(
+      <KycView
+        user={createMockUser({ kyc: { status: 'approved' } })}
+        setUser={vi.fn()}
+        showToast={vi.fn()}
+        setView={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Identidade Verificada!')).toBeInTheDocument();
+  });
+
+  it('shows rejection info when status is rejected', () => {
+    render(
+      <KycView
+        user={createMockUser({ kyc: { status: 'rejected', rejectionReason: 'Foto ilegível' } })}
+        setUser={vi.fn()}
+        showToast={vi.fn()}
+        setView={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Verificação Rejeitada')).toBeInTheDocument();
+    expect(screen.getByText('Foto ilegível')).toBeInTheDocument();
+  });
+
+  it('shows upload form when status is rejected (resubmit)', () => {
+    render(
+      <KycView
+        user={createMockUser({ kyc: { status: 'rejected' } })}
+        setUser={vi.fn()}
+        showToast={vi.fn()}
+        setView={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Anexar Documentos')).toBeInTheDocument();
   });
 });

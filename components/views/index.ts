@@ -19,3 +19,4 @@ export { ChallengesView } from './ChallengesView';
 export { RankingView } from './RankingView';
 export { StoreView } from './StoreView';
 export { AdsView } from './AdsView';
+export { KycView } from './KycView';

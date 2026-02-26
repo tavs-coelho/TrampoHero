@@ -84,6 +84,19 @@ const userSchema = new mongoose.Schema({
     lastActivity: { type: Date, default: Date.now },
     streakBonus: { type: Boolean, default: false },
   },
+  kyc: {
+    status: {
+      type: String,
+      enum: ['not_submitted', 'pending', 'approved', 'rejected'],
+      default: 'not_submitted',
+    },
+    documentFrontUrl: { type: String, default: null },
+    documentBackUrl: { type: String, default: null },
+    selfieUrl: { type: String, default: null },
+    submittedAt: { type: Date, default: null },
+    reviewedAt: { type: Date, default: null },
+    rejectionReason: { type: String, default: null },
+  },
 }, {
   timestamps: true,
 });
