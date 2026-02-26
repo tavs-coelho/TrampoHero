@@ -37,3 +37,4 @@ AuthKey_*.p8
 *.jks
 *.keystore
 service-account-key.json
+.env
