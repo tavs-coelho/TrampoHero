@@ -23,6 +23,7 @@ import adsRoutes from './routes/ads.js';
 import aiRoutes from './routes/ai.js';
 import uploadsRoutes from './routes/uploads.js';
 import notificationsRoutes from './routes/notifications.js';
+import paymentsRoutes from './routes/payments.js';
 
 import mongoose from 'mongoose';
 
@@ -56,6 +57,9 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Body parser middleware
+// NOTE: /api/payments/webhook must receive the raw body for Stripe signature verification,
+// so it is registered here – before the global express.json() – with express.raw().
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -88,6 +92,10 @@ app.use('/api/ads', adsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/payments', paymentsRoutes);
+
+// Serve generated PDF contracts for download
+app.use('/api/contracts', express.static(path.join(__dirname, '..', 'contracts')));
 
 // Serve generated PDF contracts for download
 app.use('/api/contracts', express.static(path.join(__dirname, '..', 'contracts')));

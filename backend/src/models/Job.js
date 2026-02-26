@@ -66,6 +66,12 @@ const jobSchema = new mongoose.Schema({
   isBoosted: { type: Boolean, default: false },
   isEscrowGuaranteed: { type: Boolean, default: false },
   minRatingRequired: { type: Number, default: 0 },
+  escrowPaymentIntentId: { type: String, default: null },
+  escrowStatus: {
+    type: String,
+    enum: ['none', 'held', 'released', 'refunded'],
+    default: 'none',
+  },
   applicants: [{
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     appliedAt: { type: Date, default: Date.now },
