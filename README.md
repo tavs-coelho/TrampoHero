@@ -40,7 +40,7 @@
 - **Node.js** 18+ ([Download](https://nodejs.org))
 - **NPM** 9+ (incluído com Node.js)
 - **MongoDB** (opcional - [Download](https://www.mongodb.com/try/download/community))
-- **Gemini API Key** ([Obter aqui](https://ai.google.dev))
+- **Gemini API Key** ([Obter aqui](https://ai.google.dev)) — configurada no **backend**, nunca no frontend
 
 ### Instalação Frontend
 
@@ -51,9 +51,10 @@
    npm install
    ```
 
-2. **Configure a API Key**:
+2. **Configure as variáveis de ambiente**:
    ```bash
-   echo "API_KEY=sua_gemini_api_key_aqui" > .env.local
+   cp .env.example .env.local
+   # Edite .env.local se necessário (VITE_API_URL aponta para o backend)
    ```
 
 3. **Execute o servidor de desenvolvimento**:
@@ -63,7 +64,7 @@
 
    Acesse: **http://localhost:3000** 🎉
 
-### Instalação Backend (Opcional)
+### Instalação Backend (Opcional, mas necessário para IA)
 
 1. **Instale as dependências do backend**:
    ```bash
@@ -74,7 +75,7 @@
 2. **Configure as variáveis de ambiente**:
    ```bash
    cp .env.example .env
-   # Edite .env com suas configurações
+   # Edite .env — defina JWT_SECRET, MONGODB_URI e GEMINI_API_KEY
    ```
 
 3. **Execute o servidor backend**:
@@ -83,6 +84,9 @@
    ```
 
    API disponível em: **http://localhost:5000** 🚀
+
+> ⚠️ **Segurança**: A `GEMINI_API_KEY` deve ser configurada **apenas no backend** (arquivo `backend/.env`).  
+> Ela nunca é enviada ao navegador. Consulte [DEPLOYMENT.md](DEPLOYMENT.md) para o guia completo.
 
 ### Full Stack (Frontend + Backend)
 
@@ -112,6 +116,7 @@ Criamos documentação extensiva para ajudar você a entender e contribuir com o
 | **Documentação Geral** | Visão completa do app, arquitetura e funcionalidades | [DOCUMENTATION.md](DOCUMENTATION.md) |
 | **API Documentation** | Referência de todas as APIs e serviços | [API_DOCUMENTATION.md](API_DOCUMENTATION.md) |
 | **Developer Guide** | Setup, desenvolvimento e boas práticas | [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) |
+| **Deployment Guide** | Deploy para Vercel/Netlify + Render/Fly, staging e produção | [DEPLOYMENT.md](DEPLOYMENT.md) |
 | **Novas Features** | Propostas de funcionalidades e maximização de lucros | [NEW_FEATURES_PROPOSAL.md](NEW_FEATURES_PROPOSAL.md) |
 | **Documentos Legais** | Termos de Uso, Privacidade e Conformidade LGPD | [legal/README.md](legal/README.md) |
 
@@ -231,22 +236,31 @@ TrampoHero/
 
 ## 🚀 Deploy
 
-### Vercel (Recomendado)
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the complete step-by-step guide covering:
+- Frontend on **Vercel** (recommended) or **Netlify** — includes `vercel.json` and `netlify.toml`
+- Backend on **Render** / Railway / Fly.io
+- Database on **MongoDB Atlas**
+- Required environment variables and CORS setup
+- Staging vs. production configuration
+
+### Quick deploy (Vercel)
 
 ```bash
 npm i -g vercel
 vercel
+# Set VITE_API_URL to your backend URL in the Vercel dashboard
 ```
 
-### Netlify
+### Quick deploy (Netlify)
 
 ```bash
 npm run build
 npm i -g netlify-cli
 netlify deploy --prod --dir=dist
+# Set VITE_API_URL in Site settings → Environment variables
 ```
 
-**⚠️ Importante**: Configure a variável `API_KEY` no painel de cada plataforma.
+**⚠️ Importante**: Configure `GEMINI_API_KEY` no painel do **backend** (Render/Railway), não no frontend.
 
 ---
 

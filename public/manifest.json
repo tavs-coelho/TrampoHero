@@ -1,6 +1,7 @@
 {
   "name": "TrampoHero Pro",
   "short_name": "TrampoHero",
+  "description": "Marketplace inteligente de bicos e gigs no Brasil",
   "description": "Plataforma inteligente de marketplace para trabalhos temporários",
   "start_url": "/",
   "display": "standalone",
@@ -21,6 +22,7 @@
       "purpose": "any maskable"
     }
   ],
+  "categories": ["business", "productivity"],
   "categories": ["productivity", "business"],
   "lang": "pt-BR"
 }

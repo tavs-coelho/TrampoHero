@@ -2,6 +2,11 @@
  * Frontend environment configuration with runtime validation.
  *
  * All public variables must use the VITE_ prefix so that Vite exposes them
+ * via import.meta.env. Secret keys (e.g. GEMINI_API_KEY) must never be placed
+ * here — they belong in the backend environment only.
+ */
+
+interface FrontendEnv {
  * via import.meta.env. Secret keys must never be placed here.
  */
 
@@ -15,6 +20,15 @@ interface FrontendEnv {
 }
 
 function getEnv(): FrontendEnv {
+  const VITE_API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:5000/api';
+  const VITE_APP_NAME = (import.meta.env.VITE_APP_NAME as string | undefined) ?? 'TrampoHero';
+
+  if (!import.meta.env.VITE_API_URL) {
+    const msg =
+      '[TrampoHero] VITE_API_URL is not set.\n' +
+      'Copy .env.example to .env.local and set VITE_API_URL to your backend URL.\n' +
+      'Example: VITE_API_URL=http://localhost:5000/api';
+    if (import.meta.env.PROD) {
   const VITE_GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
   const VITE_API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:5000/api';
   const VITE_APP_NAME = (import.meta.env.VITE_APP_NAME as string | undefined) ?? 'TrampoHero';

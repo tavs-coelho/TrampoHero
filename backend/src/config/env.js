@@ -26,6 +26,21 @@ function validateEnv() {
   }
 }
 
+function parsePositiveInt(value, name, defaultValue) {
+  const parsed = parseInt(value ?? String(defaultValue), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    console.error(
+      `[TrampoHero Backend] Invalid value for ${name}: "${value}". Must be a positive integer. Using default: ${defaultValue}.`
+    );
+    return defaultValue;
+  }
+  return parsed;
+}
+
+validateEnv();
+
+export const env = {
+  PORT: parsePositiveInt(process.env.PORT, 'PORT', 5000),
 validateEnv();
 
 export const env = {
@@ -36,6 +51,7 @@ export const env = {
   JWT_EXPIRE: process.env.JWT_EXPIRE ?? '30d',
   GEMINI_API_KEY: process.env.GEMINI_API_KEY ?? '',
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? '',
+  RATE_LIMIT_MAX: parsePositiveInt(process.env.RATE_LIMIT_MAX, 'RATE_LIMIT_MAX', 100),
   // Azure Blob Storage (required for photo upload endpoints)
   AZURE_STORAGE_ACCOUNT_NAME: process.env.AZURE_STORAGE_ACCOUNT_NAME ?? '',
   AZURE_STORAGE_ACCOUNT_KEY: process.env.AZURE_STORAGE_ACCOUNT_KEY ?? '',
