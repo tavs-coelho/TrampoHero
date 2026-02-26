@@ -51,9 +51,10 @@ Browser
    - **Framework**: Vite
    - **Build Command**: `npm run build`
    - **Output Directory**: `dist`
-4. Add the environment variable (see [§ 6](#6-required-environment-variables)):
+4. Add environment variables (see [§ 6](#6-required-environment-variables)):
    - `VITE_API_URL` → `https://<your-render-backend>.onrender.com/api`
-   > ⚠️ **Do NOT set `GEMINI_API_KEY` here.** That key belongs on the backend only.
+   - `VITE_GEMINI_API_KEY` → your Gemini API key (browser-side AI features)
+   > ⚠️ **Never set `GEMINI_API_KEY` (without `VITE_`) on the frontend.** The backend's copy lives only in the backend hosting dashboard.
 5. Click **Deploy**. Your URL will be `https://<project>.vercel.app`.
 
 ---
@@ -69,7 +70,8 @@ Browser
 3. Netlify reads `netlify.toml` automatically. Leave defaults.
 4. In **Site settings → Environment variables**, add:
    - `VITE_API_URL` → `https://<your-render-backend>.onrender.com/api`
-   > ⚠️ **Do NOT set `GEMINI_API_KEY` here.**
+   - `VITE_GEMINI_API_KEY` → your Gemini API key
+   > ⚠️ **Never set `GEMINI_API_KEY` (without `VITE_`) on Netlify.**
 5. Click **Deploy site**. Your URL will be `https://<site>.netlify.app`.
 
 ---
@@ -107,7 +109,7 @@ request after idle may take ~30 s).
 cd backend
 fly launch          # follow prompts, choose free tier
 fly secrets set PORT=8080 NODE_ENV=production MONGODB_URI=... JWT_SECRET=... \
-    GEMINI_API_KEY=... FRONTEND_URL=https://<your-frontend>.vercel.app
+    GEMINI_API_KEY=... ALLOWED_ORIGINS=https://<your-frontend>.vercel.app
 fly deploy
 ```
 
@@ -131,18 +133,19 @@ fly deploy
 | `MONGODB_URI` | MongoDB Atlas connection string | `mongodb+srv://user:pass@cluster.mongodb.net/trampohero` |
 | `JWT_SECRET` | Secret for signing JWTs (use a long random string) | `openssl rand -hex 32` |
 | `JWT_EXPIRE` | Token TTL | `30d` |
-| `GEMINI_API_KEY` | Google Gemini API key | `AIza…` |
+| `GEMINI_API_KEY` | Google Gemini API key (backend AI features) | `AIza…` |
 | `STRIPE_SECRET_KEY` | Stripe secret key | `sk_live_…` |
-| `FRONTEND_URL` | Allowed CORS origin(s) — comma-separated if multiple | `https://trampohero.vercel.app,https://trampohero.netlify.app` |
+| `ALLOWED_ORIGINS` | Allowed CORS origin(s) — comma-separated | `https://trampohero.vercel.app,https://trampohero.netlify.app` |
 
 ### Frontend (set in Vercel / Netlify dashboard)
 
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `VITE_API_URL` | Full URL of the backend API | `https://trampohero-api.onrender.com/api` |
+| `VITE_GEMINI_API_KEY` | Gemini API key for browser-side AI features | `AIza…` |
 
-> ⚠️ Any variable exposed in the frontend bundle (prefixed `VITE_`) **must not contain secrets**.
-> `GEMINI_API_KEY` is used server-side only — set it in the **backend** hosting dashboard.
+> ⚠️ Any variable exposed in the frontend bundle (prefixed `VITE_`) **must not be a high-value backend secret**.
+> `GEMINI_API_KEY` (without `VITE_`) is used server-side only — set it in the **backend** hosting dashboard.
 
 ### MongoDB Atlas (free M0 cluster)
 
@@ -156,18 +159,16 @@ fly deploy
 
 ## 7. Connecting Frontend ↔ Backend
 
-The backend already reads `FRONTEND_URL` and passes it to the CORS middleware.
-It now supports **comma-separated origins**, so you can allow both Vercel and Netlify
-staging URLs simultaneously:
+The backend reads `ALLOWED_ORIGINS` and uses it as the CORS allow-list (parsed from
+`backend/src/config/env.js`). Set it to the frontend's deployed URL(s), comma-separated:
 
 ```
-FRONTEND_URL=https://trampohero.vercel.app,https://trampohero.netlify.app
+ALLOWED_ORIGINS=https://trampohero.vercel.app,https://trampohero.netlify.app
 ```
 
-The frontend reads `VITE_API_URL` at build time. Make sure it points to your deployed backend.
+The frontend reads `VITE_API_URL` at build time — make sure it points to your deployed backend.
 
-If the frontend is not yet wired up to `VITE_API_URL`, all Gemini-powered features still
-work via direct browser→Gemini calls; the `VITE_API_URL` is used for the Express REST API.
+For browser-side AI features, set `VITE_GEMINI_API_KEY` in the frontend hosting dashboard.
 
 ---
 
@@ -181,13 +182,14 @@ Before sharing your staging URL, verify each item:
   - [ ] `NODE_ENV=production` set
   - [ ] `JWT_SECRET` set to a strong random value (≥ 32 chars)
   - [ ] `GEMINI_API_KEY` set (backend env only)
-  - [ ] `FRONTEND_URL` set to the frontend's deployed URL(s)
+  - [ ] `ALLOWED_ORIGINS` set to the frontend's deployed URL(s)
 - [ ] **Frontend deployed** to Vercel or Netlify
   - [ ] `VITE_API_URL` set to the backend's deployed URL + `/api`
+  - [ ] `VITE_GEMINI_API_KEY` set for browser-side AI features
   - [ ] Build succeeds without errors
   - [ ] SPA routing works (refreshing any route returns the app, not a 404)
 - [ ] **CORS** verified: browser console shows no CORS errors on API calls
-- [ ] **Secrets** not exposed: `GEMINI_API_KEY` is not visible in the browser's Network tab
+- [ ] **Secrets** not exposed: `GEMINI_API_KEY` (backend-only key) is not visible in the browser's Network tab
   or in `window.__env` / `process.env` in browser DevTools
 
 ---
@@ -224,11 +226,11 @@ After deploying, open the staging URL and perform the following checks:
 
 ### CORS errors in the browser
 
-- Open the backend service → **Environment** tab → verify `FRONTEND_URL` matches the
+- Open the backend service → **Environment** tab → verify `ALLOWED_ORIGINS` matches the
   exact origin (including `https://` and no trailing slash).
 - If you have both Vercel and Netlify URLs, separate them with a comma:
   `https://app.vercel.app,https://app.netlify.app`
-- Redeploy the backend after changing `FRONTEND_URL`.
+- Redeploy the backend after changing `ALLOWED_ORIGINS`.
 
 ### Backend returns 503 / slow first response on Render free tier
 
