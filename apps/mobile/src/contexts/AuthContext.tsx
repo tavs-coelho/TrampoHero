@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const result = await apiClient.getProfile();
         if (result.data) {
           const { id, role, niche } = result.data;
-          const tags = buildNotificationTags(id, role, niche);
+          const tags = buildNotificationTags(role, niche);
           registerForPushNotifications(id, tags).catch(() => {});
         }
         setState({
@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isLoading: false,
         });
         const { id, role, niche } = result.data.user;
-        const tags = buildNotificationTags(id, role, niche);
+        const tags = buildNotificationTags(role, niche);
         registerForPushNotifications(id, tags).catch(() => {});
         return null;
       }
@@ -99,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isLoading: false,
         });
         const { id, role: userRole, niche: userNiche } = result.data.user;
-        const tags = buildNotificationTags(id, userRole, userNiche);
+        const tags = buildNotificationTags(userRole, userNiche);
         registerForPushNotifications(id, tags).catch(() => {});
         return null;
       }

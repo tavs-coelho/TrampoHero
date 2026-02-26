@@ -12,9 +12,12 @@ This document explains how push notification registration works, how to configur
    - Requests notification permission from the OS.
    - Creates Android notification channels (`trampohero-default`, `trampohero-jobs`).
    - Obtains an **Expo push token** via `Notifications.getExpoPushTokenAsync()`.
-3. The token and `tags` (`userId:<id>`, `role:<role>`, `niche:<niche>`) are sent to the backend endpoint `POST /api/users/push-device`.
-4. The backend stores the token in the user's `pushDevices` array for future targeting.
-5. The token is also returned so Azure Notification Hubs (configured via `ANH_CONNECTION_STRING` / `ANH_HUB_NAME`) can relay push messages to FCM (Android) or APNs (iOS).
+   - Retrieves (or creates) a stable `installationId` stored in AsyncStorage.
+3. The `installationId`, push token, platform (`apns`/`fcmv1`), and `tags` (`role:<role>`, `niche:<niche>`) are sent to the backend endpoint `POST /api/notifications/register`.
+4. The backend route validates the payload and registers the device installation in **Azure Notification Hubs** via `backend/src/services/notificationHubs.js`.
+5. ANH stores the installation and can target devices via tag expressions (e.g. `role:freelancer && niche:Gastronomia`).
+
+See [docs/push-notification-hubs.md](/docs/push-notification-hubs.md) for the full Azure setup guide.
 
 ---
 
@@ -52,13 +55,13 @@ This document explains how push notification registration works, how to configur
 3. Scan the QR code with the **Expo Go** app or the development build.
 4. Log in (or register a new account). The app will immediately request notification permission.
 5. Accept the permission prompt.
-6. Open your backend logs or MongoDB and verify a new entry in the user's `pushDevices` array.
+6. Open your backend logs and verify a successful `POST /api/notifications/register` call.
 
 **Manual verification steps:**
 - [ ] A permission dialog appears on first login/register.
 - [ ] Accepting the dialog does not crash the app.
-- [ ] The backend `POST /api/users/push-device` returns `{ "success": true }` (check network logs with `npx react-native log-android`).
-- [ ] The `pushDevices` array in MongoDB contains the device token.
+- [ ] The backend `POST /api/notifications/register` returns `{ "success": true }` (check network logs with `npx react-native log-android`).
+- [ ] The device installation is visible in the Azure Notification Hubs portal under **Installations** (or confirmed via `GET /api/notifications/register/:installationId`).
 - [ ] Denying the permission does not crash the app (token is `null`, registration is skipped gracefully).
 
 ### iOS (physical device only – APNs does not work on simulator)
@@ -110,16 +113,13 @@ Distribute internally via EAS to teammates for broader testing.
 
 After logging in on the build:
 
-1. Check the backend logs for a successful `POST /api/users/push-device` call.
-2. Query MongoDB:
-   ```js
-   db.users.findOne({ email: 'your@email.com' }, { pushDevices: 1 })
-   ```
-   You should see an entry like:
-   ```json
-   { "token": "ExponentPushToken[...]", "platform": "android", "registeredAt": "..." }
-   ```
-3. Send a test notification from the [Expo Push Notification Tool](https://expo.dev/notifications) using the `ExponentPushToken` obtained above.
+1. Check the backend logs for a successful `POST /api/notifications/register` call.
+2. Verify the installation in Azure Notification Hubs:
+   - Azure Portal → Notification Hubs → your hub → **Installations**
+   - Filter by the `installationId` stored in AsyncStorage on the device.
+3. Send a test notification from the Azure Portal or using the Expo Push Notification Tool (works for Expo-mediated tokens in development):
+   - Go to [expo.dev/notifications](https://expo.dev/notifications)
+   - Enter the `ExponentPushToken[...]` from the app logs
 4. Confirm the notification appears on the device.
 
 ---

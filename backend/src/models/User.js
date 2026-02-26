@@ -78,11 +78,6 @@ const userSchema = new mongoose.Schema({
     enum: ['free', 'premium'],
     default: 'free',
   },
-  pushDevices: [{
-    token: { type: String, required: true },
-    platform: { type: String, enum: ['android', 'ios'], required: true },
-    registeredAt: { type: Date, default: Date.now },
-  }],
   trampoCoins: {
     balance: { type: Number, default: 0 },
     streak: { type: Number, default: 0 },

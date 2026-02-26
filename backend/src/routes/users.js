@@ -42,46 +42,4 @@ router.put('/profile', authenticate, async (req, res) => {
   }
 });
 
-// @route   POST /api/users/push-device
-// @desc    Register or refresh a push device token and tags
-// @access  Private
-router.post('/push-device', authenticate, async (req, res) => {
-  try {
-    const { deviceToken, platform } = req.body;
-
-    if (!deviceToken || !platform) {
-      return res.status(400).json({
-        success: false,
-        error: 'deviceToken and platform are required',
-      });
-    }
-
-    if (!['android', 'ios'].includes(platform)) {
-      return res.status(400).json({
-        success: false,
-        error: 'platform must be "android" or "ios"',
-      });
-    }
-
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' });
-    }
-
-    // Replace existing entry for this token (upsert by token)
-    user.pushDevices = user.pushDevices.filter(d => d.token !== deviceToken);
-    user.pushDevices.push({ token: deviceToken, platform, registeredAt: new Date() });
-    // Keep at most 10 device entries per user (drop oldest first)
-    if (user.pushDevices.length > 10) {
-      user.pushDevices = user.pushDevices.slice(-10);
-    }
-    await user.save();
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('[push-device] Error registering push token:', error);
-    res.status(500).json({ success: false, error: 'Server error' });
-  }
-});
-
 export default router;

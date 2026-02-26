@@ -86,9 +86,9 @@ export interface PhotoUploadSasResponse {
   containerUrl: string;
 }
 
-export interface PushRegistrationPayload {
-  deviceToken: string;
-  platform: 'android' | 'ios';
-  userId: string;
+export interface PushInstallationPayload {
+  installationId: string;
+  platform: 'apns' | 'fcmv1';
+  pushToken: string;
   tags: string[];
 }
