@@ -2,7 +2,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { Job, UserProfile } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 export const getSmartJobInsight = async (job: Job) => {
   try {

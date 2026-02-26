@@ -1,7 +1,7 @@
 import express from 'express';
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
+import User from '../models/User.js';
 
 const router = express.Router();
 
@@ -17,35 +17,29 @@ router.post('/register', [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return res.status(400).json({ success: false, errors: errors.array() });
     }
 
     const { email, password, name, role, niche } = req.body;
 
-    // TODO: Check if user exists in database
-    // const existingUser = await User.findOne({ email });
-    // if (existingUser) {
-    //   return res.status(400).json({ error: 'User already exists' });
-    // }
+    // Check if user exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ success: false, error: 'User already exists' });
+    }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // TODO: Create user in database
-    const user = {
-      id: 'user-' + Date.now(),
+    // Create user (password hashed by pre-save hook)
+    const user = await User.create({
       email,
-      password: hashedPassword,
+      password,
       name,
       role,
-      niche: niche || 'RESTAURANT',
-      createdAt: new Date().toISOString()
-    };
+      niche: niche || 'Gastronomia',
+    });
 
     // Generate JWT
     const token = jwt.sign(
-      { id: user.id, role: user.role },
+      { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRE }
     );
@@ -54,7 +48,7 @@ router.post('/register', [
       success: true,
       token,
       user: {
-        id: user.id,
+        id: user._id,
         email: user.email,
         name: user.name,
         role: user.role
@@ -62,7 +56,7 @@ router.post('/register', [
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
@@ -76,35 +70,26 @@ router.post('/login', [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return res.status(400).json({ success: false, errors: errors.array() });
     }
 
     const { email, password } = req.body;
 
-    // TODO: Find user in database
-    // const user = await User.findOne({ email });
-    // if (!user) {
-    //   return res.status(401).json({ error: 'Invalid credentials' });
-    // }
-
-    // Mock user for demonstration
-    const user = {
-      id: 'user-123',
-      email,
-      password: await bcrypt.hash('password123', 10),
-      name: 'Alex Silva',
-      role: 'freelancer'
-    };
+    // Find user with password field
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
+    }
 
     // Verify password
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
 
     // Generate JWT
     const token = jwt.sign(
-      { id: user.id, role: user.role },
+      { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRE }
     );
@@ -113,7 +98,7 @@ router.post('/login', [
       success: true,
       token,
       user: {
-        id: user.id,
+        id: user._id,
         email: user.email,
         name: user.name,
         role: user.role
@@ -121,7 +106,7 @@ router.post('/login', [
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
