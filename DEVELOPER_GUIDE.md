@@ -100,16 +100,34 @@ touch .env.local
 
 ### 3. Configurar Variáveis de Ambiente
 
+Copie o arquivo de exemplo e edite `.env.local`:
+
+```bash
+cp .env.example .env.local
+```
+
 Edite `.env.local`:
 
 ```env
-# Gemini AI API Key (obrigatório)
-API_KEY=SUA_GEMINI_API_KEY_AQUI
+# Gemini AI API Key (obrigatório – https://ai.google.dev)
+VITE_GEMINI_API_KEY=SUA_GEMINI_API_KEY_AQUI
 
-# Opcional: Configurações adicionais
-VITE_APP_NAME=TrampoHero Pro
-VITE_API_TIMEOUT=10000
+# URL base da API do backend (padrão: http://localhost:5000/api)
+VITE_API_URL=http://localhost:5000/api
+
+# (Opcional) Nome do app exibido na UI
+# VITE_APP_NAME=TrampoHero Pro
+
+# (Opcional) Feature flags – defina como false para desabilitar
+# VITE_FEATURE_AI=true
+# VITE_FEATURE_GEOLOCATION=true
+# VITE_FEATURE_CAMERA=true
+# VITE_FEATURE_PUSH=true
 ```
+
+> **Convenção Vite**: todas as variáveis acessíveis no bundle do navegador
+> **devem** usar o prefixo `VITE_`. Segredos (backend-only) nunca devem ter
+> esse prefixo.
 
 **⚠️ IMPORTANTE**: 
 - Nunca commite `.env.local` para o Git
@@ -122,7 +140,9 @@ VITE_API_TIMEOUT=10000
 npm run dev
 ```
 
-Se abrir sem erros, está tudo OK!
+Se a variável `VITE_GEMINI_API_KEY` estiver faltando, o app exibirá um
+erro claro no console em modo de desenvolvimento. Configure o valor e
+reinicie o servidor.
 
 ---
 
@@ -169,18 +189,28 @@ TrampoHero/
 ├── App.tsx                 # Componente principal (1542 linhas)
 ├── types.ts                # Definições TypeScript
 │
-├── services/               # Serviços externos
+├── src/config/             # Configuração e validação de ambiente
+│   ├── env.ts              # Typed env loader com validação em runtime
+│   └── featureFlags.ts     # Feature flags por ambiente (VITE_FEATURE_*)
+│
+├── services/               # Serviços externos e camada de API
+│   ├── apiService.ts       # HTTP client para o backend (autenticação, jobs, etc.)
 │   ├── geminiService.ts    # Integração Gemini AI
 │   └── pdfService.ts       # Geração de PDFs
+│
+├── hooks/                  # React hooks customizados
+│   └── useCapabilities.ts  # Detecção de capacidades do dispositivo (câmera, GPS, push)
 │
 ├── package.json            # Dependências e scripts
 ├── tsconfig.json           # Config TypeScript
 ├── vite.config.ts          # Config Vite
+├── vercel.json             # Deploy config para Vercel
+├── netlify.toml            # Deploy config para Netlify
 │
-├── .env.local              # Variáveis de ambiente (não versionado)
-├── .gitignore              # Arquivos ignorados pelo Git
+├── public/                 # Assets estáticos públicos
+│   └── manifest.json       # PWA manifest
 │
-└── node_modules/           # Dependências (não versionado)
+└── .env.example            # Template de variáveis de ambiente
 ```
 
 ### Detalhamento de Arquivos Chave
@@ -333,6 +363,51 @@ const handleCheckout = () => {
   // ... lógica existente
   checkSpeedDemon();
 };
+```
+
+---
+
+### Usando Feature Flags
+
+Ative ou desative funcionalidades por ambiente usando as variáveis
+`VITE_FEATURE_*` no seu arquivo `.env.local`:
+
+```env
+VITE_FEATURE_AI=true          # Google Gemini AI
+VITE_FEATURE_GEOLOCATION=true # Check-in GPS
+VITE_FEATURE_CAMERA=true      # Prova fotográfica
+VITE_FEATURE_PUSH=false       # Notificações push (desativado)
+```
+
+Importe e use no código:
+
+```typescript
+import { featureFlags } from '@/src/config/featureFlags';
+
+if (featureFlags.enableAI) {
+  // funcionalidade de IA
+}
+```
+
+---
+
+### Verificando Capacidades do Dispositivo
+
+Use o hook `useCapabilities` para verificar se o dispositivo/navegador suporta
+câmera, geolocalização e notificações push antes de exibir botões:
+
+```typescript
+import { useCapabilities } from '@/hooks/useCapabilities';
+
+function CheckInButton() {
+  const { hasGeolocation, isSecureContext } = useCapabilities();
+
+  if (!hasGeolocation || !isSecureContext) {
+    return <p>GPS não disponível neste dispositivo.</p>;
+  }
+
+  return <button onClick={handleCheckIn}>Check-in GPS</button>;
+}
 ```
 
 ---
@@ -547,12 +622,12 @@ npm run dev
 
 **Sintoma**:
 - Funcionalidades de IA não funcionam
-- Console mostra "API_KEY is invalid"
+- Console mostra "API_KEY is invalid" ou "Missing required environment variables"
 
 **Solução**:
 1. Verificar `.env.local`:
    ```env
-   API_KEY=sua_key_aqui
+   VITE_GEMINI_API_KEY=sua_key_aqui
    ```
 2. Confirmar que não há espaços extras
 3. Gerar nova key em [ai.google.dev](https://ai.google.dev)
@@ -612,9 +687,28 @@ location.reload();
 
 ## 🚀 Deploy
 
-### Opção 1: Vercel (Recomendado)
+### Preview Local da Build de Produção
 
-**Vantagens**: Grátis, CI/CD automático, CDN global
+Antes de fazer deploy, teste a build de produção localmente:
+
+```bash
+# 1. Gerar a build
+npm run build
+
+# 2. Servir localmente
+npm run preview
+# Acesse http://localhost:4173
+```
+
+> **Importante**: `vite preview` usa as variáveis de ambiente do arquivo
+> `.env.production` (se existir) e as injetadas na build. Crie
+> `.env.production.local` para sobrescrever valores localmente.
+
+---
+
+### Opção 1: Vercel (Frontend – Recomendado)
+
+**Vantagens**: Grátis, CDN global, SPA routing automático
 
 1. **Instalar Vercel CLI**:
 ```bash
@@ -626,10 +720,12 @@ npm i -g vercel
 vercel
 ```
 
-3. **Configurar variáveis de ambiente**:
-- Acesse dashboard.vercel.com
-- Vá em Settings > Environment Variables
-- Adicione `API_KEY`
+3. **Configurar variáveis de ambiente** no dashboard da Vercel:
+   - `VITE_GEMINI_API_KEY` → sua Gemini API Key
+   - `VITE_API_URL` → URL do backend em produção (ex.: `https://api.trampohero.com.br/api`)
+
+   O arquivo `vercel.json` na raiz já configura rewrites para SPA routing e
+   headers de segurança.
 
 4. **URL de produção**:
 ```
@@ -638,22 +734,20 @@ https://trampo-hero.vercel.app
 
 ---
 
-### Opção 2: Netlify
+### Opção 2: Netlify (Frontend)
 
-1. **Build local**:
+1. **Build e deploy**:
 ```bash
 npm run build
-```
-
-2. **Deploy**:
-```bash
 npm i -g netlify-cli
 netlify deploy --prod --dir=dist
 ```
 
-3. **Configurar variáveis**:
-- Site Settings > Environment > Environment Variables
-- Adicione `API_KEY`
+2. **Configurar variáveis**: Site Settings > Environment > Environment Variables
+   - `VITE_GEMINI_API_KEY`
+   - `VITE_API_URL`
+
+   O arquivo `netlify.toml` na raiz já configura rewrites e headers de cache.
 
 ---
 
@@ -683,14 +777,72 @@ npm run deploy
 
 ---
 
+### Backend: Render / Railway / Fly.io
+
+O backend Express pode ser hospedado em qualquer plataforma Node.js.
+
+#### Render (Recomendado – Free tier disponível)
+
+1. Conecte seu repositório no [render.com](https://render.com)
+2. Crie um novo **Web Service**
+3. Configure:
+   - **Root Directory**: `backend`
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+4. Adicione as variáveis de ambiente:
+
+   | Variável | Descrição |
+   |----------|-----------|
+   | `NODE_ENV` | `production` |
+   | `PORT` | `5000` (ou deixe Render definir) |
+   | `MONGODB_URI` | Connection string do MongoDB Atlas |
+   | `JWT_SECRET` | Segredo longo e aleatório |
+   | `ALLOWED_ORIGINS` | URL(s) do frontend separadas por vírgula |
+
+#### Railway
+
+```bash
+# Instalar Railway CLI
+npm i -g @railway/cli
+railway login
+cd backend
+railway init
+railway up
+```
+
+Configure as variáveis pelo dashboard Railway ou com:
+```bash
+railway variables set NODE_ENV=production ALLOWED_ORIGINS=https://app.trampohero.com.br
+```
+
+---
+
+### CORS por Ambiente
+
+Configure `ALLOWED_ORIGINS` no backend de acordo com o ambiente:
+
+| Ambiente | Valor de `ALLOWED_ORIGINS` |
+|----------|----------------------------|
+| Development | `http://localhost:3000` |
+| Staging | `https://trampo-hero-staging.vercel.app` |
+| Production | `https://app.trampohero.com.br` |
+
+Múltiplas origens separadas por vírgula:
+```
+ALLOWED_ORIGINS=https://app.trampohero.com.br,https://trampo-hero-staging.vercel.app
+```
+
+---
+
 ### Checklist de Deploy
 
 - [ ] Build sem erros (`npm run build`)
-- [ ] Variáveis de ambiente configuradas
-- [ ] .gitignore atualizado (não commitar `.env.local`)
+- [ ] Preview local testado (`npm run preview`)
+- [ ] Variáveis de ambiente configuradas na plataforma
+- [ ] `.gitignore` atualizado (não commitar `.env.local`)
+- [ ] Backend CORS configurado com a URL de produção do frontend
+- [ ] Endpoint `/health` do backend respondendo `{"status":"ok"}`
 - [ ] README atualizado com URL de produção
-- [ ] Testes básicos passando
-- [ ] Monitoramento configurado (opcional)
 
 ---
 

@@ -2,8 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
-import mongoose from 'mongoose';
+import morgan from 'morgan';
+
+// env must be imported first so missing vars cause an early exit
+import { env } from './config/env.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -15,16 +17,14 @@ import rankingRoutes from './routes/ranking.js';
 import storeRoutes from './routes/store.js';
 import adsRoutes from './routes/ads.js';
 
-// Load env vars
-dotenv.config();
+import mongoose from 'mongoose';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/trampohero');
+    const conn = await mongoose.connect(env.MONGODB_URI);
     console.log(`📦 MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`❌ MongoDB Connection Error: ${error.message}`);
@@ -37,6 +37,9 @@ connectDB();
 // Security middleware
 app.use(helmet());
 
+// Request logging (concise in production, verbose in development)
+app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -48,9 +51,16 @@ app.use('/api/', limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// CORS middleware
+// CORS – allow-list driven by ALLOWED_ORIGINS env variable
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+    if (env.ALLOWED_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error(`CORS: origin '${origin}' is not allowed`));
+  },
   credentials: true
 }));
 
@@ -74,19 +84,21 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Error handler
+// Centralized error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.status || 500).json({
     error: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    ...(env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 TrampoHero API Server running on port ${PORT}`);
-  console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
+app.listen(env.PORT, () => {
+  console.log(`🚀 TrampoHero API Server running on port ${env.PORT}`);
+  console.log(`📡 Environment: ${env.NODE_ENV}`);
+  console.log(`🌐 Allowed origins: ${env.ALLOWED_ORIGINS.join(', ')}`);
 });
 
 export default app;
+
