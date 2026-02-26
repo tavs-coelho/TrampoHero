@@ -97,6 +97,9 @@ app.use('/api/payments', paymentsRoutes);
 // Serve generated PDF contracts for download
 app.use('/api/contracts', express.static(path.join(__dirname, '..', 'contracts')));
 
+// Serve generated PDF contracts for download
+app.use('/api/contracts', express.static(path.join(__dirname, '..', 'contracts')));
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({
