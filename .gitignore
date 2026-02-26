@@ -28,3 +28,6 @@ coverage
 apps/mobile/google-services.json
 apps/mobile/GoogleService-Info.plist
 apps/mobile/.env
+*.jks
+*.keystore
+service-account-key.json
