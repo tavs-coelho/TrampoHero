@@ -73,6 +73,15 @@ const userSchema = new mongoose.Schema({
     unique: true,
     sparse: true,
   },
+  referredBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+  },
+  referralBonusPaid: {
+    type: Boolean,
+    default: false,
+  },
   analyticsAccess: {
     type: String,
     enum: ['free', 'premium'],
@@ -83,6 +92,13 @@ const userSchema = new mongoose.Schema({
     streak: { type: Number, default: 0 },
     lastActivity: { type: Date, default: Date.now },
     streakBonus: { type: Boolean, default: false },
+  },
+  subscription: {
+    stripeCustomerId: { type: String, default: null },
+    stripeSubscriptionId: { type: String, default: null },
+    plan: { type: String, enum: ['none', 'hero_prime'], default: 'none' },
+    status: { type: String, enum: ['active', 'canceled', 'past_due', 'none'], default: 'none' },
+    currentPeriodEnd: { type: Date, default: null },
   },
   kyc: {
     status: {

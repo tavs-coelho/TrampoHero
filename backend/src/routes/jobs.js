@@ -2,7 +2,9 @@ import express from 'express';
 import { authenticate, authorize } from '../middleware/auth.js';
 import Job from '../models/Job.js';
 import User from '../models/User.js';
+import Transaction from '../models/Transaction.js';
 import { generateJobContract } from '../services/pdfService.js';
+import { REFERRAL_BONUS } from './referral.js';
 
 const router = express.Router();
 
@@ -169,6 +171,29 @@ router.post('/:id/complete', authenticate, authorize('employer'), async (req, re
     // Update job status
     job.status = 'completed';
     await job.save();
+
+    // Referral bonus: credit R$ 10.00 to the referrer on the freelancer's first completed job.
+    // Use an atomic update to prevent double-payment in concurrent requests.
+    if (freelancer.referredBy && !freelancer.referralBonusPaid) {
+      const claimed = await User.findOneAndUpdate(
+        { _id: freelancer._id, referralBonusPaid: false },
+        { referralBonusPaid: true },
+      );
+      if (claimed) {
+        const referrerUpdate = await User.findByIdAndUpdate(freelancer.referredBy, {
+          $inc: { 'wallet.balance': REFERRAL_BONUS },
+        });
+        if (referrerUpdate) {
+          await Transaction.create({
+            userId: freelancer.referredBy,
+            type: 'referral_bonus',
+            amount: REFERRAL_BONUS,
+            description: `Bônus de indicação por ${freelancer.name} completar sua primeira vaga`,
+            relatedJobId: job._id,
+          });
+        }
+      }
+    }
 
     // Generate PDF contract
     const { downloadUrl, validationHash } = await generateJobContract(freelancer, employer, job);
