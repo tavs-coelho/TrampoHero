@@ -21,11 +21,6 @@ async function generate(
   if (!data.success) throw new Error(data.error || 'AI generation failed');
   return data.text as string;
 }
-import { GoogleGenAI } from "@google/genai";
-import { Job, UserProfile } from "../types";
-import { env } from "../src/config/env";
-
-const ai = new GoogleGenAI({ apiKey: env.VITE_GEMINI_API_KEY });
 
 export const getSmartJobInsight = async (job: Job) => {
   try {
