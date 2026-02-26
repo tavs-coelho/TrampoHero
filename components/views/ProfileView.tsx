@@ -1,16 +1,18 @@
 import React from 'react';
-import { UserProfile, Certificate } from '../../types';
+import { UserProfile, Certificate, Review } from '../../types';
 import { MAX_RECENT_ITEMS } from '../../data/constants';
 import { MEDALS_REPO } from '../../data/mockData';
+import { StarRating } from '../StarRating';
 
 interface ProfileViewProps {
   user: UserProfile;
   setView: (v: any) => void;
   handleDownloadCertificate: (cert: Certificate) => void;
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
+  reviews?: Review[];
 }
 
-export const ProfileView: React.FC<ProfileViewProps> = ({ user, setView, handleDownloadCertificate, showToast }) => (
+export const ProfileView: React.FC<ProfileViewProps> = ({ user, setView, handleDownloadCertificate, showToast, reviews = [] }) => (
   <div className="space-y-6 animate-in fade-in duration-500">
     <div className="bg-white p-8 rounded-[3rem] text-center border border-slate-100 shadow-lg">
         <div className="w-24 h-24 bg-slate-200 rounded-full mx-auto mb-4 overflow-hidden border-4 border-white shadow-xl flex items-center justify-center">
@@ -39,7 +41,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user, setView, handleD
         <div className="grid grid-cols-2 gap-4">
             <div className="bg-slate-50 p-4 rounded-2xl">
                 <p className="text-[10px] text-slate-400 font-black uppercase">Reputação</p>
-                <p className="text-xl font-black text-slate-900"><i className="fas fa-star text-amber-400 mr-1"></i> {user.rating}</p>
+                <StarRating rating={user.rating} size="md" reviewCount={reviews.length} />
             </div>
             <div className="bg-slate-50 p-4 rounded-2xl">
                 <p className="text-[10px] text-slate-400 font-black uppercase">Jobs</p>
@@ -47,6 +49,32 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user, setView, handleD
             </div>
         </div>
     </div>
+
+    {/* Seção de Avaliações Recebidas */}
+    {reviews.length > 0 && (
+      <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+        <h3 className="font-black text-slate-900 text-lg mb-4 flex items-center gap-2">
+          <i className="fas fa-star text-amber-400"></i>
+          Avaliações Recebidas
+        </h3>
+        <div className="space-y-3">
+          {reviews.slice(0, MAX_RECENT_ITEMS).map(review => (
+            <div key={review.id} className="bg-slate-50 p-4 rounded-2xl">
+              <div className="flex items-center justify-between mb-2">
+                <StarRating rating={review.rating} size="sm" showValue={false} />
+                <span className="text-[10px] text-slate-400">{new Date(review.createdAt).toLocaleDateString('pt-BR')}</span>
+              </div>
+              {review.comment && (
+                <p className="text-xs text-slate-600 leading-relaxed">"{review.comment}"</p>
+              )}
+              {review.authorName && (
+                <p className="text-[10px] text-slate-400 mt-2 font-bold">— {review.authorName}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
 
     {/* Seção de Convites Enviados (Apenas para Empregadores) */}
     {user.role === 'employer' && (user.invitations || []).length > 0 && (
