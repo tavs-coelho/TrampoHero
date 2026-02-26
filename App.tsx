@@ -556,19 +556,6 @@ const App: React.FC = () => {
         />
       )}
 
-      {selectedJob && (
-        <JobDetailModal
-          job={selectedJob}
-          user={user}
-          isApplying={isApplying}
-          handleApply={handleApply}
-          handleShare={handleShare}
-          handleApproveCandidate={handleApproveCandidate}
-          handleCloseJob={handleCloseJob}
-          onClose={() => setSelectedJob(null)}
-        />
-      )}
-
       {showReviewModal && completedJob && (
         <ReviewFormModal
           job={completedJob}
@@ -589,6 +576,19 @@ const App: React.FC = () => {
             setShowReviewModal(false);
             setCompletedJob(null);
           }}
+        />
+      )}
+
+      {selectedJob && (
+        <JobDetailModal
+          job={selectedJob}
+          user={user}
+          isApplying={isApplying}
+          handleApply={handleApply}
+          handleShare={handleShare}
+          handleApproveCandidate={handleApproveCandidate}
+          handleCloseJob={handleCloseJob}
+          onClose={() => setSelectedJob(null)}
         />
       )}
     </div>
