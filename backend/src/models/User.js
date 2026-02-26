@@ -73,6 +73,15 @@ const userSchema = new mongoose.Schema({
     unique: true,
     sparse: true,
   },
+  referredBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+  },
+  referralBonusPaid: {
+    type: Boolean,
+    default: false,
+  },
   analyticsAccess: {
     type: String,
     enum: ['free', 'premium'],

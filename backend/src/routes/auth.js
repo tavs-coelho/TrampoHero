@@ -20,12 +20,21 @@ router.post('/register', [
       return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    const { email, password, name, role, niche } = req.body;
+    const { email, password, name, role, niche, referralCode } = req.body;
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ success: false, error: 'User already exists' });
+    }
+
+    // Resolve referral code to a referrer ID
+    let referredBy = null;
+    if (referralCode) {
+      const referrer = await User.findOne({ referralCode });
+      if (referrer) {
+        referredBy = referrer._id;
+      }
     }
 
     // Create user (password hashed by pre-save hook)
@@ -35,6 +44,7 @@ router.post('/register', [
       name,
       role,
       niche: niche || 'Gastronomia',
+      referredBy,
     });
 
     // Generate JWT
