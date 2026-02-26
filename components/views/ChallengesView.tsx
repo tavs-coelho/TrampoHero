@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { WeeklyChallenge } from '../../types';
 
 interface ChallengesViewProps {
@@ -6,7 +6,9 @@ interface ChallengesViewProps {
   setView: (v: 'browse') => void;
 }
 
-export const ChallengesView: React.FC<ChallengesViewProps> = ({ challenges, setView }) => (
+export const ChallengesView: React.FC<ChallengesViewProps> = ({ challenges, setView }) => {
+  const now = useMemo(() => Date.now(), []);
+  return (
   <div className="space-y-6 animate-in fade-in duration-500">
     <header className="flex items-center justify-between">
       <div>
@@ -56,7 +58,7 @@ export const ChallengesView: React.FC<ChallengesViewProps> = ({ challenges, setV
 
           {/* Time Remaining */}
           <div className="mt-3 text-xs text-slate-400 text-center">
-            Termina em {Math.ceil((new Date(challenge.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} dias
+            Termina em {Math.ceil((new Date(challenge.endDate).getTime() - now) / (1000 * 60 * 60 * 24))} dias
           </div>
         </div>
       ))}
@@ -77,4 +79,5 @@ export const ChallengesView: React.FC<ChallengesViewProps> = ({ challenges, setV
       </div>
     )}
   </div>
-);
+  );
+};

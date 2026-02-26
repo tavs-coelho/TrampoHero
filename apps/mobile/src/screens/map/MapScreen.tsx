@@ -76,17 +76,20 @@ export function MapScreen() {
   }, []);
 
   const fetchJobs = useCallback(async () => {
-    const result = await apiClient.getJobs({ status: 'open' });
-    if (result.success && result.data) {
-      setJobs(result.data);
-    } else {
-      Alert.alert('Erro', result.error ?? 'Falha ao carregar vagas no mapa.');
+    try {
+      const result = await apiClient.getJobs({ status: 'open' });
+      if (result.success && result.data) {
+        setJobs(result.data);
+      } else {
+        Alert.alert('Erro', result.error ?? 'Falha ao carregar vagas no mapa.');
+      }
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    fetchJobs().finally(() => setLoading(false));
+    fetchJobs();
   }, [fetchJobs]);
 
   const handleMarkerPress = useCallback(

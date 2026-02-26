@@ -32,7 +32,11 @@ const App: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>(INITIAL_JOBS);
   const [view, setView] = useState<ViewType>('browse');
   const [browseMode, setBrowseMode] = useState<'list' | 'map'>('list');
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const jobId = params.get('jobId');
+    return jobId ? (INITIAL_JOBS.find(j => j.id === jobId) ?? null) : null;
+  });
   const [messages, setMessages] = useState<Message[]>(() => {
     try {
       const saved = localStorage.getItem('trampoHeroMessages');
@@ -191,15 +195,6 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('trampoHeroMessages', JSON.stringify(messages));
   }, [messages]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const jobId = params.get('jobId');
-    if (jobId) {
-      const job = jobs.find(j => j.id === jobId);
-      if (job) setSelectedJob(job);
-    }
-  }, []);
 
   useEffect(() => {
     if (user.role === 'employer') {

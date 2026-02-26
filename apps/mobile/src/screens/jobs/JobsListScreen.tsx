@@ -52,17 +52,20 @@ export function JobsListScreen({ navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchJobs = useCallback(async () => {
-    const result = await apiClient.getJobs();
-    if (result.success && result.data) {
-      setJobs(result.data);
-    } else {
-      Alert.alert('Erro', result.error ?? 'Falha ao carregar vagas.');
+    try {
+      const result = await apiClient.getJobs();
+      if (result.success && result.data) {
+        setJobs(result.data);
+      } else {
+        Alert.alert('Erro', result.error ?? 'Falha ao carregar vagas.');
+      }
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    fetchJobs().finally(() => setLoading(false));
+    fetchJobs();
   }, [fetchJobs]);
 
   const onRefresh = useCallback(async () => {
