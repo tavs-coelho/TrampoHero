@@ -39,6 +39,7 @@ function detectCapabilities(): DeviceCapabilities {
     pushNotifications:
       typeof window !== 'undefined' &&
       'Notification' in window &&
+      typeof navigator !== 'undefined' &&
       'serviceWorker' in navigator,
     paymentRequest:
       typeof window !== 'undefined' && 'PaymentRequest' in window,

@@ -26,17 +26,28 @@ function validateEnv() {
   }
 }
 
+function parsePositiveInt(value, name, defaultValue) {
+  const parsed = parseInt(value ?? String(defaultValue), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    console.error(
+      `[TrampoHero Backend] Invalid value for ${name}: "${value}". Must be a positive integer. Using default: ${defaultValue}.`
+    );
+    return defaultValue;
+  }
+  return parsed;
+}
+
 validateEnv();
 
 export const env = {
-  PORT: parseInt(process.env.PORT ?? '5000', 10),
+  PORT: parsePositiveInt(process.env.PORT, 'PORT', 5000),
   NODE_ENV: process.env.NODE_ENV ?? 'development',
   MONGODB_URI: process.env.MONGODB_URI,
   JWT_SECRET: process.env.JWT_SECRET,
   JWT_EXPIRE: process.env.JWT_EXPIRE ?? '30d',
   GEMINI_API_KEY: process.env.GEMINI_API_KEY ?? '',
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? '',
-  RATE_LIMIT_MAX: parseInt(process.env.RATE_LIMIT_MAX ?? '100', 10),
+  RATE_LIMIT_MAX: parsePositiveInt(process.env.RATE_LIMIT_MAX, 'RATE_LIMIT_MAX', 100),
   /** Comma-separated list of allowed CORS origins, e.g. "http://localhost:3000,https://app.trampohero.com.br" */
   ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS ?? 'http://localhost:3000')
     .split(',')

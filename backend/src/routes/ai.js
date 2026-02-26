@@ -13,6 +13,12 @@ const aiLimiter = rateLimit({
 const GEMINI_BASE_URL =
   'https://generativelanguage.googleapis.com/v1beta/models';
 
+const ALLOWED_MODELS = new Set([
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-pro',
+]);
+
 /**
  * POST /api/ai/generate
  * Proxy for Gemini AI text generation.
@@ -32,6 +38,12 @@ router.post('/generate', aiLimiter, async (req, res) => {
       systemInstruction,
       responseMimeType,
     } = req.body;
+
+    if (!ALLOWED_MODELS.has(model)) {
+      return res
+        .status(400)
+        .json({ success: false, error: `Unsupported model. Allowed: ${[...ALLOWED_MODELS].join(', ')}` });
+    }
 
     if (!prompt || typeof prompt !== 'string') {
       return res

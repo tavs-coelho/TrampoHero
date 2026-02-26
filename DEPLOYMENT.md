@@ -128,7 +128,7 @@ flyctl deploy
 ## Database – MongoDB Atlas
 
 1. Create a free cluster at [mongodb.com/atlas](https://www.mongodb.com/atlas).
-2. Under **Network Access**, add `0.0.0.0/0` (allow all IPs) for cloud hosting, or the specific IP range of your backend host.
+2. Under **Network Access**, add only the specific IP addresses or ranges of your backend host(s). Avoid `0.0.0.0/0` (allow all) in production — use it only temporarily during initial setup in non-production environments, and remove it once your backend IPs are known.
 3. Create a database user and copy the connection string:
    ```
    mongodb+srv://<user>:<password>@cluster0.xxxx.mongodb.net/trampohero?retryWrites=true&w=majority
@@ -213,4 +213,4 @@ After every deploy, verify the following:
 | Frontend loads but API calls fail with CORS error | Backend `FRONTEND_URL` / `ALLOWED_ORIGINS` does not include the frontend URL | Update backend env var and redeploy |
 | `AI service is not configured on this server` | `GEMINI_API_KEY` not set on backend | Add the key in Render environment variables |
 | Backend exits immediately with `❌ Missing required environment variables` | `JWT_SECRET` or `MONGODB_URI` not set | Set missing vars in host dashboard |
-| MongoDB connection error | IP not whitelisted in Atlas | Add `0.0.0.0/0` in Atlas Network Access |
+| MongoDB connection error | IP not whitelisted in Atlas | Add your backend host's IP in Atlas Network Access |
