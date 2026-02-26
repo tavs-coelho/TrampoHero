@@ -3,9 +3,13 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // env must be imported first so missing vars cause an early exit
 import { env } from './config/env.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -20,6 +24,8 @@ import aiRoutes from './routes/ai.js';
 import uploadsRoutes from './routes/uploads.js';
 import notificationsRoutes from './routes/notifications.js';
 import reviewRoutes from './routes/reviews.js';
+import referralRoutes from './routes/referral.js';
+import paymentsRoutes from './routes/payments.js';
 
 import mongoose from 'mongoose';
 
@@ -53,6 +59,9 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Body parser middleware
+// NOTE: /api/payments/webhook must receive the raw body for Stripe signature verification,
+// so it is registered here – before the global express.json() – with express.raw().
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -86,6 +95,11 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/referral', referralRoutes);
+app.use('/api/payments', paymentsRoutes);
+
+// Serve generated PDF contracts for download
+app.use('/api/contracts', express.static(path.join(__dirname, '..', 'contracts')));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
