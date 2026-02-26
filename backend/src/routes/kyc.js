@@ -95,6 +95,26 @@ router.post(
         uploadToAzure(files.selfie[0].buffer, buildBlobName('selfie'), files.selfie[0].mimetype),
       ]);
 
+      // If storage is not properly configured or uploads failed, do not persist null URLs
+      if (!documentFrontUrl || !documentBackUrl || !selfieUrl) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error(
+            '[kyc/submit] Failed to upload KYC documents: storage not configured or upload error.',
+            {
+              documentFrontUrlPresent: Boolean(documentFrontUrl),
+              documentBackUrlPresent: Boolean(documentBackUrl),
+              selfieUrlPresent: Boolean(selfieUrl),
+            }
+          );
+        } else {
+          console.error('[kyc/submit] Failed to upload KYC documents.');
+        }
+        return res.status(500).json({
+          success: false,
+          error: 'KYC document storage is not properly configured. Please try again later.',
+        });
+      }
+
       const user = await User.findByIdAndUpdate(
         userId,
         {

@@ -435,3 +435,15 @@ export interface StoreOrder {
   deliveryDate?: string;
   trackingCode?: string;
 }
+
+// ==================== REVIEWS & RATINGS ====================
+export interface Review {
+  id: string;
+  rating: number; // 1-5
+  comment: string;
+  authorId: string;
+  authorName?: string;
+  targetId: string;
+  jobId: string;
+  createdAt: string;
+}

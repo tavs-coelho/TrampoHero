@@ -14,6 +14,18 @@ interface FileState {
   preview: string | null;
 }
 
+interface KycSubmitResponse {
+  success: boolean;
+  error?: string;
+  data?: {
+    kycStatus: KycStatus;
+    documentFrontUrl: string | null;
+    documentBackUrl: string | null;
+    selfieUrl: string | null;
+    submittedAt: string;
+  };
+}
+
 const KYC_STATUS_LABELS: Record<KycStatus, string> = {
   not_submitted: 'Não Enviado',
   pending: 'Em Análise',
@@ -76,15 +88,15 @@ export const KycView: React.FC<KycViewProps> = ({ user, setUser, showToast, setV
         documentFront.file,
         documentBack.file,
         selfie.file,
-      );
+      ) as KycSubmitResponse;
 
       if (result.success) {
         const kycInfo: KycInfo = {
           status: 'pending',
-          documentFrontUrl: (result as any).data?.documentFrontUrl ?? null,
-          documentBackUrl: (result as any).data?.documentBackUrl ?? null,
-          selfieUrl: (result as any).data?.selfieUrl ?? null,
-          submittedAt: (result as any).data?.submittedAt ?? new Date().toISOString(),
+          documentFrontUrl: result.data?.documentFrontUrl ?? null,
+          documentBackUrl: result.data?.documentBackUrl ?? null,
+          selfieUrl: result.data?.selfieUrl ?? null,
+          submittedAt: result.data?.submittedAt ?? new Date().toISOString(),
         };
         setUser(prev => ({ ...prev, kyc: kycInfo }));
         showToast('Documentos enviados! Sua conta está em análise.', 'success');

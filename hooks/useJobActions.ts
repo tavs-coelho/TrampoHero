@@ -29,13 +29,15 @@ export const useJobActions = (deps: {
   setShowPaymentModal: React.Dispatch<React.SetStateAction<boolean>>;
   showToast: (msg: string, type?: 'success'|'error'|'info') => void;
   handleUpdateChallengeProgress: (challengeType: 'jobs_completed' | 'referrals' | 'streak_days' | 'rating_maintained', increment?: number) => void;
+  onCheckoutComplete?: (job: Job) => void;
 }) => {
   const {
     user, setUser, jobs, setJobs, activeJob, selectedJob, setSelectedJob,
     setView, isCheckedIn, setIsCheckedIn, isApplying, setIsApplying,
     isRecording, setIsRecording, newJobData, setNewJobData,
     isGeneratingDesc, setIsGeneratingDesc, setShowCreateJobModal,
-    setDepositAmount, setShowPaymentModal, showToast, handleUpdateChallengeProgress
+    setDepositAmount, setShowPaymentModal, showToast, handleUpdateChallengeProgress,
+    onCheckoutComplete
   } = deps;
 
   const handleApply = (job: Job) => {
@@ -115,6 +117,11 @@ export const useJobActions = (deps: {
         handleUpdateChallengeProgress('streak_days', currentStreak);
         
         showToast(`Trabalho concluído! +${actualCoins} TrampoCoins ganhos 🎉`, "success");
+        
+        // Trigger review form for the completed job
+        if (onCheckoutComplete) {
+          onCheckoutComplete(activeJob);
+        }
     }
   };
 

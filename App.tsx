@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Niche, Job, UserProfile, SubscriptionTier, Message, Course, Certificate, WeeklyChallenge, TalentRanking, StoreProduct, Advertisement } from './types';
+import { Niche, Job, UserProfile, SubscriptionTier, Message, Course, Certificate, WeeklyChallenge, TalentRanking, StoreProduct, Advertisement, Review } from './types';
 import { supportAssistant, getRecurrentSuggestion } from './services/geminiService';
 import { WEEKLY_CHALLENGES, TALENT_RANKINGS, STORE_PRODUCTS, ADVERTISEMENTS, INITIAL_JOBS, INITIAL_USER } from './data/mockData';
 import { Toast } from './components/Toast';
 import { SplashScreen } from './components/SplashScreen';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
-import { ExamModal, PrimeModal, PaymentModal, CreateJobModal, JobDetailModal } from './components/modals';
+import { ExamModal, PrimeModal, PaymentModal, CreateJobModal, JobDetailModal, ReviewFormModal } from './components/modals';
 import {
   DashboardView, TalentsView, EmployerProfileView, EmployerWalletView, EmployerChatView, EmployerActiveView,
   BrowseView, ActiveJobView, WalletView, AcademyView, ProfileView, ChatView,
@@ -83,6 +83,10 @@ const App: React.FC = () => {
   const [advertisements, setAdvertisements] = useState<Advertisement[]>(ADVERTISEMENTS);
   const [isApplying, setIsApplying] = useState(false);
 
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [completedJob, setCompletedJob] = useState<Job | null>(null);
+
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersLayerRef = useRef<any>(null);
@@ -106,7 +110,11 @@ const App: React.FC = () => {
     setView, isCheckedIn, setIsCheckedIn, isApplying, setIsApplying,
     isRecording, setIsRecording, newJobData, setNewJobData,
     isGeneratingDesc, setIsGeneratingDesc, setShowCreateJobModal,
-    setDepositAmount, setShowPaymentModal, showToast, handleUpdateChallengeProgress
+    setDepositAmount, setShowPaymentModal, showToast, handleUpdateChallengeProgress,
+    onCheckoutComplete: (job) => {
+      setCompletedJob(job);
+      setShowReviewModal(true);
+    },
   });
 
   const { handleWithdraw, handleAnticipate, handleOpenAddBalance, handleProcessPayment } = useWalletActions({
@@ -387,6 +395,7 @@ const App: React.FC = () => {
                 setView={setView}
                 handleDownloadCertificate={handleDownloadCertificate}
                 showToast={showToast}
+                reviews={reviews}
               />
             )}
             {view === 'chat' && (
@@ -557,6 +566,29 @@ const App: React.FC = () => {
           handleApproveCandidate={handleApproveCandidate}
           handleCloseJob={handleCloseJob}
           onClose={() => setSelectedJob(null)}
+        />
+      )}
+
+      {showReviewModal && completedJob && (
+        <ReviewFormModal
+          job={completedJob}
+          authorId={user.id}
+          onSubmit={(reviewData) => {
+            const newReview: Review = {
+              id: Date.now().toString(),
+              ...reviewData,
+              authorName: user.name,
+              createdAt: new Date().toISOString(),
+            };
+            setReviews(prev => [newReview, ...prev]);
+            setShowReviewModal(false);
+            setCompletedJob(null);
+            showToast("Avaliação enviada! Obrigado pelo feedback.", "success");
+          }}
+          onClose={() => {
+            setShowReviewModal(false);
+            setCompletedJob(null);
+          }}
         />
       )}
     </div>
