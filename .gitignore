@@ -23,3 +23,8 @@ coverage
 *.njsproj
 *.sln
 *.sw?
+
+# Mobile – sensitive config files (never commit these)
+apps/mobile/google-services.json
+apps/mobile/GoogleService-Info.plist
+apps/mobile/.env
