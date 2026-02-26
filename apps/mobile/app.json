@@ -15,12 +15,20 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.trampohero.app",
+      "buildNumber": "1",
+      "requireFullScreen": false,
+      "usesAppleSignIn": false,
       "infoPlist": {
         "NSCameraUsageDescription": "TrampoHero needs camera access to capture proof-of-work photos.",
         "NSPhotoLibraryUsageDescription": "TrampoHero needs photo library access to upload proof-of-work photos.",
+        "NSPhotoLibraryAddUsageDescription": "TrampoHero needs access to save photos.",
         "NSLocationWhenInUseUsageDescription": "TrampoHero needs your location to enable job check-in.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "TrampoHero needs your location for check-in at job sites.",
+        "NSMicrophoneUsageDescription": "TrampoHero needs microphone access for video recording.",
         "UIBackgroundModes": ["remote-notification", "fetch"]
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
