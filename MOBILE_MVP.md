@@ -66,9 +66,15 @@ apps/mobile/
 
 ### Map
 - Full-screen Google Maps / Apple Maps view.
-- Job pins rendered at `job.coordinates` ({lat, lng}).
+- Requests foreground location permission on screen mount.
+  - If granted: shows native blue dot and "My Location" button.
+  - If denied: shows a warning banner; map still renders without user location.
+- Job pins fetched from `GET /api/jobs?status=open`.
+  - Jobs with valid `coordinates` are pinned at their exact position.
+  - Jobs whose `coordinates` are missing or zero-value fall back to a
+    deterministic mock coordinate in the São Paulo area so the map is never empty.
 - Boosted jobs shown in amber, standard jobs in navy.
-- User's current location shown with the native blue dot.
+- Tapping any pin navigates to the **Job Detail** screen for that job.
 
 ### Geolocation check-in
 - Requests foreground location permission at check-in time (not upfront).
@@ -166,10 +172,23 @@ For platform-specific setup (FCM, APNs, EAS builds), see:
 5. Register a new account (freelancer + niche, or employer).
 6. Browse the jobs list – confirm items load from the API.
 7. Tap a job to open the detail screen.
-8. Confirm the map shows pins for open jobs.
-9. For an `ongoing` job: test check-in (should request location permission),
+
+### Map – manual tests
+
+8. Open the **Mapa** tab.
+   - **Permission granted**: Accept the location permission prompt. Confirm the native blue dot and "My Location" button appear on the map.
+   - **Permission denied**: Deny the permission. Confirm the amber warning banner ("Permissão de localização negada") appears below the title, and that the map still renders with job pins but without the user's location dot.
+9. Confirm job pins load from the API:
+   - Navy pins for standard open jobs.
+   - Amber pins for boosted jobs.
+10. **Fallback coordinates**: If the backend returns jobs without `coordinates` (or with `{lat:0, lng:0}`), confirm those jobs still appear as pins distributed around São Paulo (mock fallback) instead of crashing or disappearing.
+11. **Tap a pin** – confirm the info callout appears (job title + employer + payment).
+12. **Tap the callout / pin again** – confirm the app navigates to the **Job Detail** screen for that job, showing the full job information.
+13. Press Back and confirm you return to the map.
+
+For an `ongoing` job: test check-in (should request location permission),
    photo upload (should open image picker), and chat (should connect to WS).
-10. Force-kill and relaunch the app – confirm you remain logged in.
+14. Force-kill and relaunch the app – confirm you remain logged in.
 
 ---
 
@@ -195,6 +214,11 @@ They can return mock data during initial development:
 - [x] Jobs list screen with pull-to-refresh
 - [x] Job detail screen (info, apply, check-in, photo, chat)
 - [x] Map screen with job pins (boosted = amber, standard = navy)
+- [x] Map requests foreground location permission on mount
+- [x] Map shows user's blue dot when permission is granted
+- [x] Map shows warning banner when permission is denied (still functional)
+- [x] Map tapping a pin navigates to Job Detail screen
+- [x] Map fallback mock coordinates for jobs missing valid coordinates
 - [x] Map uses native provider (Apple Maps on iOS, Google Maps on Android)
 - [x] Geolocation check-in (`POST /api/jobs/:id/checkin`)
 - [x] Photo upload via Azure Blob SAS URL (degrades gracefully)
