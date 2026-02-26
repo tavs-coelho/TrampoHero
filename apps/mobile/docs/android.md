@@ -119,6 +119,8 @@ eas build --platform android --profile preview
 ### Production build (Play Store AAB)
 
 ```bash
+npm run build:android
+# or equivalently:
 eas build --platform android --profile production
 ```
 
@@ -145,7 +147,55 @@ The `eas.json` build profiles should follow this structure:
 
 ---
 
-## 7. Android permissions
+## 7. Submitting to Google Play (EAS Submit)
+
+### Create a Google Play Service Account Key
+
+1. Open the [Google Play Console](https://play.google.com/console/).
+2. Navigate to **Setup → API access**.
+3. Link your Google Play account to a Google Cloud project (create one if needed).
+4. Click **Create new service account**, then follow the link to Google Cloud Console.
+5. In Google Cloud Console: **IAM & Admin → Service Accounts → Create Service Account**.
+   - Give it a name like `eas-submit`.
+   - Grant the role **Service Account User**.
+6. Under the service account, go to **Keys → Add Key → Create new key → JSON**.
+   - Download the JSON file — this is your `service-account-key.json`.
+   - **Never commit this file to version control.**
+7. Back in Google Play Console, grant the new service account the **Release Manager** role
+   (or at minimum **Release to production, exclude devices, and use Play App Signing**).
+
+### Configure `eas.json`
+
+In `apps/mobile/eas.json`, update the `submit.production.android` section with the path
+to your downloaded service account key:
+
+```json
+"submit": {
+  "production": {
+    "android": {
+      "serviceAccountKeyPath": "../path/to/service-account-key.json",
+      "track": "internal"
+    }
+  }
+}
+```
+
+> `track` can be `"internal"`, `"alpha"`, `"beta"`, or `"production"`.
+> Start with `"internal"` for the initial launch.
+
+### Submit the production build
+
+```bash
+npm run submit:android
+# or equivalently:
+eas submit --platform android
+```
+
+EAS Submit will use the latest successful production build by default.
+
+---
+
+## 8. Android permissions
 
 The following permissions are declared in `app.json` and will be included in the
 `AndroidManifest.xml` automatically by Expo:
@@ -153,16 +203,19 @@ The following permissions are declared in `app.json` and will be included in the
 | Permission | Purpose |
 |---|---|
 | `CAMERA` | Capture proof-of-work photos |
-| `READ_EXTERNAL_STORAGE` | Select photos from gallery |
-| `WRITE_EXTERNAL_STORAGE` | Save downloaded files |
+| `READ_EXTERNAL_STORAGE` | Select photos from gallery (Android ≤ 12) |
+| `WRITE_EXTERNAL_STORAGE` | Save downloaded files (Android ≤ 12) |
+| `READ_MEDIA_IMAGES` | Select photos from gallery (Android 13+) |
+| `READ_MEDIA_VIDEO` | Select videos from gallery (Android 13+) |
 | `ACCESS_FINE_LOCATION` | Precise GPS for check-in |
 | `ACCESS_COARSE_LOCATION` | Fallback location for map |
 | `RECEIVE_BOOT_COMPLETED` | Restore scheduled notifications on reboot |
 | `VIBRATE` | Notification haptic feedback |
+| `INTERNET` | Network requests to the backend API |
 
 ---
 
-## 8. Notification channels
+## 9. Notification channels
 
 Two notification channels are created at runtime (see `src/services/notifications.ts`):
 
@@ -173,7 +226,7 @@ Two notification channels are created at runtime (see `src/services/notification
 
 ---
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 ### Metro bundler cache
 
@@ -197,3 +250,33 @@ Ensure the file exists at `apps/mobile/google-services.json` (see step 3 above).
 In the AVD emulator: **⋮ → Location** and enable the virtual GPS.
 Set a custom location by entering latitude/longitude values in the
 **Extended Controls → Location** panel, then click **Set Location**.
+
+---
+
+## 11. Play Store asset requirements
+
+Before submitting to the Google Play Store, prepare the following assets:
+
+| Asset | Specification |
+|---|---|
+| App icon | 512×512 PNG, no alpha |
+| Feature graphic | 1024×500 PNG or JPEG |
+| Phone screenshots | At least 2 screenshots (min 320 px, max 3840 px on longest side) |
+| Short description | Up to 80 characters |
+| Full description | Up to 4000 characters |
+
+Upload these in the Google Play Console under **Store listing**.
+
+---
+
+## 12. Launch checklist
+
+Before submitting to the Google Play Store, verify all of the following:
+
+- [ ] `google-services.json` downloaded from Firebase and placed at `apps/mobile/google-services.json`
+- [ ] EAS Project ID filled in `app.json` (`extra.eas.projectId`)
+- [ ] Service Account Key created and path set in `eas.json` (`submit.production.android.serviceAccountKeyPath`)
+- [ ] Play Store assets ready: 512×512 icon, 1024×500 feature graphic, ≥2 phone screenshots
+- [ ] `version` and `versionCode` correct in `app.json` (start with `"1.0.0"` / `1`)
+- [ ] Production AAB generated: `npm run build:android`
+- [ ] App submitted to internal track: `npm run submit:android`

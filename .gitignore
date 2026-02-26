@@ -34,3 +34,6 @@ apps/mobile/.env
 *.p12
 *.mobileprovision
 AuthKey_*.p8
+*.jks
+*.keystore
+service-account-key.json
