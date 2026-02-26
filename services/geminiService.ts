@@ -1,4 +1,3 @@
-
 import { Job } from "../types";
 import { env } from "../src/config/env";
 
