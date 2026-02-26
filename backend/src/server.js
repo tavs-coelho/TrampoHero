@@ -16,6 +16,9 @@ import challengeRoutes from './routes/challenges.js';
 import rankingRoutes from './routes/ranking.js';
 import storeRoutes from './routes/store.js';
 import adsRoutes from './routes/ads.js';
+import uploadsRoutes from './routes/uploads.js';
+import chatRoutes from './routes/chat.js';
+import notificationsRoutes from './routes/notifications.js';
 
 import mongoose from 'mongoose';
 
@@ -74,6 +77,9 @@ app.use('/api/challenges', challengeRoutes);
 app.use('/api/ranking', rankingRoutes);
 app.use('/api/store', storeRoutes);
 app.use('/api/ads', adsRoutes);
+app.use('/api/uploads', uploadsRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

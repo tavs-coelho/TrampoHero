@@ -42,4 +42,24 @@ export const env = {
     .map((o) => o.trim())
     .filter(Boolean),
   FRONTEND_URL: process.env.FRONTEND_URL ?? 'http://localhost:3000',
+
+  // ── Azure Blob Storage (PR 3: SAS uploads) ──────────────────────────────────
+  /** Azure Storage account name (optional – SAS upload endpoints disabled when absent). */
+  AZURE_STORAGE_ACCOUNT_NAME: process.env.AZURE_STORAGE_ACCOUNT_NAME ?? '',
+  /** Azure Storage account key (keep in Key Vault in production). */
+  AZURE_STORAGE_ACCOUNT_KEY: process.env.AZURE_STORAGE_ACCOUNT_KEY ?? '',
+  /** Blob container name for user-uploaded files. */
+  AZURE_STORAGE_CONTAINER_NAME: process.env.AZURE_STORAGE_CONTAINER_NAME ?? 'uploads',
+
+  // ── Azure Web PubSub (PR 4: chat) ───────────────────────────────────────────
+  /** Web PubSub connection string (optional – real-time chat disabled when absent). */
+  WEB_PUBSUB_CONNECTION_STRING: process.env.WEB_PUBSUB_CONNECTION_STRING ?? '',
+  /** Web PubSub hub name. */
+  WEB_PUBSUB_HUB_NAME: process.env.WEB_PUBSUB_HUB_NAME ?? 'chat',
+
+  // ── Azure Notification Hubs (PR 5: push notifications) ──────────────────────
+  /** Notification Hubs connection string (optional – push disabled when absent). */
+  NH_CONNECTION_STRING: process.env.NH_CONNECTION_STRING ?? '',
+  /** Notification Hub name. */
+  NH_HUB_NAME: process.env.NH_HUB_NAME ?? 'trampohero',
 };
