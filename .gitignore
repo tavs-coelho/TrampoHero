@@ -28,6 +28,12 @@ coverage
 apps/mobile/google-services.json
 apps/mobile/GoogleService-Info.plist
 apps/mobile/.env
+
+# iOS sensitive files
+*.p8
+*.p12
+*.mobileprovision
+AuthKey_*.p8
 *.jks
 *.keystore
 service-account-key.json

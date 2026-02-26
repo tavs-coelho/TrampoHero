@@ -42,7 +42,8 @@
       "ios": {
         "appleId": "your_apple_id@example.com",
         "ascAppId": "YOUR_ASC_APP_ID",
-        "appleTeamId": "YOUR_APPLE_TEAM_ID"
+        "appleTeamId": "YOUR_APPLE_TEAM_ID",
+        "language": "pt-BR"
       }
     }
   }
