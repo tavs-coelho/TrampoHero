@@ -103,9 +103,24 @@ All variables are prefixed with `EXPO_PUBLIC_` so they are embedded in the
 bundle at build time. Copy `apps/mobile/.env.example` to `apps/mobile/.env`
 and fill in the values.
 
+```bash
+cp apps/mobile/.env.example apps/mobile/.env
+```
+
+The most important variable is `EXPO_PUBLIC_API_BASE_URL`, which points the
+app at the backend API:
+
+```dotenv
+# Local development
+EXPO_PUBLIC_API_BASE_URL=http://localhost:5000/api
+
+# Staging
+EXPO_PUBLIC_API_BASE_URL=https://api-staging.trampohero.com/api
+```
+
 | Variable | Description |
 |---|---|
-| `EXPO_PUBLIC_API_URL` | Backend API base URL |
+| `EXPO_PUBLIC_API_BASE_URL` | Backend API base URL |
 | `EXPO_PUBLIC_ANH_CONNECTION_STRING` | Azure Notification Hubs connection string |
 | `EXPO_PUBLIC_ANH_HUB_NAME` | Azure Notification Hubs name |
 | `EXPO_PUBLIC_WEB_PUBSUB_URL` | Fallback Web PubSub WebSocket URL |
@@ -115,19 +130,37 @@ and fill in the values.
 
 ---
 
-## Platforms
+## How to run locally (Expo)
 
-| PR | Branch | Platform | Docs |
-|---|---|---|---|
-| Android MVP | `copilot/add-android-mvp-support` | Android | `docs/android.md` |
-| iOS MVP | `copilot/add-ios-mvp-support` | iOS | `docs/ios.md` |
+```bash
+# 1. Install dependencies
+cd apps/mobile
+npm install
+
+# 2. Configure environment variables
+cp .env.example .env
+# Edit .env and set EXPO_PUBLIC_API_BASE_URL to your backend URL
+
+# 3. Start the Expo development server
+npm run start
+
+# 4. Launch on Android emulator
+npm run android
+
+# 5. Launch on iOS simulator (macOS only)
+npm run ios
+```
+
+For platform-specific setup (FCM, APNs, EAS builds), see:
+- [Android setup →](apps/mobile/docs/android.md)
+- [iOS setup →](apps/mobile/docs/ios.md)
 
 ---
 
 ## Manual test steps
 
 1. **Start the backend** (`cd backend && npm start`).
-2. **Set env vars** (`cp apps/mobile/.env.example apps/mobile/.env`).
+2. **Set env vars**: `cp apps/mobile/.env.example apps/mobile/.env` then set `EXPO_PUBLIC_API_BASE_URL`.
 3. **Install dependencies** (`cd apps/mobile && npm install`).
 4. **Run on device/emulator** (`npm run android` or `npm run ios`).
 5. Register a new account (freelancer + niche, or employer).
@@ -151,3 +184,22 @@ They can return mock data during initial development:
 | `POST` | `/api/jobs/:id/checkin` | Accept `{ jobId, latitude, longitude, timestamp }` |
 | `GET` | `/api/jobs/:id/chat-token` | Return `{ url }` (Web PubSub access URL) |
 | `POST` | `/api/users/push-device` | Accept `{ deviceToken, platform, userId, tags }` |
+
+---
+
+## MVP feature checklist
+
+- [x] Login screen (email + password, JWT stored in AsyncStorage)
+- [x] Register screen (name, email, password, role, niche)
+- [x] Persistent session restore on launch
+- [x] Jobs list screen with pull-to-refresh
+- [x] Job detail screen (info, apply, check-in, photo, chat)
+- [x] Map screen with job pins (boosted = amber, standard = navy)
+- [x] Map uses native provider (Apple Maps on iOS, Google Maps on Android)
+- [x] Geolocation check-in (`POST /api/jobs/:id/checkin`)
+- [x] Photo upload via Azure Blob SAS URL (degrades gracefully)
+- [x] Real-time chat via WebSocket / Azure Web PubSub (stub-safe)
+- [x] Push notification registration (Expo + Azure Notification Hubs)
+- [ ] Backend stubs for SAS, check-in, chat-token, push-device
+- [ ] `google-services.json` for Android FCM (see `docs/android.md`)
+- [ ] APNs key for iOS push (see `docs/ios.md`)

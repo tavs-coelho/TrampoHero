@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -17,6 +18,9 @@ const DEFAULT_REGION = {
   latitudeDelta: 0.5,
   longitudeDelta: 0.5,
 };
+
+// Use Google Maps on Android, default native maps (Apple Maps) on iOS.
+const MAP_PROVIDER = Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined;
 
 export function MapScreen() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -51,7 +55,7 @@ export function MapScreen() {
       <MapView
         ref={mapRef}
         style={styles.map}
-        provider={PROVIDER_GOOGLE}
+        provider={MAP_PROVIDER}
         initialRegion={DEFAULT_REGION}
         showsUserLocation
         showsMyLocationButton

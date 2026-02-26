@@ -39,7 +39,7 @@ cp .env.example .env
 
 | Variable | Description |
 |---|---|
-| `EXPO_PUBLIC_API_URL` | Backend API base URL |
+| `EXPO_PUBLIC_API_BASE_URL` | Backend API base URL |
 | `EXPO_PUBLIC_ANH_CONNECTION_STRING` | Azure Notification Hubs connection string |
 | `EXPO_PUBLIC_ANH_HUB_NAME` | Azure Notification Hubs name |
 | `EXPO_PUBLIC_WEB_PUBSUB_URL` | Azure Web PubSub WebSocket URL |
