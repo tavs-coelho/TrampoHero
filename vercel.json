@@ -3,6 +3,8 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
     { "source": "/((?!api/.*).*)", "destination": "/index.html" }
@@ -24,4 +26,9 @@
       ]
     }
   ]
+  ],
+  "env": {
+    "VITE_API_URL": "@vite_api_url",
+    "VITE_GEMINI_API_KEY": "@vite_gemini_api_key"
+  }
 }

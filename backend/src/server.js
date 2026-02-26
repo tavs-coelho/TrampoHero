@@ -66,6 +66,7 @@ app.use(cors({
     const err = new Error('Not allowed by CORS');
     err.status = 403;
     callback(err);
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true
 }));
@@ -114,3 +115,4 @@ app.listen(env.PORT, () => {
 });
 
 export default app;
+

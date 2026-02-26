@@ -7,6 +7,12 @@
  */
 
 interface FrontendEnv {
+ * via import.meta.env. Secret keys must never be placed here.
+ */
+
+interface FrontendEnv {
+  /** Google Gemini API key – used client-side for AI features */
+  VITE_GEMINI_API_KEY: string;
   /** Backend API base URL */
   VITE_API_URL: string;
   /** Application name, defaults to "TrampoHero" */
@@ -23,6 +29,23 @@ function getEnv(): FrontendEnv {
       'Copy .env.example to .env.local and set VITE_API_URL to your backend URL.\n' +
       'Example: VITE_API_URL=http://localhost:5000/api';
     if (import.meta.env.PROD) {
+  const VITE_GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
+  const VITE_API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:5000/api';
+  const VITE_APP_NAME = (import.meta.env.VITE_APP_NAME as string | undefined) ?? 'TrampoHero';
+
+  const missing: string[] = [];
+
+  if (!VITE_GEMINI_API_KEY) {
+    missing.push('VITE_GEMINI_API_KEY');
+  }
+
+  if (missing.length > 0) {
+    const msg =
+      `[TrampoHero] Missing required environment variables: ${missing.join(', ')}.\n` +
+      'Copy .env.example to .env.local and fill in the values.';
+    // In development (but not test), throw so the developer sees the error immediately.
+    // In production, log a warning and continue so the app can still load.
+    if (import.meta.env.DEV && import.meta.env.MODE !== 'test') {
       throw new Error(msg);
     } else {
       console.warn(msg);
@@ -30,6 +53,7 @@ function getEnv(): FrontendEnv {
   }
 
   return {
+    VITE_GEMINI_API_KEY: VITE_GEMINI_API_KEY ?? '',
     VITE_API_URL,
     VITE_APP_NAME,
   };
