@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticate, authorize } from '../middleware/auth.js';
 import Job from '../models/Job.js';
 import User from '../models/User.js';
+import { generateJobContract } from '../services/pdfService.js';
 
 const router = express.Router();
 
@@ -127,6 +128,64 @@ router.post('/:id/apply', authenticate, authorize('freelancer'), async (req, res
 
     res.json({ success: true, message: 'Applied successfully' });
   } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// @route   POST /api/jobs/:id/complete
+// @desc    Mark a job as completed, generate a digital contract PDF and return its download link
+// @access  Private (Employer only)
+router.post('/:id/complete', authenticate, authorize('employer'), async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.id);
+    if (!job) {
+      return res.status(404).json({ success: false, error: 'Job not found' });
+    }
+
+    // Only the employer who owns this job may complete it
+    if (job.employerId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, error: 'Not authorized' });
+    }
+
+    if (!['ongoing', 'waiting_approval'].includes(job.status)) {
+      return res.status(400).json({ success: false, error: 'Job cannot be completed in its current status' });
+    }
+
+    // Identify the approved freelancer
+    const approvedApplicant = job.applicants.find(a => a.status === 'approved');
+    if (!approvedApplicant) {
+      return res.status(400).json({ success: false, error: 'No approved freelancer assigned to this job' });
+    }
+
+    const [freelancer, employer] = await Promise.all([
+      User.findById(approvedApplicant.userId),
+      User.findById(req.user.id),
+    ]);
+
+    if (!freelancer || !employer) {
+      return res.status(404).json({ success: false, error: 'User data not found' });
+    }
+
+    // Update job status
+    job.status = 'completed';
+    await job.save();
+
+    // Generate PDF contract
+    const { downloadUrl, validationHash } = await generateJobContract(freelancer, employer, job);
+
+    res.json({
+      success: true,
+      message: 'Job completed successfully',
+      data: {
+        job,
+        contract: {
+          downloadUrl,
+          validationHash,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('[POST /jobs/:id/complete]', error.message);
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
