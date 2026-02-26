@@ -37,7 +37,7 @@ export const env = {
   GEMINI_API_KEY: process.env.GEMINI_API_KEY ?? '',
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? '',
   /** Comma-separated list of allowed CORS origins, e.g. "http://localhost:3000,https://app.trampohero.com.br" */
-  ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS ?? process.env.FRONTEND_URL ?? 'http://localhost:3000')
+  ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS ?? 'http://localhost:3000')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean),
