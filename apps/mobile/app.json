@@ -1,0 +1,92 @@
+{
+  "expo": {
+    "name": "TrampoHero",
+    "slug": "trampohero",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a1a2e"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.trampohero.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "TrampoHero needs camera access to capture proof-of-work photos.",
+        "NSPhotoLibraryUsageDescription": "TrampoHero needs photo library access to upload proof-of-work photos.",
+        "NSLocationWhenInUseUsageDescription": "TrampoHero needs your location to enable job check-in.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "TrampoHero needs your location for check-in at job sites.",
+        "UIBackgroundModes": ["remote-notification", "fetch"]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1a1a2e"
+      },
+      "package": "com.trampohero.app",
+      "versionCode": 1,
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "USE_FINGERPRINT"
+      ],
+      "notification": {
+        "icon": "./assets/notification-icon.png",
+        "color": "#1a1a2e",
+        "androidMode": "default",
+        "androidCollapsedTitle": "TrampoHero"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#1a1a2e",
+          "sounds": [],
+          "androidMode": "default",
+          "androidCollapsedTitle": "TrampoHero"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "TrampoHero needs your location for check-in at job sites.",
+          "locationWhenInUsePermission": "TrampoHero needs your location to enable job check-in."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "TrampoHero needs camera access to capture proof-of-work photos."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "TrampoHero needs photo library access to upload proof-of-work photos.",
+          "cameraPermission": "TrampoHero needs camera access to capture proof-of-work photos."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    }
+  }
+}
