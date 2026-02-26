@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "seed": "node src/seeds/seed.js"
+    "seed": "node src/seeds/seed.js",
+    "test": "vitest run"
   },
   "keywords": [
     "gig",
@@ -29,9 +30,12 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.23.0",
-    "morgan": "^1.10.1"
+    "morgan": "^1.10.1",
+    "stripe": "^20.4.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.0.2",
+    "supertest": "^7.2.2",
+    "vitest": "^4.0.18"
   }
 }
