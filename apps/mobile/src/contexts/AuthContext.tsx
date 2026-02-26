@@ -8,6 +8,11 @@ import React, {
 
 import { apiClient } from '../api/client';
 import type { User } from '../api/types';
+import {
+  buildNotificationTags,
+  configureForegroundNotifications,
+  registerForPushNotifications,
+} from '../services/notifications';
 
 interface AuthState {
   user: User | null;
@@ -37,11 +42,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
+    configureForegroundNotifications();
     (async () => {
       await apiClient.init();
       const token = apiClient.getToken();
       if (token) {
         const result = await apiClient.getProfile();
+        if (result.data) {
+          const { id, role, niche } = result.data;
+          const tags = buildNotificationTags(role, niche);
+          registerForPushNotifications(id, tags).catch(() => {});
+        }
         setState({
           user: result.data ?? null,
           token,
@@ -62,6 +73,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           token: result.data.token,
           isLoading: false,
         });
+        const { id, role, niche } = result.data.user;
+        const tags = buildNotificationTags(role, niche);
+        registerForPushNotifications(id, tags).catch(() => {});
         return null;
       }
       return result.error ?? 'Login failed';
@@ -84,6 +98,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           token: result.data.token,
           isLoading: false,
         });
+        const { id, role: userRole, niche: userNiche } = result.data.user;
+        const tags = buildNotificationTags(userRole, userNiche);
+        registerForPushNotifications(id, tags).catch(() => {});
         return null;
       }
       return result.error ?? 'Registration failed';

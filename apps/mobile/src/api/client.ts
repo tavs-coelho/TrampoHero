@@ -6,7 +6,7 @@ import type {
   CheckInPayload,
   Job,
   PhotoUploadSasResponse,
-  PushRegistrationPayload,
+  PushInstallationPayload,
   User,
 } from './types';
 
@@ -176,10 +176,10 @@ class MobileApiClient {
 
   // ── Push Notifications ────────────────────────────────────────
 
-  async registerPushDevice(
-    payload: PushRegistrationPayload,
+  async registerPushInstallation(
+    payload: PushInstallationPayload,
   ): Promise<ApiResponse<unknown>> {
-    return this.request('/users/push-device', {
+    return this.request('/notifications/register', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
