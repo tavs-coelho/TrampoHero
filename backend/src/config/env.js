@@ -56,6 +56,9 @@ export const env = {
   AZURE_STORAGE_ACCOUNT_NAME: process.env.AZURE_STORAGE_ACCOUNT_NAME ?? '',
   AZURE_STORAGE_ACCOUNT_KEY: process.env.AZURE_STORAGE_ACCOUNT_KEY ?? '',
   AZURE_STORAGE_CONTAINER_NAME: process.env.AZURE_STORAGE_CONTAINER_NAME ?? 'uploads',
+  // Azure Notification Hubs (optional – required for server-side push dispatch)
+  ANH_CONNECTION_STRING: process.env.ANH_CONNECTION_STRING ?? '',
+  ANH_HUB_NAME: process.env.ANH_HUB_NAME ?? '',
   /** Comma-separated list of allowed CORS origins, e.g. "http://localhost:3000,https://app.trampohero.com.br" */
   ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS ?? 'http://localhost:3000')
     .split(',')
