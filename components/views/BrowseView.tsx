@@ -1,6 +1,7 @@
 import React from 'react';
 import { Job, Niche, UserProfile } from '../../types';
 import { JobCard } from '../JobCard';
+import { JobCardSkeleton } from '../JobCardSkeleton';
 
 interface BrowseViewProps {
   sortedOpenJobs: Job[];
@@ -13,6 +14,7 @@ interface BrowseViewProps {
   user: UserProfile;
   setView: (v: any) => void;
   setShowPrimeModal: (v: boolean) => void;
+  isLoading?: boolean;
 }
 
 export const BrowseView: React.FC<BrowseViewProps> = ({
@@ -26,6 +28,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
   user,
   setView,
   setShowPrimeModal,
+  isLoading = false,
 }) => (
   <div className="space-y-6 animate-in fade-in duration-500">
     <div className="flex items-center justify-between">
@@ -64,7 +67,9 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
             <span className="text-[10px] font-bold uppercase bg-white/20 px-3 py-1 rounded-full group-hover:bg-white group-hover:text-indigo-600 transition-colors">Assinar agora</span>
           </div>
         )}
-        {sortedOpenJobs.length === 0 ? (
+        {isLoading ? (
+          Array.from({ length: 5 }).map((_, i) => <JobCardSkeleton key={i} />)
+        ) : sortedOpenJobs.length === 0 ? (
             <div className="text-center py-20 opacity-50">
                 <i className="fas fa-search text-4xl mb-4"></i>
                 <p className="font-bold">Nenhum bico encontrado nesta categoria.</p>
