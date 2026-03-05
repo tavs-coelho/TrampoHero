@@ -222,6 +222,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user, setView, handleD
           <p className="text-xs font-black text-slate-900">Loja</p>
           <p className="text-[9px] text-slate-500">EPIs & Mais</p>
         </button>
+        <button onClick={() => setView('kyc')} className="p-4 bg-violet-50 rounded-xl text-left hover:bg-violet-100 transition-colors">
+          <i className="fas fa-id-card text-violet-500 text-xl mb-2"></i>
+          <p className="text-xs font-black text-slate-900">Verificação</p>
+          <p className="text-[9px] text-slate-500">
+            {user.kyc?.status === 'approved' ? 'Verificado ✓' : user.kyc?.status === 'pending' ? 'Em análise' : 'KYC'}
+          </p>
+        </button>
         {user.role === 'employer' && (
           <button onClick={() => setView('ads')} className="p-4 bg-rose-50 rounded-xl text-left hover:bg-rose-100 transition-colors">
             <i className="fas fa-bullhorn text-rose-500 text-xl mb-2"></i>

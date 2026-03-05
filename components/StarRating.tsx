@@ -28,6 +28,10 @@ export const StarRating: React.FC<StarRatingProps> = ({
   };
 
   return (
+    <div
+      className={`flex items-center gap-1 ${sizeMap[size]}`}
+      aria-label={`Rating: ${rating.toFixed(1)} out of ${maxStars} stars`}
+    >
     <div className={`flex items-center gap-1 ${sizeMap[size]}`}>
       {Array.from({ length: maxStars }, (_, i) => {
         const filled = i + 1 <= Math.floor(rating);

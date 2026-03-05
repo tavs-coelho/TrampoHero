@@ -199,6 +199,36 @@ class ApiService {
       body: JSON.stringify({ products }),
     });
   }
+
+  // KYC (Identity Verification)
+  async getKycStatus() {
+    return this.request('/kyc/status');
+  }
+
+  async submitKycDocuments(documentFront: File, documentBack: File, selfie: File) {
+    const formData = new FormData();
+    formData.append('documentFront', documentFront);
+    formData.append('documentBack', documentBack);
+    formData.append('selfie', selfie);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/kyc/submit`, {
+        method: 'POST',
+        headers: this.token ? { Authorization: `Bearer ${this.token}` } : {},
+        body: formData,
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return { success: false, error: data.error || 'An error occurred' };
+      }
+      return data;
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Network error',
+      };
+    }
+  }
 }
 
 export const apiService = new ApiService();

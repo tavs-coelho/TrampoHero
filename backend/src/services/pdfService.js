@@ -25,6 +25,39 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CONTRACTS_DIR = path.join(__dirname, '..', '..', 'contracts');
 
 /**
+ * Ensures the contracts output directory exists and is writable.
+ * Throws a descriptive error if the directory cannot be created or written to.
+ */
+function ensureContractsDir() {
+  try {
+    if (!fs.existsSync(CONTRACTS_DIR)) {
+      fs.mkdirSync(CONTRACTS_DIR, { recursive: true });
+    }
+  } catch (err) {
+    throw new Error(
+      `Failed to create contracts directory at "${CONTRACTS_DIR}": ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+
+  let stats;
+  try {
+    stats = fs.statSync(CONTRACTS_DIR);
+  } catch (err) {
+    throw new Error(
+      `Contracts path "${CONTRACTS_DIR}" is not accessible: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+
+  if (!stats.isDirectory()) {
+    throw new Error(`Contracts path "${CONTRACTS_DIR}" exists but is not a directory.`);
+  }
+
+  try {
+    fs.accessSync(CONTRACTS_DIR, fs.constants.W_OK);
+  } catch (err) {
+    throw new Error(
+      `Contracts directory "${CONTRACTS_DIR}" is not writable: ${err instanceof Error ? err.message : String(err)}`
+    );
  * Ensures the contracts output directory exists.
  */
 function ensureContractsDir() {
@@ -64,6 +97,8 @@ export async function generateJobContract(freelancer, employer, job) {
   ensureContractsDir();
 
   const hash = buildValidationHash(freelancer, employer, job);
+  const timestamp = Date.now();
+  const fileName = `${hash}-${timestamp}.pdf`;
   const fileName = `${hash}.pdf`;
   const filePath = path.join(CONTRACTS_DIR, fileName);
   const downloadUrl = `/api/contracts/${fileName}`;

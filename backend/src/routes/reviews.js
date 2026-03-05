@@ -62,6 +62,7 @@ router.get('/', async (req, res) => {
       return res.status(400).json({ success: false, error: 'targetId query parameter is required' });
     }
 
+    const reviews = await Review.find({ targetId: new mongoose.Types.ObjectId(targetId) })
     const reviews = await Review.find({ targetId })
       .populate('authorId', 'name role')
       .sort({ createdAt: -1 });

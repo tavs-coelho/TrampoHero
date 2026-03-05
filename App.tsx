@@ -11,7 +11,7 @@ import {
   DashboardView, TalentsView, EmployerProfileView, EmployerWalletView, EmployerChatView, EmployerActiveView,
   BrowseView, ActiveJobView, WalletView, AcademyView, ProfileView, ChatView,
   CoinsView, InsuranceView, CreditView, ReferralsView, AnalyticsView, ChallengesView,
-  RankingView, StoreView, AdsView
+  RankingView, StoreView, AdsView, KycView
 } from './components/views';
 import { useToast } from './hooks/useToast';
 import { useJobActions } from './hooks/useJobActions';
@@ -477,6 +477,14 @@ const App: React.FC = () => {
               <AdsView
                 user={user}
                 advertisements={advertisements}
+                showToast={showToast}
+                setView={setView}
+              />
+            )}
+            {view === 'kyc' && (
+              <KycView
+                user={user}
+                setUser={setUser}
                 showToast={showToast}
                 setView={setView}
               />

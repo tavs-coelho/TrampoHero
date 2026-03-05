@@ -143,6 +143,18 @@ export interface Invoice {
   downloadUrl?: string;
 }
 
+export type KycStatus = 'not_submitted' | 'pending' | 'approved' | 'rejected';
+
+export interface KycInfo {
+  status: KycStatus;
+  documentFrontUrl?: string | null;
+  documentBackUrl?: string | null;
+  selfieUrl?: string | null;
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
+  rejectionReason?: string | null;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -172,6 +184,7 @@ export interface UserProfile {
   analyticsAccess?: 'free' | 'premium'; // Acesso ao dashboard de analytics
   courseProgress?: CourseProgress[]; // Progresso nos cursos
   certificates?: Certificate[]; // Certificados emitidos
+  kyc?: KycInfo; // Status de verificação de identidade
 }
 
 // ==================== FEATURE 1: TRAMPOCOINS ====================
