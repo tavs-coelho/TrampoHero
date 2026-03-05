@@ -56,6 +56,9 @@ export const env = {
   // Azure Notification Hubs (required for push notification endpoints)
   ANH_CONNECTION_STRING: process.env.ANH_CONNECTION_STRING ?? '',
   ANH_HUB_NAME: process.env.ANH_HUB_NAME ?? '',
+  // Azure Web PubSub (required for real-time chat token endpoint)
+  AZURE_WEBPUBSUB_CONNECTION_STRING: process.env.AZURE_WEBPUBSUB_CONNECTION_STRING ?? '',
+  AZURE_WEBPUBSUB_HUB_NAME: process.env.AZURE_WEBPUBSUB_HUB_NAME ?? '',
   /** Comma-separated list of allowed CORS origins, e.g. "http://localhost:3000,https://app.trampohero.com.br" */
   ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS ?? 'http://localhost:3000')
     .split(',')
