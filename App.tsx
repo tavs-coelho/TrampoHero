@@ -34,6 +34,7 @@ const App: React.FC = () => {
   });
 
   const [jobs, setJobs] = useState<Job[]>(INITIAL_JOBS);
+  const [isJobsLoading, setIsJobsLoading] = useState(true);
   const [view, setView] = useState<ViewType>('browse');
   const [browseMode, setBrowseMode] = useState<'list' | 'map'>('list');
   const [selectedJob, setSelectedJob] = useState<Job | null>(() => {
@@ -201,6 +202,11 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const timer = setTimeout(() => setIsJobsLoading(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem('trampoHeroUser', JSON.stringify(user));
   }, [user]);
 
@@ -365,6 +371,7 @@ const App: React.FC = () => {
                 user={user}
                 setView={setView}
                 setShowPrimeModal={setShowPrimeModal}
+                isLoading={isJobsLoading}
               />
             )}
             {view === 'active' && (
