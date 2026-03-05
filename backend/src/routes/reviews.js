@@ -63,6 +63,7 @@ router.get('/', async (req, res) => {
     }
 
     const reviews = await Review.find({ targetId: new mongoose.Types.ObjectId(targetId) })
+    const reviews = await Review.find({ targetId })
       .populate('authorId', 'name role')
       .sort({ createdAt: -1 });
 
