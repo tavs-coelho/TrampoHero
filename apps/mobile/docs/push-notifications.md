@@ -76,6 +76,122 @@ See [docs/push-notification-hubs.md](/docs/push-notification-hubs.md) for the fu
 
 ---
 
+## Configuring push credentials for EAS Cloud Builds
+
+EAS stores push credentials (FCM key and APNs key) on its servers so cloud builds can
+inject them automatically. Run the following commands once and they will be reused
+for every subsequent build.
+
+### Android – FCM (`google-services.json`)
+
+**Step 1 – Upload via EAS Credentials (recommended)**
+
+```bash
+cd apps/mobile
+eas credentials --platform android
+# Select: "Update credentials on Expo servers"
+# Select: "Google Services JSON" → choose the local google-services.json file
+```
+
+EAS stores the file securely and injects it into every Android build whose profile has
+`"credentialsSource": "remote"` (already set in `eas.json`).
+
+**Step 2 – Or upload as an EAS Secret (alternative for CI/CD)**
+
+```bash
+eas secret:create \
+  --scope project \
+  --name GOOGLE_SERVICES_JSON \
+  --type file \
+  --value ./google-services.json
+```
+
+Then reference the secret in `eas.json`:
+
+```json
+"build": {
+  "production": {
+    "android": {
+      "buildType": "app-bundle",
+      "credentialsSource": "remote",
+      "env": {
+        "GOOGLE_SERVICES_JSON": "@GOOGLE_SERVICES_JSON"
+      }
+    }
+  }
+}
+```
+
+> The `credentialsSource: "remote"` approach via `eas credentials` is simpler and
+> sufficient for most projects. Use the EAS Secrets approach only if you manage
+> the file yourself through CI environment variables.
+
+---
+
+### iOS – APNs Auth Key (`.p8`)
+
+**Step 1 – Upload via EAS Credentials**
+
+```bash
+cd apps/mobile
+eas credentials --platform ios
+# Select: "Update credentials on Expo servers"
+# Select: "Push Notifications Key" → follow the prompts to:
+#   - Enter the path to your .p8 file
+#   - Enter the Key ID (10-character alphanumeric string from Apple Developer Portal)
+#   - Enter the Apple Team ID (10-character string from Apple Developer Portal)
+```
+
+EAS stores the key and injects it into every iOS build whose profile has
+`"credentialsSource": "remote"` (already set in `eas.json`).
+
+**Step 2 – Or upload as EAS Secrets**
+
+```bash
+eas secret:create --scope project --name APNS_KEY_ID    --value "XXXXXXXXXX"
+eas secret:create --scope project --name APPLE_TEAM_ID  --value "XXXXXXXXXX"
+eas secret:create --scope project --name APNS_KEY_P8    --type file --value ./AuthKey_XXXXXXXXXX.p8
+```
+
+---
+
+### Viewing and rotating credentials
+
+```bash
+# List all credentials for the project
+eas credentials
+
+# Delete a stored credential (e.g. to rotate a compromised key)
+eas credentials --platform android   # follow interactive menu
+eas credentials --platform ios
+```
+
+---
+
+### EAS Project ID
+
+Before running any `eas build` command, make sure the EAS project is initialised and
+the project ID is set in `app.json`:
+
+```bash
+eas init   # creates the project on expo.dev and writes the projectId to app.json
+```
+
+Replace the placeholder in `apps/mobile/app.json`:
+
+```json
+"extra": {
+  "eas": {
+    "projectId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  }
+}
+```
+
+The `projectId` is also required at runtime for `getExpoPushTokenAsync()` (already
+wired up in `src/services/notifications.ts` via `expo-constants`).
+
+---
+
 ## Testing with EAS builds
 
 ### 1. Configure your EAS project
