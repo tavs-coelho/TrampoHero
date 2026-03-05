@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 import { Niche, Job, UserProfile, SubscriptionTier, Message, Course, Certificate, WeeklyChallenge, TalentRanking, StoreProduct, Advertisement, Review } from './types';
 import { supportAssistant, getRecurrentSuggestion } from './services/geminiService';
 import { WEEKLY_CHALLENGES, TALENT_RANKINGS, STORE_PRODUCTS, ADVERTISEMENTS, INITIAL_JOBS, INITIAL_USER } from './data/mockData';
@@ -22,6 +24,8 @@ import { useStoreActions } from './hooks/useStoreActions';
 import { ViewType } from './contexts/AppContext';
 
 declare const L: any;
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ?? '');
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile>(() => {
@@ -118,7 +122,7 @@ const App: React.FC = () => {
   });
 
   const { handleWithdraw, handleAnticipate, handleOpenAddBalance, handleProcessPayment } = useWalletActions({
-    user, setUser, depositAmount, setDepositAmount, paymentMethod, cardData, setCardData,
+    user, setUser, depositAmount, setDepositAmount, paymentMethod,
     setIsProcessingPayment, setShowPaymentModal, showToast
   });
 
@@ -531,18 +535,38 @@ const App: React.FC = () => {
       )}
 
       {showPaymentModal && (
-        <PaymentModal
-          depositAmount={depositAmount}
-          setDepositAmount={setDepositAmount}
-          paymentMethod={paymentMethod}
-          setPaymentMethod={setPaymentMethod}
-          cardData={cardData}
-          setCardData={setCardData}
-          isProcessingPayment={isProcessingPayment}
-          handleProcessPayment={handleProcessPayment}
-          showToast={showToast}
-          onClose={() => setShowPaymentModal(false)}
-        />
+        <Elements stripe={stripePromise}>
+          <PaymentModal
+            depositAmount={depositAmount}
+            setDepositAmount={setDepositAmount}
+            paymentMethod={paymentMethod}
+            setPaymentMethod={setPaymentMethod}
+            isProcessingPayment={isProcessingPayment}
+            setIsProcessingPayment={setIsProcessingPayment}
+            handleProcessPayment={handleProcessPayment}
+            onPaymentSuccess={(amount) => {
+              const newTransaction = {
+                id: Date.now().toString(),
+                type: 'deposit' as const,
+                amount,
+                date: new Date().toLocaleDateString('pt-BR'),
+                description: 'Depósito via cartão',
+              };
+              setUser(prev => ({
+                ...prev,
+                wallet: {
+                  ...prev.wallet,
+                  balance: prev.wallet.balance + amount,
+                  transactions: [newTransaction, ...prev.wallet.transactions],
+                },
+              }));
+              setShowPaymentModal(false);
+              setDepositAmount('');
+            }}
+            showToast={showToast}
+            onClose={() => setShowPaymentModal(false)}
+          />
+        </Elements>
       )}
 
       {showCreateJobModal && (

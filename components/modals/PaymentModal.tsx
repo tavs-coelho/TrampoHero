@@ -1,30 +1,112 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { apiService } from '../../services/apiService';
 
 export interface PaymentModalProps {
   depositAmount: string;
   setDepositAmount: (value: string) => void;
   paymentMethod: 'pix' | 'card';
   setPaymentMethod: (method: 'pix' | 'card') => void;
-  cardData: { number: string; name: string; expiry: string; cvv: string };
-  setCardData: React.Dispatch<React.SetStateAction<{ number: string; name: string; expiry: string; cvv: string }>>;
   isProcessingPayment: boolean;
+  setIsProcessingPayment: (value: boolean) => void;
+  /** Called for PIX payments (non-Stripe flow). */
   handleProcessPayment: () => void;
+  /** Called after a Stripe card payment succeeds, with the deposited BRL amount. */
+  onPaymentSuccess: (amount: number) => void;
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   onClose: () => void;
 }
+
+const CARD_ELEMENT_OPTIONS = {
+  style: {
+    base: {
+      fontSize: '16px',
+      color: '#1e293b',
+      fontFamily: 'inherit',
+      '::placeholder': { color: '#94a3b8' },
+    },
+    invalid: { color: '#ef4444' },
+  },
+};
 
 const PaymentModal: React.FC<PaymentModalProps> = ({
   depositAmount,
   setDepositAmount,
   paymentMethod,
   setPaymentMethod,
-  cardData,
-  setCardData,
   isProcessingPayment,
+  setIsProcessingPayment,
   handleProcessPayment,
+  onPaymentSuccess,
   showToast,
   onClose,
 }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [cardError, setCardError] = useState<string | null>(null);
+
+  const handleConfirm = async () => {
+    if (paymentMethod === 'pix') {
+      handleProcessPayment();
+      return;
+    }
+
+    // Card flow via Stripe Elements
+    const amount = parseFloat(depositAmount);
+    if (isNaN(amount) || amount <= 0) {
+      showToast('Valor inválido.', 'error');
+      return;
+    }
+
+    if (!stripe || !elements) {
+      showToast('Stripe não carregado. Tente novamente.', 'error');
+      return;
+    }
+
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      showToast('Dados do cartão inválidos.', 'error');
+      return;
+    }
+
+    setIsProcessingPayment(true);
+    setCardError(null);
+
+    try {
+      // 1. Ask the backend to create a PaymentIntent
+      const intentResult = await apiService.createPaymentIntent(amount);
+      if (!intentResult.success || !intentResult.data) {
+        showToast(intentResult.error || 'Erro ao criar pagamento.', 'error');
+        setIsProcessingPayment(false);
+        return;
+      }
+
+      const { clientSecret } = intentResult.data as { clientSecret: string };
+
+      // 2. Confirm the card payment using Stripe.js
+      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: { card: cardElement },
+      });
+
+      if (error) {
+        setCardError(error.message ?? 'Erro no pagamento.');
+        showToast(error.message ?? 'Erro no pagamento.', 'error');
+        setIsProcessingPayment(false);
+        return;
+      }
+
+      if (paymentIntent?.status === 'succeeded') {
+        onPaymentSuccess(amount);
+        showToast(`Depósito de R$ ${amount.toFixed(2)} confirmado!`, 'success');
+        onClose();
+      }
+    } catch (err) {
+      showToast('Erro inesperado. Tente novamente.', 'error');
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/90 backdrop-blur-md p-6 animate-in fade-in duration-300">
         <div className="bg-white w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl relative">
@@ -66,21 +148,21 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                     </div>
                 ) : (
                     <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <div className="relative">
-                            <i className="fas fa-credit-card absolute left-4 top-4 text-slate-300"></i>
-                            <input placeholder="Número do Cartão" value={cardData.number} onChange={(e) => setCardData({...cardData, number: e.target.value})} className="w-full pl-10 p-3 bg-slate-50 rounded-xl text-sm font-bold text-slate-700 focus:outline-indigo-500" />
+                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                            <CardElement options={CARD_ELEMENT_OPTIONS} />
                         </div>
-                        <div className="flex gap-3">
-                            <input placeholder="Validade (MM/AA)" value={cardData.expiry} onChange={(e) => setCardData({...cardData, expiry: e.target.value})} className="flex-1 p-3 bg-slate-50 rounded-xl text-sm font-bold text-slate-700 focus:outline-indigo-500" />
-                            <input placeholder="CVV" value={cardData.cvv} onChange={(e) => setCardData({...cardData, cvv: e.target.value})} className="w-20 p-3 bg-slate-50 rounded-xl text-sm font-bold text-slate-700 focus:outline-indigo-500" />
-                        </div>
-                        <input placeholder="Nome no Cartão" value={cardData.name} onChange={(e) => setCardData({...cardData, name: e.target.value})} className="w-full p-3 bg-slate-50 rounded-xl text-sm font-bold text-slate-700 focus:outline-indigo-500" />
+                        {cardError && (
+                            <p className="text-xs text-red-500 font-medium">{cardError}</p>
+                        )}
+                        <p className="text-[10px] text-slate-400 text-center">
+                            <i className="fas fa-lock mr-1"></i> Pagamento seguro via Stripe
+                        </p>
                     </div>
                 )}
 
                 <button 
-                    onClick={handleProcessPayment} 
-                    disabled={isProcessingPayment || !depositAmount}
+                    onClick={handleConfirm}
+                    disabled={isProcessingPayment || !depositAmount || (paymentMethod === 'card' && !stripe)}
                     className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest text-white shadow-xl transition-all ${isProcessingPayment ? 'bg-slate-300 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-800 active:scale-95'}`}
                 >
                     {isProcessingPayment ? (

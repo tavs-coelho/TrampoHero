@@ -19,6 +19,18 @@ vi.mock('../services/pdfService', () => ({
   generateCertificate: vi.fn().mockResolvedValue(true),
 }));
 
+// Mock Stripe so tests don't need a real Stripe publishable key
+vi.mock('@stripe/stripe-js', () => ({
+  loadStripe: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock('@stripe/react-stripe-js', () => ({
+  Elements: ({ children }: { children: React.ReactNode }) => children,
+  useStripe: () => null,
+  useElements: () => null,
+  CardElement: () => null,
+}));
+
 // Leaflet is referenced as a global `L` in App.tsx
 const mockLeaflet = {
   map: vi.fn().mockReturnValue({
@@ -381,7 +393,7 @@ describe('Payment Modal flow', () => {
       if (btn) {
         await user.click(btn);
         await waitFor(() => {
-          expect(screen.queryByPlaceholderText('Número do Cartão')).toBeInTheDocument();
+          expect(screen.queryByText(/Pagamento seguro via Stripe/)).toBeInTheDocument();
         });
       }
     }

@@ -72,8 +72,6 @@ describe('useWalletActions', () => {
     depositAmount: '100',
     setDepositAmount: vi.fn(),
     paymentMethod: 'pix' as const,
-    cardData: { number: '', name: '', expiry: '', cvv: '' },
-    setCardData: vi.fn(),
     setIsProcessingPayment: vi.fn(),
     setShowPaymentModal: vi.fn(),
     showToast: vi.fn(),
@@ -116,61 +114,6 @@ describe('useWalletActions', () => {
     expect(deps.showToast).toHaveBeenCalledWith(expect.any(String), 'error');
   });
 
-  it('handleProcessPayment validates card number', () => {
-    const deps = createDeps({
-      depositAmount: '50',
-      paymentMethod: 'card' as const,
-      cardData: { number: '123', name: 'Test', expiry: '12/28', cvv: '123' },
-    });
-    const { result } = renderHook(() => useWalletActions(deps));
-    act(() => result.current.handleProcessPayment());
-    expect(deps.showToast).toHaveBeenCalledWith(expect.any(String), 'error');
-  });
-
-  it('handleProcessPayment validates card name', () => {
-    const deps = createDeps({
-      depositAmount: '50',
-      paymentMethod: 'card' as const,
-      cardData: { number: '4111111111111', name: '', expiry: '12/28', cvv: '123' },
-    });
-    const { result } = renderHook(() => useWalletActions(deps));
-    act(() => result.current.handleProcessPayment());
-    expect(deps.showToast).toHaveBeenCalledWith(expect.any(String), 'error');
-  });
-
-  it('handleProcessPayment validates CVV format', () => {
-    const deps = createDeps({
-      depositAmount: '50',
-      paymentMethod: 'card' as const,
-      cardData: { number: '4111111111111', name: 'Test', expiry: '12/28', cvv: 'abc' },
-    });
-    const { result } = renderHook(() => useWalletActions(deps));
-    act(() => result.current.handleProcessPayment());
-    expect(deps.showToast).toHaveBeenCalledWith(expect.any(String), 'error');
-  });
-
-  it('handleProcessPayment validates expiry format', () => {
-    const deps = createDeps({
-      depositAmount: '50',
-      paymentMethod: 'card' as const,
-      cardData: { number: '4111111111111', name: 'Test', expiry: 'invalid', cvv: '123' },
-    });
-    const { result } = renderHook(() => useWalletActions(deps));
-    act(() => result.current.handleProcessPayment());
-    expect(deps.showToast).toHaveBeenCalledWith(expect.any(String), 'error');
-  });
-
-  it('handleProcessPayment validates expired card', () => {
-    const deps = createDeps({
-      depositAmount: '50',
-      paymentMethod: 'card' as const,
-      cardData: { number: '4111111111111', name: 'Test', expiry: '01/20', cvv: '123' },
-    });
-    const { result } = renderHook(() => useWalletActions(deps));
-    act(() => result.current.handleProcessPayment());
-    expect(deps.showToast).toHaveBeenCalledWith(expect.any(String), 'error');
-  });
-
   it('handleProcessPayment starts processing for valid PIX payment', () => {
     const deps = createDeps({ depositAmount: '100', paymentMethod: 'pix' as const });
     const { result } = renderHook(() => useWalletActions(deps));
@@ -178,15 +121,14 @@ describe('useWalletActions', () => {
     expect(deps.setIsProcessingPayment).toHaveBeenCalledWith(true);
   });
 
-  it('handleProcessPayment starts processing for valid card payment', () => {
+  it('handleProcessPayment does nothing for card (Stripe handles it)', () => {
     const deps = createDeps({
       depositAmount: '100',
       paymentMethod: 'card' as const,
-      cardData: { number: '4111111111111111', name: 'Test User', expiry: '12/30', cvv: '123' },
     });
     const { result } = renderHook(() => useWalletActions(deps));
     act(() => result.current.handleProcessPayment());
-    expect(deps.setIsProcessingPayment).toHaveBeenCalledWith(true);
+    expect(deps.setIsProcessingPayment).not.toHaveBeenCalled();
   });
 });
 

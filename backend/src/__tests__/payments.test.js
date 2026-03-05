@@ -98,6 +98,7 @@ import {
   FEE_EMPLOYER,
   HERO_PRIME_PRICE_CENTS,
   getOrCreateCustomer,
+  createPaymentIntent,
   createEscrowPaymentIntent,
   releaseEscrow,
   cancelEscrow,
@@ -658,5 +659,154 @@ describe('POST /api/payments/webhook', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.received).toBe(true);
+  });
+
+  it('handles payment_intent.succeeded and credits user wallet', async () => {
+    const fakeEvent = {
+      type: 'payment_intent.succeeded',
+      data: {
+        object: {
+          id: 'pi_wallet_success',
+          amount: 5000,
+          amount_received: 5000,
+          metadata: { userId: 'user-wallet-deposit', type: 'wallet_deposit' },
+        },
+      },
+    };
+    mockStripe.webhooks.constructEvent.mockReturnValue(fakeEvent);
+    User.findByIdAndUpdate.mockResolvedValue({});
+    Transaction.create.mockResolvedValue({});
+
+    const app = buildApp();
+    const res = await request(app)
+      .post('/api/payments/webhook')
+      .set('stripe-signature', 'valid_sig')
+      .set('content-type', 'application/json')
+      .send(Buffer.from(JSON.stringify(fakeEvent)));
+
+    expect(res.status).toBe(200);
+    expect(res.body.received).toBe(true);
+    expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
+      'user-wallet-deposit',
+      { $inc: { 'wallet.balance': 50 } },
+    );
+    expect(Transaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-wallet-deposit',
+        type: 'deposit',
+        status: 'completed',
+        amount: 50,
+        stripePaymentIntentId: 'pi_wallet_success',
+      }),
+    );
+  });
+
+  it('ignores payment_intent.succeeded without wallet_deposit type', async () => {
+    const fakeEvent = {
+      type: 'payment_intent.succeeded',
+      data: {
+        object: {
+          id: 'pi_escrow_success',
+          amount: 10000,
+          amount_received: 10000,
+          metadata: { type: 'escrow', jobId: 'job-1' },
+        },
+      },
+    };
+    mockStripe.webhooks.constructEvent.mockReturnValue(fakeEvent);
+
+    const app = buildApp();
+    const res = await request(app)
+      .post('/api/payments/webhook')
+      .set('stripe-signature', 'valid_sig')
+      .set('content-type', 'application/json')
+      .send(Buffer.from(JSON.stringify(fakeEvent)));
+
+    expect(res.status).toBe(200);
+    expect(User.findByIdAndUpdate).not.toHaveBeenCalled();
+  });
+});
+
+// ── POST /api/payments/create-intent ──────────────────────────────────────────
+
+describe('POST /api/payments/create-intent', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns 400 when amount is missing', async () => {
+    const app = buildApp();
+    const res = await request(app).post('/api/payments/create-intent').send({});
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/amount/i);
+  });
+
+  it('returns 400 when amount is zero', async () => {
+    const app = buildApp();
+    const res = await request(app).post('/api/payments/create-intent').send({ amount: 0 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/positive/i);
+  });
+
+  it('returns 400 when amount is negative', async () => {
+    const app = buildApp();
+    const res = await request(app).post('/api/payments/create-intent').send({ amount: -10 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/positive/i);
+  });
+
+  it('creates a PaymentIntent and returns 201 with clientSecret', async () => {
+    mockStripe.paymentIntents.create.mockResolvedValue({
+      id: 'pi_wallet_123',
+      client_secret: 'pi_wallet_123_secret',
+      amount: 5000,
+      metadata: { userId: 'employer-id-123', type: 'wallet_deposit' },
+    });
+
+    const app = buildApp();
+    const res = await request(app)
+      .post('/api/payments/create-intent')
+      .send({ amount: 50 });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.paymentIntentId).toBe('pi_wallet_123');
+    expect(res.body.data.clientSecret).toBe('pi_wallet_123_secret');
+    expect(mockStripe.paymentIntents.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amount: 5000,
+        currency: 'brl',
+        metadata: expect.objectContaining({
+          userId: 'employer-id-123',
+          type: 'wallet_deposit',
+        }),
+      }),
+    );
+  });
+});
+
+// ── createPaymentIntent (service) ─────────────────────────────────────────────
+
+describe('createPaymentIntent', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('creates a PaymentIntent with correct amount and metadata', async () => {
+    mockStripe.paymentIntents.create.mockResolvedValue({
+      id: 'pi_deposit_test',
+      client_secret: 'pi_deposit_test_secret',
+      amount: 10000,
+    });
+
+    const result = await createPaymentIntent({
+      amountCents: 10000,
+      userId: 'user-test',
+      description: 'Depósito na carteira TrampoHero',
+    });
+
+    expect(mockStripe.paymentIntents.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amount: 10000,
+        currency: 'brl',
+        metadata: { userId: 'user-test', type: 'wallet_deposit' },
+      }),
+    );
+    expect(result.id).toBe('pi_deposit_test');
   });
 });

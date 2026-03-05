@@ -28,8 +28,6 @@ import referralRoutes from './routes/referral.js';
 import paymentsRoutes from './routes/payments.js';
 import reviewRoutes from './routes/reviews.js';
 import reviewRoutes from './routes/reviews.js';
-import referralRoutes from './routes/referral.js';
-import paymentsRoutes from './routes/payments.js';
 
 import mongoose from 'mongoose';
 
@@ -78,9 +76,6 @@ app.use(cors({
       return callback(null, true);
     }
     console.warn(`[CORS] Blocked request from origin: ${origin}`);
-    const err = new Error('Not allowed by CORS');
-    err.status = 403;
-    callback(err);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true
@@ -103,8 +98,6 @@ app.use('/api/referral', referralRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/reviews', reviewRoutes);
-app.use('/api/referral', referralRoutes);
-app.use('/api/payments', paymentsRoutes);
 
 // Serve generated PDF contracts for download
 app.use('/api/contracts', express.static(path.join(__dirname, '..', 'contracts')));
