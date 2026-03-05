@@ -62,6 +62,11 @@ const jobSchema = new mongoose.Schema({
   checkInTime: String,
   checkOutTime: String,
   proofPhoto: String,
+  checkin: {
+    latitude: { type: Number },
+    longitude: { type: Number },
+    recordedAt: { type: Date },
+  },
   isAnticipated: { type: Boolean, default: false },
   isBoosted: { type: Boolean, default: false },
   isEscrowGuaranteed: { type: Boolean, default: false },
