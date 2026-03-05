@@ -113,6 +113,12 @@ const userSchema = new mongoose.Schema({
     reviewedAt: { type: Date, default: null },
     rejectionReason: { type: String, default: null },
   },
+  pushDevices: [{
+    deviceToken: { type: String, required: true },
+    platform: { type: String, enum: ['apns', 'fcmv1'], required: true },
+    tags: [{ type: String }],
+    updatedAt: { type: Date, default: Date.now },
+  }],
 }, {
   timestamps: true,
 });

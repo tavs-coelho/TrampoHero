@@ -58,11 +58,6 @@ function ensureContractsDir() {
     throw new Error(
       `Contracts directory "${CONTRACTS_DIR}" is not writable: ${err instanceof Error ? err.message : String(err)}`
     );
- * Ensures the contracts output directory exists.
- */
-function ensureContractsDir() {
-  if (!fs.existsSync(CONTRACTS_DIR)) {
-    fs.mkdirSync(CONTRACTS_DIR, { recursive: true });
   }
 }
 
@@ -99,7 +94,6 @@ export async function generateJobContract(freelancer, employer, job) {
   const hash = buildValidationHash(freelancer, employer, job);
   const timestamp = Date.now();
   const fileName = `${hash}-${timestamp}.pdf`;
-  const fileName = `${hash}.pdf`;
   const filePath = path.join(CONTRACTS_DIR, fileName);
   const downloadUrl = `/api/contracts/${fileName}`;
 
