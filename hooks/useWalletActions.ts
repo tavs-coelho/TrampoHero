@@ -7,15 +7,13 @@ export const useWalletActions = (deps: {
   depositAmount: string;
   setDepositAmount: React.Dispatch<React.SetStateAction<string>>;
   paymentMethod: 'pix' | 'card';
-  cardData: { number: string; name: string; expiry: string; cvv: string };
-  setCardData: React.Dispatch<React.SetStateAction<{ number: string; name: string; expiry: string; cvv: string }>>;
   setIsProcessingPayment: React.Dispatch<React.SetStateAction<boolean>>;
   setShowPaymentModal: React.Dispatch<React.SetStateAction<boolean>>;
   showToast: (msg: string, type?: 'success'|'error'|'info') => void;
 }) => {
   const {
     user, setUser, depositAmount, setDepositAmount,
-    paymentMethod, cardData, setCardData,
+    paymentMethod,
     setIsProcessingPayment, setShowPaymentModal, showToast
   } = deps;
 
@@ -106,42 +104,13 @@ export const useWalletActions = (deps: {
           return;
       }
 
-      if (paymentMethod === 'card') {
-         if (cardData.number.length < 13 || !cardData.name || !cardData.cvv) {
-             showToast("Dados do cartão incompletos.", "error");
-             return;
-         }
-         
-         // Validate CVV (3-4 digits)
-         if (cardData.cvv.length < 3 || cardData.cvv.length > 4 || !/^\d+$/.test(cardData.cvv)) {
-             showToast("CVV inválido. Use 3 ou 4 dígitos.", "error");
-             return;
-         }
-         
-         // Validate expiry date format (MM/YY)
-         if (!cardData.expiry || !/^\d{2}\/\d{2}$/.test(cardData.expiry)) {
-             showToast("Data de validade inválida. Use MM/AA.", "error");
-             return;
-         }
-         
-         // Check if expiry date is in the future
-         const [month, year] = cardData.expiry.split('/').map(Number);
-         const currentDate = new Date();
-         const currentMonth = currentDate.getMonth() + 1;
-         
-         // Convert 2-digit year to 4-digit (assuming 20xx for years 00-99)
-         const fullYear = year < 100 ? 2000 + year : year;
-         const currentFullYear = currentDate.getFullYear();
-         
-         if (fullYear < currentFullYear || (fullYear === currentFullYear && month < currentMonth)) {
-             showToast("Cartão vencido. Verifique a data de validade.", "error");
-             return;
-         }
-      }
+      // Card payments are handled via Stripe Elements inside PaymentModal.
+      // This handler covers PIX and other non-card flows.
+      if (paymentMethod === 'card') return;
 
       setIsProcessingPayment(true);
       
-      // Simulação de delay de rede
+      // Simulação de delay de rede para PIX
       setTimeout(() => {
           setIsProcessingPayment(false);
           const newTransaction: Transaction = {
@@ -149,7 +118,7 @@ export const useWalletActions = (deps: {
               type: 'deposit',
               amount: amount,
               date: new Date().toLocaleDateString('pt-BR'),
-              description: `Depósito via ${paymentMethod === 'pix' ? 'PIX' : 'Cartão'}`
+              description: 'Depósito via PIX'
           };
 
           setUser(prev => ({
@@ -164,7 +133,6 @@ export const useWalletActions = (deps: {
           setShowPaymentModal(false);
           showToast(`Depósito de R$ ${amount.toFixed(2)} confirmado!`, "success");
           setDepositAmount('');
-          setCardData({ number: '', name: '', expiry: '', cvv: '' });
       }, 2000);
   };
 

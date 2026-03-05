@@ -15,6 +15,14 @@ import {
 } from '../index';
 import { Niche } from '../../../types';
 
+// Mock @stripe/react-stripe-js so PaymentModal can render without a real Stripe provider
+vi.mock('@stripe/react-stripe-js', () => ({
+  useStripe: () => null,
+  useElements: () => null,
+  CardElement: () => null,
+  Elements: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 describe('CreateJobModal', () => {
   const defaultProps = {
     newJobData: { title: '', payment: '', niche: Niche.RESTAURANT, date: '', startTime: '', description: '' },
@@ -228,10 +236,10 @@ describe('PaymentModal', () => {
     setDepositAmount: vi.fn(),
     paymentMethod: 'pix' as const,
     setPaymentMethod: vi.fn(),
-    cardData: { number: '', name: '', expiry: '', cvv: '' },
-    setCardData: vi.fn(),
     isProcessingPayment: false,
+    setIsProcessingPayment: vi.fn(),
     handleProcessPayment: vi.fn(),
+    onPaymentSuccess: vi.fn(),
     showToast: vi.fn(),
     onClose: vi.fn(),
   };
@@ -258,7 +266,7 @@ describe('PaymentModal', () => {
 
   it('renders card form when card selected', () => {
     render(<PaymentModal {...defaultProps} paymentMethod="card" />);
-    expect(screen.getByPlaceholderText('Número do Cartão')).toBeInTheDocument();
+    expect(screen.getByText(/Pagamento seguro via Stripe/)).toBeInTheDocument();
   });
 });
 

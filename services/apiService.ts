@@ -200,6 +200,14 @@ class ApiService {
     });
   }
 
+  // Payments
+  async createPaymentIntent(amount: number) {
+    return this.request<{ paymentIntentId: string; clientSecret: string }>('/payments/create-intent', {
+      method: 'POST',
+      body: JSON.stringify({ amount }),
+    });
+  }
+
   // KYC (Identity Verification)
   async getKycStatus() {
     return this.request('/kyc/status');

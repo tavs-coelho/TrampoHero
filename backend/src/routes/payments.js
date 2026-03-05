@@ -13,6 +13,7 @@ import Job from '../models/Job.js';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
 import {
+  createPaymentIntent,
   createEscrowPaymentIntent,
   releaseEscrow,
   getOrCreateCustomer,
@@ -23,6 +24,48 @@ import {
 import { env } from '../config/env.js';
 
 const router = express.Router();
+
+// ─── Wallet Deposit PaymentIntent ─────────────────────────────────────────────
+
+/**
+ * @route  POST /api/payments/create-intent
+ * @desc   Create a Stripe PaymentIntent for a wallet top-up.
+ *         Returns the client_secret so the frontend can confirm payment via Stripe.js.
+ * @access Private
+ */
+router.post('/create-intent', authenticate, async (req, res) => {
+  try {
+    const { amount } = req.body;
+
+    if (amount === undefined || amount === null) {
+      return res.status(400).json({ success: false, error: 'amount is required' });
+    }
+
+    const amountNumber = Number(amount);
+    if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+      return res.status(400).json({ success: false, error: 'amount must be a positive number (in BRL)' });
+    }
+
+    const amountCents = Math.round(amountNumber * 100);
+
+    const paymentIntent = await createPaymentIntent({
+      amountCents,
+      userId: req.user.id,
+      description: 'Depósito na carteira TrampoHero',
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        paymentIntentId: paymentIntent.id,
+        clientSecret: paymentIntent.client_secret,
+      },
+    });
+  } catch (error) {
+    console.error('[payments/create-intent]', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // ─── Escrow ──────────────────────────────────────────────────────────────────
 
@@ -371,6 +414,28 @@ router.post('/webhook', async (req, res) => {
       }
 
       // ── PaymentIntent / Escrow events ──────────────────────────────────────
+      case 'payment_intent.succeeded': {
+        const paymentIntent = event.data.object;
+        if (paymentIntent.metadata?.type === 'wallet_deposit') {
+          const userId = paymentIntent.metadata?.userId;
+          if (userId) {
+            const amountBRL = (paymentIntent.amount_received ?? paymentIntent.amount) / 100;
+            await User.findByIdAndUpdate(userId, {
+              $inc: { 'wallet.balance': amountBRL },
+            });
+            await Transaction.create({
+              userId,
+              type: 'deposit',
+              status: 'completed',
+              amount: amountBRL,
+              description: 'Depósito via cartão',
+              stripePaymentIntentId: paymentIntent.id,
+            });
+          }
+        }
+        break;
+      }
+
       case 'payment_intent.payment_failed': {
         const paymentIntent = event.data.object;
         if (paymentIntent.metadata?.type === 'escrow') {

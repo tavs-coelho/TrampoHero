@@ -34,9 +34,6 @@
     "multer": "^2.0.2",
     "pdfkit": "^0.17.2",
     "stripe": "^20.4.0"
-    "pdfkit": "^0.17.2",
-    "stripe": "^20.4.0"
-    "pdfkit": "^0.17.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.2",

@@ -57,7 +57,29 @@ export async function getOrCreateCustomer(user) {
 }
 
 /**
- * Create a Stripe PaymentIntent for escrow (capture_method = manual).
+ * Create a Stripe PaymentIntent for a wallet top-up (automatic capture).
+ * The client_secret is returned to the frontend to complete payment via Stripe.js.
+ *
+ * @param {{ amountCents: number, userId: string, description: string }} opts
+ * @returns {Promise<import('stripe').Stripe.PaymentIntent>}
+ */
+export async function createPaymentIntent({ amountCents, userId, description }) {
+  const stripe = getStripe();
+
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: amountCents,
+    currency: 'brl',
+    description,
+    metadata: {
+      userId,
+      type: 'wallet_deposit',
+    },
+  });
+
+  return paymentIntent;
+}
+
+/**
  * The payment is authorized but not captured until the job is completed.
  *
  * @param {{ amountCents: number, employerId: string, jobId: string, description: string }} opts
