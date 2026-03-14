@@ -197,7 +197,11 @@ router.put(
 
       await AdminAction.create({
         adminId: req.user.id,
-        action: req.body.status === 'resolved' ? 'ticket_resolve' : 'ticket_close',
+        action: req.body.status === 'resolved'
+          ? 'ticket_resolve'
+          : req.body.status === 'closed'
+            ? 'ticket_close'
+            : 'ticket_assign',
         targetType: 'SupportTicket',
         targetId: ticket._id,
         details: { newStatus: req.body.status },
