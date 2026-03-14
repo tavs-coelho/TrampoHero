@@ -22,9 +22,16 @@ export const BottomNav: React.FC<BottomNavProps> = ({ user, view, setView }) => 
       <i className="fas fa-wallet text-xl mb-1"></i>
       <span className="text-[8px] font-black uppercase tracking-widest">Carteira</span>
     </button>
-    <button onClick={() => setView('chat')} className={`flex flex-col items-center transition-transform active:scale-95 ${view === 'chat' ? 'text-indigo-600 scale-110' : 'text-slate-300'}`}>
-      <i className="fas fa-headset text-xl mb-1"></i>
-      <span className="text-[8px] font-black uppercase tracking-widest">Suporte</span>
-    </button>
+    {user.role === 'admin' ? (
+      <button onClick={() => setView('admin')} className={`flex flex-col items-center transition-transform active:scale-95 ${view === 'admin' ? 'text-indigo-600 scale-110' : 'text-slate-300'}`}>
+        <i className="fas fa-shield-halved text-xl mb-1"></i>
+        <span className="text-[8px] font-black uppercase tracking-widest">Admin</span>
+      </button>
+    ) : (
+      <button onClick={() => setView('chat')} className={`flex flex-col items-center transition-transform active:scale-95 ${view === 'chat' ? 'text-indigo-600 scale-110' : 'text-slate-300'}`}>
+        <i className="fas fa-headset text-xl mb-1"></i>
+        <span className="text-[8px] font-black uppercase tracking-widest">Suporte</span>
+      </button>
+    )}
   </div>
 );
