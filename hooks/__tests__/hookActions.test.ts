@@ -12,6 +12,19 @@ vi.mock('../../services/pdfService', () => ({
   generateCertificate: vi.fn().mockResolvedValue(true),
 }));
 
+vi.mock('../../services/apiService', () => ({
+  apiService: {
+    applyToJob: vi.fn().mockResolvedValue({ success: true }),
+    createJob: vi.fn().mockResolvedValue({ success: true, data: { id: 'api-j1', status: 'open' } }),
+    checkInJob: vi.fn().mockResolvedValue({ success: true }),
+    checkOutJob: vi.fn().mockResolvedValue({ success: true }),
+    withdraw: vi.fn().mockResolvedValue({ success: true }),
+    deposit: vi.fn().mockResolvedValue({ success: true }),
+    getToken: vi.fn().mockReturnValue(null),
+    logout: vi.fn(),
+  },
+}));
+
 import { useWalletActions } from '../useWalletActions';
 import { useChallengeActions } from '../useChallengeActions';
 import { useCourseActions } from '../useCourseActions';
@@ -78,10 +91,10 @@ describe('useWalletActions', () => {
     ...overrides,
   });
 
-  it('handleWithdraw shows error when balance is zero', () => {
+  it('handleWithdraw shows error when balance is zero', async () => {
     const deps = createDeps({ user: createMockUser({ wallet: { balance: 0, pending: 0, scheduled: 0, transactions: [] } }) });
     const { result } = renderHook(() => useWalletActions(deps));
-    act(() => result.current.handleWithdraw());
+    await act(() => result.current.handleWithdraw());
     expect(deps.showToast).toHaveBeenCalledWith('Saldo indisponível para saque.', 'error');
   });
 
@@ -100,34 +113,34 @@ describe('useWalletActions', () => {
     expect(deps.setShowPaymentModal).toHaveBeenCalledWith(true);
   });
 
-  it('handleProcessPayment shows error for invalid amount', () => {
+  it('handleProcessPayment shows error for invalid amount', async () => {
     const deps = createDeps({ depositAmount: '' });
     const { result } = renderHook(() => useWalletActions(deps));
-    act(() => result.current.handleProcessPayment());
+    await act(() => result.current.handleProcessPayment());
     expect(deps.showToast).toHaveBeenCalledWith(expect.any(String), 'error');
   });
 
-  it('handleProcessPayment shows error for zero amount', () => {
+  it('handleProcessPayment shows error for zero amount', async () => {
     const deps = createDeps({ depositAmount: '0' });
     const { result } = renderHook(() => useWalletActions(deps));
-    act(() => result.current.handleProcessPayment());
+    await act(() => result.current.handleProcessPayment());
     expect(deps.showToast).toHaveBeenCalledWith(expect.any(String), 'error');
   });
 
-  it('handleProcessPayment starts processing for valid PIX payment', () => {
+  it('handleProcessPayment starts processing for valid PIX payment', async () => {
     const deps = createDeps({ depositAmount: '100', paymentMethod: 'pix' as const });
     const { result } = renderHook(() => useWalletActions(deps));
-    act(() => result.current.handleProcessPayment());
+    await act(() => result.current.handleProcessPayment());
     expect(deps.setIsProcessingPayment).toHaveBeenCalledWith(true);
   });
 
-  it('handleProcessPayment does nothing for card (Stripe handles it)', () => {
+  it('handleProcessPayment does nothing for card (Stripe handles it)', async () => {
     const deps = createDeps({
       depositAmount: '100',
       paymentMethod: 'card' as const,
     });
     const { result } = renderHook(() => useWalletActions(deps));
-    act(() => result.current.handleProcessPayment());
+    await act(() => result.current.handleProcessPayment());
     expect(deps.setIsProcessingPayment).not.toHaveBeenCalled();
   });
 });
@@ -485,24 +498,24 @@ describe('useJobActions', () => {
     ...overrides,
   });
 
-  it('handleApply rejects when already applying', () => {
+  it('handleApply rejects when already applying', async () => {
     const deps = createDeps({ isApplying: true });
     const { result } = renderHook(() => useJobActions(deps));
-    act(() => result.current.handleApply(createMockJob()));
+    await act(() => result.current.handleApply(createMockJob()));
     expect(deps.showToast).not.toHaveBeenCalled();
   });
 
-  it('handleApply rejects when user has active job', () => {
+  it('handleApply rejects when user has active job', async () => {
     const deps = createDeps({ user: createMockUser({ activeJobId: 'j-existing' }) });
     const { result } = renderHook(() => useJobActions(deps));
-    act(() => result.current.handleApply(createMockJob()));
+    await act(() => result.current.handleApply(createMockJob()));
     expect(deps.showToast).toHaveBeenCalledWith(expect.any(String), 'error');
   });
 
-  it('handleApply succeeds for valid application', () => {
+  it('handleApply succeeds for valid application', async () => {
     const deps = createDeps();
     const { result } = renderHook(() => useJobActions(deps));
-    act(() => result.current.handleApply(createMockJob()));
+    await act(() => result.current.handleApply(createMockJob()));
     expect(deps.setIsApplying).toHaveBeenCalledWith(true);
     expect(deps.setJobs).toHaveBeenCalled();
     expect(deps.setUser).toHaveBeenCalled();
@@ -531,37 +544,37 @@ describe('useJobActions', () => {
     expect(deps.setSelectedJob).toHaveBeenCalledWith(job);
   });
 
-  it('handleCreateJob validates empty title', () => {
+  it('handleCreateJob validates empty title', async () => {
     const deps = createDeps({
       newJobData: { title: '', payment: '100', niche: Niche.EVENTS, date: '2027-01-01', startTime: '09:00', description: '' },
     });
     const { result } = renderHook(() => useJobActions(deps));
-    act(() => result.current.handleCreateJob());
+    await act(() => result.current.handleCreateJob());
     expect(deps.showToast).toHaveBeenCalledWith(expect.any(String), 'error');
   });
 
-  it('handleCreateJob validates empty payment', () => {
+  it('handleCreateJob validates empty payment', async () => {
     const deps = createDeps({
       newJobData: { title: 'Test', payment: '', niche: Niche.EVENTS, date: '2027-01-01', startTime: '09:00', description: '' },
     });
     const { result } = renderHook(() => useJobActions(deps));
-    act(() => result.current.handleCreateJob());
+    await act(() => result.current.handleCreateJob());
     expect(deps.showToast).toHaveBeenCalledWith(expect.any(String), 'error');
   });
 
-  it('handleCreateJob validates past date', () => {
+  it('handleCreateJob validates past date', async () => {
     const deps = createDeps({
       newJobData: { title: 'Test', payment: '100', niche: Niche.EVENTS, date: '2020-01-01', startTime: '09:00', description: '' },
     });
     const { result } = renderHook(() => useJobActions(deps));
-    act(() => result.current.handleCreateJob());
+    await act(() => result.current.handleCreateJob());
     expect(deps.showToast).toHaveBeenCalledWith(expect.any(String), 'error');
   });
 
-  it('handleCreateJob succeeds with valid data', () => {
+  it('handleCreateJob succeeds with valid data', async () => {
     const deps = createDeps();
     const { result } = renderHook(() => useJobActions(deps));
-    act(() => result.current.handleCreateJob());
+    await act(() => result.current.handleCreateJob());
     expect(deps.setJobs).toHaveBeenCalled();
     expect(deps.setShowCreateJobModal).toHaveBeenCalledWith(false);
     expect(deps.showToast).toHaveBeenCalledWith(expect.any(String), 'success');

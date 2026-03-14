@@ -1,5 +1,6 @@
 import React from 'react';
 import { UserProfile, Transaction } from '../types';
+import { apiService } from '../services/apiService';
 
 export const useWalletActions = (deps: {
   user: UserProfile;
@@ -17,7 +18,7 @@ export const useWalletActions = (deps: {
     setIsProcessingPayment, setShowPaymentModal, showToast
   } = deps;
 
-  const handleWithdraw = () => {
+  const handleWithdraw = async () => {
     if (user.wallet.balance <= 0) {
       showToast("Saldo indisponível para saque.", "error");
       return;
@@ -44,21 +45,27 @@ export const useWalletActions = (deps: {
     
     if (confirm(`Confirmar saque de R$ ${amountToWithdraw.toFixed(2)} para a chave PIX: ${pixKey}?\nTaxa: R$ ${fee.toFixed(2)} ${user.isPrime ? '(Prime: Isento)' : ''}`)) {
         showToast("Processando transferência...", "info");
-        setTimeout(() => {
-            const newTransaction: Transaction = {
-                id: Date.now().toString(),
-                type: 'withdrawal',
-                amount: -(amountToWithdraw + fee),
-                date: new Date().toLocaleDateString('pt-BR'),
-                description: `Saque PIX (${pixKey})`,
-                fee: fee
-            };
-            setUser(prev => ({
-                ...prev,
-                wallet: { ...prev.wallet, balance: 0, transactions: [newTransaction, ...prev.wallet.transactions] }
-            }));
-            showToast("PIX realizado com sucesso!", "success");
-        }, 2000);
+
+        const result = await apiService.withdraw(amountToWithdraw, pixKey);
+        if (!result.success) {
+          showToast(result.error || "Falha no saque. Tente novamente.", "error");
+          return;
+        }
+
+        const serverTransaction = result.data as Transaction | undefined;
+        const newTransaction: Transaction = serverTransaction ?? {
+            id: Date.now().toString(),
+            type: 'withdrawal',
+            amount: -(amountToWithdraw + fee),
+            date: new Date().toLocaleDateString('pt-BR'),
+            description: `Saque PIX (${pixKey})`,
+            fee: fee
+        };
+        setUser(prev => ({
+            ...prev,
+            wallet: { ...prev.wallet, balance: 0, transactions: [newTransaction, ...prev.wallet.transactions] }
+        }));
+        showToast("PIX realizado com sucesso!", "success");
     }
   };
 
@@ -97,7 +104,7 @@ export const useWalletActions = (deps: {
     setShowPaymentModal(true);
   };
 
-  const handleProcessPayment = () => {
+  const handleProcessPayment = async () => {
       const amount = parseFloat(depositAmount);
       if (isNaN(amount) || amount <= 0) {
           showToast("Valor inválido.", "error");
@@ -109,31 +116,37 @@ export const useWalletActions = (deps: {
       if (paymentMethod === 'card') return;
 
       setIsProcessingPayment(true);
-      
-      // Simulação de delay de rede para PIX
-      setTimeout(() => {
-          setIsProcessingPayment(false);
-          const newTransaction: Transaction = {
-              id: Date.now().toString(),
-              type: 'deposit',
-              amount: amount,
-              date: new Date().toLocaleDateString('pt-BR'),
-              description: 'Depósito via PIX'
-          };
 
-          setUser(prev => ({
-              ...prev,
-              wallet: {
-                  ...prev.wallet,
-                  balance: prev.wallet.balance + amount,
-                  transactions: [newTransaction, ...prev.wallet.transactions]
-              }
-          }));
+      const result = await apiService.deposit(amount, 'pix');
 
-          setShowPaymentModal(false);
-          showToast(`Depósito de R$ ${amount.toFixed(2)} confirmado!`, "success");
-          setDepositAmount('');
-      }, 2000);
+      setIsProcessingPayment(false);
+
+      if (!result.success) {
+          showToast(result.error || "Falha no depósito. Tente novamente.", "error");
+          return;
+      }
+
+      const serverTransaction = result.data as Transaction | undefined;
+      const newTransaction: Transaction = serverTransaction ?? {
+          id: Date.now().toString(),
+          type: 'deposit',
+          amount: amount,
+          date: new Date().toLocaleDateString('pt-BR'),
+          description: 'Depósito via PIX'
+      };
+
+      setUser(prev => ({
+          ...prev,
+          wallet: {
+              ...prev.wallet,
+              balance: prev.wallet.balance + amount,
+              transactions: [newTransaction, ...prev.wallet.transactions]
+          }
+      }));
+
+      setShowPaymentModal(false);
+      showToast(`Depósito de R$ ${amount.toFixed(2)} confirmado!`, "success");
+      setDepositAmount('');
   };
 
   return {

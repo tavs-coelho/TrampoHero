@@ -132,6 +132,19 @@ class ApiService {
     });
   }
 
+  async checkInJob(id: string, latitude: number, longitude: number, timestamp: string) {
+    return this.request(`/jobs/${id}/checkin`, {
+      method: 'POST',
+      body: JSON.stringify({ latitude, longitude, timestamp }),
+    });
+  }
+
+  async checkOutJob(id: string) {
+    return this.request(`/jobs/${id}/checkout`, {
+      method: 'POST',
+    });
+  }
+
   // User Profile
   async getProfile() {
     return this.request('/users/profile');
