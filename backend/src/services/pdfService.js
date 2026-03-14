@@ -18,6 +18,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import Contract from '../models/Contract.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -95,7 +96,7 @@ export async function generateJobContract(freelancer, employer, job) {
   const timestamp = Date.now();
   const fileName = `${hash}-${timestamp}.pdf`;
   const filePath = path.join(CONTRACTS_DIR, fileName);
-  const downloadUrl = `/api/contracts/${fileName}`;
+  const downloadUrl = `/api/contracts/files/${fileName}`;
 
   await new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 60, size: 'A4' });
@@ -207,6 +208,23 @@ export async function generateJobContract(freelancer, employer, job) {
     stream.on('finish', resolve);
     stream.on('error', reject);
   });
+
+  // Persist the contract record to the database (upsert so repeated calls are idempotent)
+  await Contract.findOneAndUpdate(
+    { jobId: job._id },
+    {
+      jobId: job._id,
+      freelancerId: freelancer._id,
+      employerId: employer._id,
+      pdfUrl: downloadUrl,
+      validationHash: hash,
+      value: job.payment,
+      paymentType: job.paymentType ?? 'dia',
+      jobDate: job.date,
+      status: 'generated',
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
 
   return { filePath, downloadUrl, validationHash: hash };
 }
