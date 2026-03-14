@@ -237,6 +237,36 @@ class ApiService {
       };
     }
   }
+
+  // Admin
+  async adminGetStats() {
+    return this.request('/admin/stats');
+  }
+
+  async adminGetUsers(search?: string) {
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+    return this.request(`/admin/users${query}`);
+  }
+
+  async adminGetJobs(status?: string) {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return this.request(`/admin/jobs${query}`);
+  }
+
+  async adminDeleteJob(id: string) {
+    return this.request(`/admin/jobs/${id}`, { method: 'DELETE' });
+  }
+
+  async adminGetKyc(status: string = 'pending') {
+    return this.request(`/admin/kyc?status=${encodeURIComponent(status)}`);
+  }
+
+  async adminDecideKyc(userId: string, decision: 'approved' | 'rejected', rejectionReason?: string) {
+    return this.request(`/admin/kyc/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ decision, ...(rejectionReason ? { rejectionReason } : {}) }),
+    });
+  }
 }
 
 export const apiService = new ApiService();

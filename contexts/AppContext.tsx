@@ -39,7 +39,8 @@ export type ViewType =
   | 'ranking'
   | 'store'
   | 'ads'
-  | 'kyc';
+  | 'kyc'
+  | 'admin';
 
 export interface AppState {
   user: UserProfile;
