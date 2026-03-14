@@ -38,8 +38,8 @@ router.get('/stats', async (req, res) => {
     ]);
 
     const revenueAgg = await Transaction.aggregate([
-      { $match: { type: { $in: ['payment', 'subscription'] } } },
-      { $group: { _id: null, total: { $sum: '$amount' } } },
+      { $match: { type: { $in: ['fee_charge', 'subscription'] }, amount: { $lt: 0 } } },
+      { $group: { _id: null, total: { $sum: { $abs: '$amount' } } } },
     ]);
     const totalRevenue = revenueAgg[0]?.total ?? 0;
 
@@ -150,6 +150,8 @@ router.patch(
     body('tier').optional().isIn(['Free', 'Pro', 'Ultra']),
     body('isPrime').optional().isBoolean(),
     body('analyticsAccess').optional().isIn(['free', 'premium']),
+    body('niche').optional().trim().isLength({ max: 50 }),
+    body('bio').optional().trim().isLength({ max: 500 }),
   ],
   async (req, res) => {
     const errors = validationResult(req);

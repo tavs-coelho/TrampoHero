@@ -105,9 +105,32 @@ describe('Admin routes – authentication & authorization', () => {
     expect(res.status).toBe(401);
   });
 
-  it('returns 403 for non-admin role', async () => {
+  it('returns 403 for freelancer role', async () => {
     const token = makeToken({ role: 'freelancer' });
     const res = await request(app).get('/api/admin/stats').set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 403 for employer role', async () => {
+    const token = makeToken({ role: 'employer' });
+    const res = await request(app).get('/api/admin/stats').set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 403 for employer on destructive DELETE /admin/jobs/:id', async () => {
+    const token = makeToken({ role: 'employer' });
+    const res = await request(app)
+      .delete('/api/admin/jobs/507f1f77bcf86cd799439011')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 403 for employer on PATCH /admin/kyc/:userId', async () => {
+    const token = makeToken({ role: 'employer' });
+    const res = await request(app)
+      .patch('/api/admin/kyc/507f1f77bcf86cd799439011')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ decision: 'approved' });
     expect(res.status).toBe(403);
   });
 });
@@ -168,14 +191,6 @@ describe('GET /api/admin/users', () => {
     expect(Array.isArray(res.body.data)).toBe(true);
     expect(res.body.data.length).toBe(2);
     expect(res.body.pagination).toHaveProperty('total', 2);
-  });
-
-  it('returns 403 for employer trying to list users', async () => {
-    const token = makeToken({ role: 'employer' });
-    const res = await request(app)
-      .get('/api/admin/users')
-      .set('Authorization', `Bearer ${token}`);
-    expect(res.status).toBe(403);
   });
 });
 
