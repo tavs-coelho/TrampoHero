@@ -49,6 +49,18 @@ export const env = {
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? '',
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET ?? '',
   RATE_LIMIT_MAX: parsePositiveInt(process.env.RATE_LIMIT_MAX, 'RATE_LIMIT_MAX', 100),
+  /** Flat fee (R$) charged on each withdrawal for non-Prime users. Default: 2.50. */
+  WITHDRAWAL_FEE: (() => {
+    const raw = process.env.WITHDRAWAL_FEE;
+    const parsed = parseFloat(raw ?? '2.50');
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      console.error(
+        `[TrampoHero Backend] Invalid value for WITHDRAWAL_FEE: "${raw}". Must be a non-negative number. Using default: 2.50.`
+      );
+      return 2.50;
+    }
+    return parsed;
+  })(),
   // Azure Blob Storage (required for photo upload endpoints)
   AZURE_STORAGE_ACCOUNT_NAME: process.env.AZURE_STORAGE_ACCOUNT_NAME ?? '',
   AZURE_STORAGE_ACCOUNT_KEY: process.env.AZURE_STORAGE_ACCOUNT_KEY ?? '',

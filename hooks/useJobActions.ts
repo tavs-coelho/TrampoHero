@@ -4,6 +4,7 @@ import { generateVoiceJob, generateJobDescription } from '../services/geminiServ
 import { generateContract } from '../services/pdfService';
 import { COINS_PER_CURRENCY_UNIT, STREAK_BONUS_THRESHOLD, STREAK_BONUS_MULTIPLIER } from '../data/constants';
 import { ViewType } from '../contexts/AppContext';
+import { apiService } from '../services/apiService';
 
 export const useJobActions = (deps: {
   user: UserProfile;
@@ -40,7 +41,7 @@ export const useJobActions = (deps: {
     onCheckoutComplete
   } = deps;
 
-  const handleApply = (job: Job) => {
+  const handleApply = async (job: Job) => {
     if (isApplying) return; // Prevent duplicate submissions
     if (user.activeJobId) {
       showToast("Você já tem um trabalho ativo.", "error");
@@ -48,6 +49,14 @@ export const useJobActions = (deps: {
     }
     
     setIsApplying(true);
+
+    const result = await apiService.applyToJob(job.id);
+    if (!result.success) {
+      showToast(result.error || "Erro ao candidatar-se. Tente novamente.", "error");
+      setIsApplying(false);
+      return;
+    }
+
     setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: 'applied' } : j));
     setUser(prev => ({ ...prev, activeJobId: job.id, wallet: { ...prev.wallet, scheduled: prev.wallet.scheduled + job.payment } }));
     setSelectedJob(null);
@@ -62,11 +71,36 @@ export const useJobActions = (deps: {
   const handleCheckIn = () => {
     if (!activeJob) return;
     showToast("Verificando localização GPS...", "info");
-    setTimeout(() => {
-      setIsCheckedIn(true);
-      generateContract(activeJob, user);
-      showToast(`Check-in confirmado! Contrato enviado para ${user.name.toLowerCase().replace(' ','')}@email.com`, "success");
-    }, 1500);
+
+    const doCheckIn = async (latitude: number, longitude: number) => {
+      const timestamp = new Date().toISOString();
+      const result = await apiService.checkInJob(activeJob.id, latitude, longitude, timestamp);
+      if (result.success) {
+        setIsCheckedIn(true);
+        generateContract(activeJob, user);
+        showToast(`Check-in confirmado! Contrato enviado para ${user.name.toLowerCase().replace(' ','')}@email.com`, "success");
+      } else {
+        showToast(result.error || "Falha no check-in. Tente novamente.", "error");
+      }
+    };
+
+    const handleError = () => showToast("Falha no check-in. Tente novamente.", "error");
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          doCheckIn(position.coords.latitude, position.coords.longitude).catch(handleError);
+        },
+        () => {
+          // Fallback to job coordinates if GPS access is denied
+          doCheckIn(activeJob.coordinates.lat, activeJob.coordinates.lng).catch(handleError);
+        },
+        { timeout: 5000 }
+      );
+    } else {
+      // Fallback: use job coordinates when Geolocation API is unavailable
+      doCheckIn(activeJob.coordinates.lat, activeJob.coordinates.lng).catch(handleError);
+    }
   };
   
   const handleCheckout = () => {
@@ -137,7 +171,7 @@ export const useJobActions = (deps: {
     } catch (err) { console.error(err); }
   };
 
-  const handleCreateJob = () => {
+  const handleCreateJob = async () => {
     if (!newJobData.title || !newJobData.payment) return showToast("Preencha título e valor.", "error");
     
     // Validate date is not in the past
@@ -151,24 +185,32 @@ export const useJobActions = (deps: {
       return showToast("Não é possível criar vagas com data passada.", "error");
     }
     
-    const newJob: Job = {
-        id: Date.now().toString(),
-        employerId: user.id,
+    const jobData = {
         title: newJobData.title,
-        employer: user.name,
-        employerRating: 5.0,
-        niche: newJobData.niche,
-        location: 'São Paulo, SP', // Mock
-        coordinates: { lat: -23.5505, lng: -46.6333 },
         payment: parseFloat(newJobData.payment),
-        paymentType: 'dia',
+        niche: newJobData.niche,
+        location: 'São Paulo, SP',
+        coordinates: { lat: -23.5505, lng: -46.6333 },
         description: newJobData.description || "Sem descrição.",
         date: jobDate,
         startTime: newJobData.startTime || "09:00",
-        status: 'open',
-        minRatingRequired: 0
+        paymentType: 'dia',
+        minRatingRequired: 0,
     };
-    setJobs(prev => [newJob, ...prev]);
+
+    const result = await apiService.createJob(jobData);
+    if (!result.success) {
+      showToast(result.error || "Erro ao publicar vaga. Tente novamente.", "error");
+      return;
+    }
+
+    const createdJob = result.data as Job | undefined;
+    if (!createdJob) {
+      showToast("Erro ao publicar vaga: resposta inválida do servidor.", "error");
+      return;
+    }
+
+    setJobs(prev => [createdJob, ...prev]);
     setShowCreateJobModal(false);
     showToast("Vaga publicada com sucesso!", "success");
     setNewJobData({ title: '', payment: '', niche: Niche.RESTAURANT, date: '', startTime: '', description: '' });
