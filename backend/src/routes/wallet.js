@@ -2,8 +2,9 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
+import { env } from '../config/env.js';
 
-const WITHDRAWAL_FEE = parseFloat(process.env.WITHDRAWAL_FEE || '2.50');
+const WITHDRAWAL_FEE = env.WITHDRAWAL_FEE;
 
 const router = express.Router();
 

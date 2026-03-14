@@ -209,10 +209,14 @@ const App: React.FC = () => {
       if (apiService.getToken()) {
         const profileResult = await apiService.getProfile();
         if (!profileResult.success) {
-          // Token is invalid or expired — clear local session
-          apiService.logout();
-          localStorage.removeItem('trampoHeroUser');
-          setUser(INITIAL_USER);
+          if (profileResult.statusCode === 401) {
+            // Token is definitively invalid or expired — clear local session
+            apiService.logout();
+            localStorage.removeItem('trampoHeroUser');
+            setUser(INITIAL_USER);
+          }
+          // For network errors (statusCode === 0) or server errors (5xx),
+          // keep the session — the token may still be valid once the server recovers
         }
       }
 

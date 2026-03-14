@@ -6,6 +6,9 @@ interface ApiResponse<T> {
   error?: string;
   errors?: { msg: string }[];
   count?: number;
+  /** HTTP status code. Only present when success is false.
+   *  0 means no response received (network error, timeout, etc.). */
+  statusCode?: number;
 }
 
 class ApiService {
@@ -53,6 +56,7 @@ class ApiService {
       if (!response.ok) {
         return {
           success: false,
+          statusCode: response.status,
           error: data.error || data.errors?.[0]?.msg || 'An error occurred',
         };
       }
@@ -61,6 +65,7 @@ class ApiService {
     } catch (error) {
       return {
         success: false,
+        statusCode: 0, // 0 = no HTTP response (network error, timeout, etc.)
         error: error instanceof Error ? error.message : 'Network error',
       };
     }
