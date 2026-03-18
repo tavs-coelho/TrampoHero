@@ -28,9 +28,9 @@ import referralRoutes from './routes/referral.js';
 import paymentsRoutes from './routes/payments.js';
 import reviewRoutes from './routes/reviews.js';
 import analyticsRoutes from './routes/analytics.js';
-import adminRoutes from './routes/admin.js';
 import contractsRoutes from './routes/contracts.js';
 import supportRoutes from './routes/support.js';
+import adminRoutes from './routes/admin.js';
 
 import mongoose from 'mongoose';
 

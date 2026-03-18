@@ -6,6 +6,9 @@ interface ApiResponse<T> {
   error?: string;
   errors?: { msg: string }[];
   count?: number;
+  /** HTTP status code. Only present when success is false.
+   *  0 means no response received (network error, timeout, etc.). */
+  statusCode?: number;
 }
 
 class ApiService {
@@ -53,6 +56,7 @@ class ApiService {
       if (!response.ok) {
         return {
           success: false,
+          statusCode: response.status,
           error: data.error || data.errors?.[0]?.msg || 'An error occurred',
         };
       }
@@ -61,6 +65,7 @@ class ApiService {
     } catch (error) {
       return {
         success: false,
+        statusCode: 0, // 0 = no HTTP response (network error, timeout, etc.)
         error: error instanceof Error ? error.message : 'Network error',
       };
     }
@@ -128,6 +133,67 @@ class ApiService {
 
   async applyToJob(id: string) {
     return this.request(`/jobs/${id}/apply`, {
+      method: 'POST',
+    });
+  }
+
+  async getUploadSasUrl(contentType: string = 'image/jpeg') {
+    return this.request<{ sasUrl: string; blobName: string; containerUrl: string }>('/jobs/upload-sas', {
+      method: 'POST',
+      body: JSON.stringify({ contentType }),
+    });
+  }
+
+  async getJobApplicants(id: string) {
+    return this.request<{ userId: string; name: string; rating: number; niche: string; status: string; appliedAt: string }[]>(`/jobs/${id}/applicants`);
+  }
+
+  async selectCandidate(jobId: string, candidateId: string) {
+    return this.request(`/jobs/${jobId}/select-candidate`, {
+      method: 'POST',
+      body: JSON.stringify({ candidateId }),
+    });
+  }
+
+  async checkoutJob(jobId: string) {
+    return this.request(`/jobs/${jobId}/checkout`, {
+      method: 'POST',
+    });
+  }
+
+  async submitProofPhoto(jobId: string, photoUrl: string) {
+    return this.request(`/jobs/${jobId}/submit-proof`, {
+      method: 'POST',
+      body: JSON.stringify({ photoUrl }),
+    });
+  }
+
+  async approveJobCompletion(jobId: string) {
+    return this.request(`/jobs/${jobId}/complete`, {
+      method: 'POST',
+    });
+  }
+
+  async createReview(data: { rating: number; comment?: string; targetId: string; jobId: string }) {
+    return this.request('/reviews', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getReviews(targetId: string) {
+    return this.request(`/reviews?targetId=${targetId}`);
+  }
+
+  async checkInJob(id: string, latitude: number, longitude: number, timestamp: string) {
+    return this.request(`/jobs/${id}/checkin`, {
+      method: 'POST',
+      body: JSON.stringify({ latitude, longitude, timestamp }),
+    });
+  }
+
+  async checkOutJob(id: string) {
+    return this.request(`/jobs/${id}/checkout`, {
       method: 'POST',
     });
   }

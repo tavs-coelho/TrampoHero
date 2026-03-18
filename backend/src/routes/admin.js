@@ -1,35 +1,24 @@
 import express from 'express';
-import { body, param, query, validationResult } from 'express-validator';
+import { query, param, body, validationResult } from 'express-validator';
 import { authenticate, authorize } from '../middleware/auth.js';
 import AdminAction from '../models/AdminAction.js';
+import User from '../models/User.js';
 import Job from '../models/Job.js';
 import Review from '../models/Review.js';
-import Transaction from '../models/Transaction.js';
-import User from '../models/User.js';
 
 const router = express.Router();
-
-// Escape special characters in a string intended for use in a RegExp.
-// This helps avoid unexpected regex behavior and excessive backtracking
-// from user-controlled input.
-const escapeRegex = (value) =>
-  typeof value === 'string'
-    ? value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    : value;
 
 // All admin routes require authentication + admin role
 router.use(authenticate, authorize('admin'));
 
-// ─── Admin Audit Logs ──────────────────────────────────────────────────────────
-
 // @route   GET /api/admin/actions
 // @desc    List admin audit log entries (paginated)
-// @access  Admin
+// @access  Private (admin)
 router.get(
   '/actions',
   [
-    query('page').optional().isInt({ min: 1 }).toInt(),
-    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    query('page').optional().isInt({ min: 1 }),
+    query('limit').optional().isInt({ min: 1, max: 100 }),
     query('action').optional().isString(),
     query('adminId').optional().isMongoId(),
   ],
@@ -40,8 +29,8 @@ router.get(
     }
 
     try {
-      const page = req.query.page ?? 1;
-      const limit = req.query.limit ?? 20;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 20;
       const skip = (page - 1) * limit;
 
       const filter = {};
@@ -252,7 +241,7 @@ router.patch(
 
 // @route   PUT /api/admin/users/:id/ban
 // @desc    Ban a user
-// @access  Admin
+// @access  Private (admin)
 router.put(
   '/users/:id/ban',
   [
@@ -300,7 +289,7 @@ router.put(
 
 // @route   PUT /api/admin/users/:id/unban
 // @desc    Unban a user
-// @access  Admin
+// @access  Private (admin)
 router.put(
   '/users/:id/unban',
   [param('id').isMongoId().withMessage('Invalid user id')],
@@ -386,8 +375,8 @@ router.get(
 );
 
 // @route   DELETE /api/admin/jobs/:id
-// @desc    Remove a job (e.g. spam/inappropriate)
-// @access  Admin
+// @desc    Remove a job (admin)
+// @access  Private (admin)
 router.delete(
   '/jobs/:id',
   [
@@ -418,9 +407,8 @@ router.delete(
         userAgent: req.headers['user-agent'] || null,
       });
 
-      res.json({ success: true, message: 'Job removed successfully' });
+      res.json({ success: true, message: 'Job removed' });
     } catch (error) {
-      console.error('[DELETE /admin/jobs/:id]', error.message);
       res.status(500).json({ success: false, error: 'Server error' });
     }
   }
@@ -428,7 +416,7 @@ router.delete(
 
 // @route   DELETE /api/admin/reviews/:id
 // @desc    Remove a review (admin)
-// @access  Admin
+// @access  Private (admin)
 router.delete(
   '/reviews/:id',
   [

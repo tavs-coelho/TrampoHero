@@ -86,8 +86,16 @@ const jobSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Index for efficient queries
 jobSchema.index({ status: 1, niche: 1 });
 jobSchema.index({ employerId: 1 });
+
+jobSchema.set('toJSON', {
+  virtuals: true,
+  transform: (_doc, ret) => {
+    ret.id = ret._id.toString();
+    delete ret._id;
+    delete ret.__v;
+  },
+});
 
 export default mongoose.model('Job', jobSchema);
