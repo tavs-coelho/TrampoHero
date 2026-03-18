@@ -204,40 +204,77 @@ router.post('/:id/resolve', authenticate, authorize('admin'), async (req, res) =
     // Issue refund to employer if applicable
     if (resolvedEmployerBRL > 0 && job.escrowPaymentIntentId) {
       const refundAmountCents = Math.round(resolvedEmployerBRL * 100);
+      const gatewayProvider = process.env.PAYMENT_GATEWAY_PROVIDER ?? 'stripe';
       let gatewayRefundId = null;
+      let refundRecord;
+
       try {
+        // If escrow is still held (uncaptured PaymentIntent), a direct refund will typically fail.
+        if (job.escrowStatus === 'held') {
+          throw new Error('Cannot process refund while escrow is held (payment not captured).');
+        }
+
         const stripeRefund = await createRefund({
           paymentIntentId: job.escrowPaymentIntentId,
           // Omit amountCents for a full refund (Stripe default); pass it for partial refunds.
           amountCents: refundAmountCents < jobPaymentCents ? refundAmountCents : undefined,
         });
         gatewayRefundId = stripeRefund.id;
+
+        refundRecord = await Refund.create({
+          userId: dispute.employerId,
+          jobId: job._id,
+          amount: resolvedEmployerBRL,
+          reason: 'dispute_resolved',
+          status: 'completed',
+          gatewayRefundId,
+          gatewayProvider,
+          processedAt: new Date(),
+        });
+
+        await Transaction.create({
+          userId: dispute.employerId,
+          type: 'refund',
+          status: 'completed',
+          amount: resolvedEmployerBRL,
+          description: `Reembolso via resolução de disputa: ${job.title}`,
+          relatedJobId: job._id,
+          disputeId: dispute._id,
+          refundId: refundRecord._id,
+        });
       } catch (gatewayErr) {
-        // Log but continue – admin can reconcile manually
-        console.error('[disputes/resolve] Gateway refund failed:', gatewayErr.message);
+        const failureReason =
+          (gatewayErr && gatewayErr.message) || 'Failed to process refund via payment gateway.';
+
+        console.error('[disputes/resolve] Gateway refund failed:', failureReason);
+
+        refundRecord = await Refund.create({
+          userId: dispute.employerId,
+          jobId: job._id,
+          amount: resolvedEmployerBRL,
+          reason: 'dispute_resolved',
+          status: 'failed',
+          failureReason,
+          gatewayRefundId,
+          gatewayProvider,
+          processedAt: new Date(),
+        });
+
+        await Transaction.create({
+          userId: dispute.employerId,
+          type: 'refund',
+          status: 'failed',
+          amount: resolvedEmployerBRL,
+          description: `Falha no reembolso via resolução de disputa: ${job.title}`,
+          relatedJobId: job._id,
+          disputeId: dispute._id,
+          refundId: refundRecord._id,
+          failureReason,
+        });
+
+        // Re-throw so that the route handler can return an error response
+        throw gatewayErr;
       }
-
-      const refundRecord = await Refund.create({
-        userId: dispute.employerId,
-        jobId: job._id,
-        amount: resolvedEmployerBRL,
-        reason: 'dispute_resolved',
-        status: 'completed',
-        gatewayRefundId,
-        gatewayProvider: process.env.PAYMENT_GATEWAY_PROVIDER ?? 'stripe',
-        processedAt: new Date(),
-      });
-
-      await Transaction.create({
-        userId: dispute.employerId,
-        type: 'refund',
-        status: 'completed',
-        amount: resolvedEmployerBRL,
-        description: `Reembolso via resolução de disputa: ${job.title}`,
-        relatedJobId: job._id,
-        disputeId: dispute._id,
-        refundId: refundRecord._id,
-      });
     }
 
     // Credit freelancer wallet if applicable
