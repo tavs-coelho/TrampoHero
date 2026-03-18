@@ -14,7 +14,20 @@ let _transporter = null;
 function getTransporter() {
   if (_transporter) return _transporter;
 
-  if (env.EMAIL_ENABLED && env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS) {
+  if (env.EMAIL_ENABLED) {
+    const missing = [];
+    if (!env.SMTP_HOST) missing.push('SMTP_HOST');
+    if (!env.SMTP_USER) missing.push('SMTP_USER');
+    if (!env.SMTP_PASS) missing.push('SMTP_PASS');
+
+    if (missing.length > 0) {
+      const message =
+        `[emailService] EMAIL_ENABLED=true but missing SMTP configuration: ${missing.join(', ')}. ` +
+        'Emails will not be sent until this is fixed.';
+      console.error(message);
+      throw new Error(message);
+    }
+
     _transporter = nodemailer.createTransport({
       host: env.SMTP_HOST,
       port: env.SMTP_PORT,
@@ -25,10 +38,10 @@ function getTransporter() {
       },
     });
   } else {
-    // Ethereal / console fallback for development
+    // Ethereal / console fallback for development when email is disabled
     _transporter = {
       sendMail: async (opts) => {
-        console.log('[emailService] Email not configured – logging instead:');
+        console.log('[emailService] Email disabled or not configured – logging instead:');
         console.log(`  To: ${opts.to}`);
         console.log(`  Subject: ${opts.subject}`);
         if (opts.text) console.log(`  Body: ${opts.text}`);
