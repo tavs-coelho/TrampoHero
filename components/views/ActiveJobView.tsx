@@ -32,7 +32,6 @@ export const ActiveJobView: React.FC<ActiveJobViewProps> = ({ activeJob, isCheck
 
       if (!sasResult.success || !sasResult.data) {
         setProofUploadError('Não foi possível obter URL de upload.');
-        setIsUploadingProof(false);
         return;
       }
 
@@ -47,7 +46,6 @@ export const ActiveJobView: React.FC<ActiveJobViewProps> = ({ activeJob, isCheck
 
       if (!uploadRes.ok) {
         setProofUploadError('Falha no upload da imagem.');
-        setIsUploadingProof(false);
         return;
       }
 
