@@ -149,8 +149,6 @@ describe('POST /api/auth/register', () => {
       role: 'freelancer',
     });
 
-    // Allow the non-blocking promise to settle
-    await new Promise((r) => setTimeout(r, 50));
     expect(sendVerificationEmail).toHaveBeenCalledWith(mockUserDoc.email, expect.any(String));
   });
 
