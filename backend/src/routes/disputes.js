@@ -79,15 +79,26 @@ router.post('/', authenticate, async (req, res) => {
     });
 
     // Record a hold transaction on both parties to show funds are frozen
-    await Transaction.create({
-      userId: req.user.id,
-      type: 'dispute_hold',
-      status: 'pending',
-      amount: 0,
-      description: `Disputa aberta: ${job.title}`,
-      relatedJobId: job._id,
-      disputeId: dispute._id,
-    });
+    await Promise.all([
+      Transaction.create({
+        userId: job.employerId,
+        type: 'dispute_hold',
+        status: 'pending',
+        amount: 0,
+        description: `Disputa aberta: ${job.title}`,
+        relatedJobId: job._id,
+        disputeId: dispute._id,
+      }),
+      Transaction.create({
+        userId: hiredApplicant.userId,
+        type: 'dispute_hold',
+        status: 'pending',
+        amount: 0,
+        description: `Disputa aberta: ${job.title}`,
+        relatedJobId: job._id,
+        disputeId: dispute._id,
+      }),
+    ]);
 
     res.status(201).json({ success: true, data: dispute });
   } catch (error) {
