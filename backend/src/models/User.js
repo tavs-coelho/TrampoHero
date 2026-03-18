@@ -119,6 +119,18 @@ const userSchema = new mongoose.Schema({
     tags: [{ type: String }],
     updatedAt: { type: Date, default: Date.now },
   }],
+  isBanned: {
+    type: Boolean,
+    default: false,
+  },
+  bannedAt: {
+    type: Date,
+    default: null,
+  },
+  banReason: {
+    type: String,
+    default: null,
+  },
 }, {
   timestamps: true,
 });

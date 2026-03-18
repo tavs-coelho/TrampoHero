@@ -525,6 +525,50 @@ router.post(
   }
 );
 
+// @route   POST /api/jobs/:id/checkout
+// @desc    Freelancer records end of work (changes status to waiting_approval)
+// @access  Private (Freelancer only)
+router.post(
+  '/:id/checkout',
+  authenticate,
+  authorize('freelancer'),
+  [param('id').isMongoId().withMessage('Invalid job id')],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    try {
+      const job = await Job.findById(req.params.id);
+      if (!job) {
+        return res.status(404).json({ success: false, error: 'Job not found' });
+      }
+
+      // Only the approved freelancer may check out
+      const approved = job.applicants.find(
+        (a) => a.status === 'approved' && a.userId.toString() === req.user.id
+      );
+      if (!approved) {
+        return res.status(403).json({ success: false, error: 'Not authorized to check out for this job' });
+      }
+
+      if (job.status !== 'ongoing') {
+        return res.status(400).json({ success: false, error: 'Job is not ongoing' });
+      }
+
+      job.status = 'waiting_approval';
+      job.checkOutTime = new Date().toISOString();
+      await job.save();
+
+      return res.json({ success: true, data: job });
+    } catch (error) {
+      console.error('[POST /jobs/:id/checkout]', error.message);
+      return res.status(500).json({ success: false, error: 'Server error' });
+    }
+  }
+);
+
 // @route   GET /api/jobs/:id/chat-token
 // @desc    Return an Azure Web PubSub client access URL (or JWT mock) for real-time chat
 // @access  Private
