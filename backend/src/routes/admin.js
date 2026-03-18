@@ -32,7 +32,7 @@ router.get('/stats', async (req, res) => {
       User.countDocuments({ role: 'employer' }),
       Job.countDocuments(),
       Job.countDocuments({ status: 'open' }),
-      Job.countDocuments({ status: 'completed' }),
+      Job.countDocuments({ status: { $in: ['completed', 'paid'] } }),
       User.countDocuments({ 'kyc.status': 'pending' }),
       Transaction.find().sort({ createdAt: -1 }).limit(5).lean(),
     ]);
