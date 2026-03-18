@@ -279,19 +279,29 @@ router.post('/:id/resolve', authenticate, authorize('admin'), async (req, res) =
 
     // Credit freelancer wallet if applicable
     if (resolvedFreelancerBRL > 0) {
-      await User.findByIdAndUpdate(dispute.freelancerId, {
-        $inc: { 'wallet.balance': resolvedFreelancerBRL },
-      });
+      const escrowAlreadyReleased = job.escrowStatus === 'released';
 
-      await Transaction.create({
-        userId: dispute.freelancerId,
-        type: 'dispute_release',
-        status: 'completed',
-        amount: resolvedFreelancerBRL,
-        description: `Pagamento liberado via resolução de disputa: ${job.title}`,
-        relatedJobId: job._id,
-        disputeId: dispute._id,
-      });
+      if (escrowAlreadyReleased) {
+        // Avoid double-paying the freelancer if escrow was already released
+        console.warn(
+          '[disputes/resolve] Skipping freelancer credit because escrow is already released for job',
+          job._id.toString()
+        );
+      } else {
+        await User.findByIdAndUpdate(dispute.freelancerId, {
+          $inc: { 'wallet.balance': resolvedFreelancerBRL },
+        });
+
+        await Transaction.create({
+          userId: dispute.freelancerId,
+          type: 'dispute_release',
+          status: 'completed',
+          amount: resolvedFreelancerBRL,
+          description: `Pagamento liberado via resolução de disputa: ${job.title}`,
+          relatedJobId: job._id,
+          disputeId: dispute._id,
+        });
+      }
     }
 
     // Update dispute record
