@@ -42,8 +42,48 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
     if (!isEmployerView) return;
     setLoadingApplicants(true);
     const result = await apiService.getJobApplicants(job.id);
-    if (result.success && result.data) {
-      setApplicants(result.data as unknown as Applicant[]);
+    if (result.success && Array.isArray(result.data)) {
+      const mappedApplicants: Applicant[] = result.data
+        .map((item) => {
+          if (!item || typeof item !== 'object') {
+            return null;
+          }
+          const {
+            userId,
+            name,
+            rating = null,
+            niche = null,
+            status,
+            appliedAt,
+          } = item as {
+            userId?: unknown;
+            name?: unknown;
+            rating?: unknown;
+            niche?: unknown;
+            status?: unknown;
+            appliedAt?: unknown;
+          };
+          if (
+            typeof userId !== 'string' ||
+            typeof name !== 'string' ||
+            typeof status !== 'string' ||
+            typeof appliedAt !== 'string'
+          ) {
+            return null;
+          }
+          return {
+            userId,
+            name,
+            rating: typeof rating === 'number' ? rating : null,
+            niche: typeof niche === 'string' ? niche : null,
+            status,
+            appliedAt,
+          } as Applicant;
+        })
+        .filter((applicant): applicant is Applicant => applicant !== null);
+      setApplicants(mappedApplicants);
+    } else {
+      setApplicants([]);
     }
     setLoadingApplicants(false);
   }, [isEmployerView, job.id]);
