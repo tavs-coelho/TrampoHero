@@ -2,6 +2,8 @@
  * Unit tests for admin routes:
  *  - GET  /api/admin/stats
  *  - GET  /api/admin/users
+ *  - GET  /api/admin/users/:id
+ *  - PATCH /api/admin/users/:id
  *  - GET  /api/admin/jobs
  *  - DELETE /api/admin/jobs/:id
  *  - GET  /api/admin/kyc
@@ -191,6 +193,105 @@ describe('GET /api/admin/users', () => {
     expect(Array.isArray(res.body.data)).toBe(true);
     expect(res.body.data.length).toBe(2);
     expect(res.body.pagination).toHaveProperty('total', 2);
+  });
+});
+
+describe('GET /api/admin/users/:id', () => {
+  it('returns user details for a valid id', async () => {
+    User.findById.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockResolvedValue(mockUsers[0]),
+    });
+
+    const token = makeToken();
+    const res = await request(app)
+      .get('/api/admin/users/507f1f77bcf86cd799439011')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveProperty('name', 'João Silva');
+  });
+
+  it('returns 400 for an invalid user id format', async () => {
+    const token = makeToken();
+    const res = await request(app)
+      .get('/api/admin/users/not-a-valid-id')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('returns 404 when user does not exist', async () => {
+    User.findById.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockResolvedValue(null),
+    });
+
+    const token = makeToken();
+    const res = await request(app)
+      .get('/api/admin/users/507f1f77bcf86cd799439011')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
+  });
+});
+
+describe('PATCH /api/admin/users/:id', () => {
+  it('updates an allowed field and returns the updated user', async () => {
+    const updatedUser = { ...mockUsers[0], tier: 'Pro' };
+    User.findByIdAndUpdate.mockReturnValue({
+      select: vi.fn().mockResolvedValue(updatedUser),
+    });
+
+    const token = makeToken();
+    const res = await request(app)
+      .patch('/api/admin/users/507f1f77bcf86cd799439011')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tier: 'Pro' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.tier).toBe('Pro');
+  });
+
+  it('returns 400 for an invalid user id format', async () => {
+    const token = makeToken();
+    const res = await request(app)
+      .patch('/api/admin/users/not-a-valid-id')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tier: 'Pro' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('returns 400 for an invalid tier value', async () => {
+    const token = makeToken();
+    const res = await request(app)
+      .patch('/api/admin/users/507f1f77bcf86cd799439011')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tier: 'InvalidTier' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('returns 404 when user does not exist', async () => {
+    User.findByIdAndUpdate.mockReturnValue({
+      select: vi.fn().mockResolvedValue(null),
+    });
+
+    const token = makeToken();
+    const res = await request(app)
+      .patch('/api/admin/users/507f1f77bcf86cd799439011')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ isPrime: true });
+
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
   });
 });
 
