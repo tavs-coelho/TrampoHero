@@ -351,7 +351,6 @@ describe('POST /api/auth/resend-verification', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
-    await new Promise((r) => setTimeout(r, 50));
     expect(sendVerificationEmail).toHaveBeenCalled();
   });
 
