@@ -204,19 +204,19 @@ router.put(
 
       await ticket.save();
 
-      await AdminAction.create({
-        adminId: req.user.id,
-        action: req.body.status === 'resolved'
-          ? 'ticket_resolve'
-          : req.body.status === 'closed'
-            ? 'ticket_close'
-            : 'ticket_assign',
-        targetType: 'SupportTicket',
-        targetId: ticket._id,
-        details: { newStatus: req.body.status },
-        ipAddress: req.ip,
-        userAgent: req.headers['user-agent'] || null,
-      });
+      if (req.body.status === 'resolved' || req.body.status === 'closed') {
+        await AdminAction.create({
+          adminId: req.user.id,
+          action: req.body.status === 'resolved'
+            ? 'ticket_resolve'
+            : 'ticket_close',
+          targetType: 'SupportTicket',
+          targetId: ticket._id,
+          details: { newStatus: req.body.status },
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'] || null,
+        });
+      }
 
       res.json({ success: true, data: ticket });
     } catch (error) {
