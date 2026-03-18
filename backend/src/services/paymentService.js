@@ -146,6 +146,21 @@ export async function cancelEscrow(paymentIntentId) {
 }
 
 /**
+ * Issue a full or partial refund against a captured PaymentIntent.
+ *
+ * @param {{ paymentIntentId: string, amountCents?: number }} opts
+ *   - `amountCents` is optional; if omitted the full amount is refunded.
+ * @returns {Promise<import('stripe').Stripe.Refund>}
+ */
+export async function createRefund({ paymentIntentId, amountCents }) {
+  const stripe = getStripe();
+  return stripe.refunds.create({
+    payment_intent: paymentIntentId,
+    ...(amountCents !== undefined && { amount: amountCents }),
+  });
+}
+
+/**
  * Create a Stripe Checkout Session for Hero Prime subscription.
  * Prices are created on-the-fly as inline price data to avoid requiring a
  * pre-configured Stripe product/price ID.
