@@ -14,7 +14,7 @@ import {
   DashboardView, TalentsView, EmployerProfileView, EmployerWalletView, EmployerChatView, EmployerActiveView,
   BrowseView, ActiveJobView, WalletView, AcademyView, ProfileView, ChatView,
   CoinsView, InsuranceView, CreditView, ReferralsView, AnalyticsView, ChallengesView,
-  RankingView, StoreView, AdsView, KycView
+  RankingView, StoreView, AdsView, KycView, AdminView
 } from './components/views';
 import { useToast } from './hooks/useToast';
 import { useJobActions } from './hooks/useJobActions';
@@ -552,6 +552,12 @@ const App: React.FC = () => {
                 setUser={setUser}
                 showToast={showToast}
                 setView={setView}
+              />
+            )}
+            {view === 'admin' && (
+              <AdminView
+                user={user}
+                showToast={showToast}
               />
             )}
           </>
