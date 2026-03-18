@@ -173,6 +173,11 @@ export const useJobActions = (deps: {
 
   const handleCreateJob = async () => {
     if (!newJobData.title || !newJobData.payment) return showToast("Preencha título e valor.", "error");
+
+    const paymentAmount = parseFloat(newJobData.payment);
+    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+      return showToast("Informe um valor válido maior que zero.", "error");
+    }
     
     // Validate date is not in the past
     // Compare dates at midnight in local timezone to avoid timezone issues
@@ -187,7 +192,7 @@ export const useJobActions = (deps: {
     
     const jobData = {
         title: newJobData.title,
-        payment: parseFloat(newJobData.payment),
+        payment: paymentAmount,
         niche: newJobData.niche,
         location: 'São Paulo, SP',
         coordinates: { lat: -23.5505, lng: -46.6333 },
