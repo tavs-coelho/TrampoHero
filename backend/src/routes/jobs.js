@@ -14,6 +14,32 @@ import { env } from '../config/env.js';
 
 const router = express.Router();
 
+/**
+ * Validate that the proof photo URL is:
+ * - a syntactically valid URL
+ * - served over HTTPS
+ * - (optionally) within the configured Azure blob storage base URL
+ */
+function isValidProofPhotoUrl(photoUrl) {
+  try {
+    const parsed = new URL(photoUrl);
+
+    if (parsed.protocol !== 'https:') {
+      return false;
+    }
+
+    // If a specific Azure blob base URL is configured, enforce that prefix.
+    if (env.AZURE_BLOB_BASE_URL) {
+      return photoUrl.startsWith(env.AZURE_BLOB_BASE_URL);
+    }
+
+    // Fallback: accept any HTTPS URL when no base URL is configured.
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // @route   GET /api/jobs
 // @desc    Get all jobs
 // @access  Public
@@ -220,6 +246,174 @@ router.post('/:id/complete', authenticate, authorize('employer'), async (req, re
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
+
+// @route   GET /api/jobs/:id/applicants
+// @desc    Get applicants for a job with user details (name, rating)
+// @access  Private (Employer only)
+router.get(
+  '/:id/applicants',
+  [
+    param('id').isMongoId().withMessage('Invalid job id'),
+  ],
+  authenticate,
+  authorize('employer'),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    try {
+      const job = await Job.findById(req.params.id);
+      if (!job) {
+        return res.status(404).json({ success: false, error: 'Job not found' });
+      }
+
+      if (job.employerId.toString() !== req.user.id) {
+        return res.status(403).json({ success: false, error: 'Not authorized' });
+      }
+
+      const applicantIds = job.applicants.map(a => a.userId);
+      const users = await User.find({ _id: { $in: applicantIds } }, 'name rating niche');
+
+      const userMap = {};
+      users.forEach(u => { userMap[u._id.toString()] = u; });
+
+      const applicants = job.applicants.map(a => {
+        const u = userMap[a.userId.toString()] || {};
+        return {
+          userId: a.userId,
+          appliedAt: a.appliedAt,
+          status: a.status,
+          name: u.name || 'Desconhecido',
+          rating: u.rating ?? null,
+          niche: u.niche || null,
+        };
+      });
+
+      res.json({ success: true, count: applicants.length, data: applicants });
+    } catch (error) {
+      console.error('[GET /jobs/:id/applicants]', error.message);
+      res.status(500).json({ success: false, error: 'Server error' });
+    }
+  }
+);
+
+// @route   POST /api/jobs/:id/select-candidate
+// @desc    Employer approves one candidate, rejects all others, transitions job to applied
+// @access  Private (Employer only)
+router.post(
+  '/:id/select-candidate',
+  authenticate,
+  authorize('employer'),
+  [
+    param('id').isMongoId().withMessage('Invalid job ID'),
+    body('candidateId').optional().isMongoId().withMessage('candidateId must be a valid MongoId'),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        const firstError = errors.array()[0];
+        return res.status(400).json({ success: false, error: firstError.msg });
+      }
+
+      const { candidateId } = req.body;
+      if (!candidateId) {
+        return res.status(400).json({ success: false, error: 'candidateId is required' });
+      }
+
+      const job = await Job.findById(req.params.id);
+      if (!job) {
+        return res.status(404).json({ success: false, error: 'Job not found' });
+      }
+
+      if (job.employerId.toString() !== req.user.id) {
+        return res.status(403).json({ success: false, error: 'Not authorized' });
+      }
+
+      if (!['open', 'applied'].includes(job.status)) {
+        return res.status(400).json({ success: false, error: 'Job is not accepting candidate selection in its current status' });
+      }
+
+      const targetApplicant = job.applicants.find(a => a.userId.toString() === candidateId);
+      if (!targetApplicant) {
+        return res.status(404).json({ success: false, error: 'Candidate not found in applicants list' });
+      }
+
+      // Approve selected candidate, reject all others
+      job.applicants.forEach(a => {
+        a.status = a.userId.toString() === candidateId ? 'approved' : 'rejected';
+      });
+
+      job.status = 'applied';
+      await job.save();
+
+      res.json({ success: true, message: 'Candidate selected successfully', data: job });
+    } catch (error) {
+      console.error('[POST /jobs/:id/select-candidate]', error.message);
+      res.status(500).json({ success: false, error: 'Server error' });
+    }
+  }
+);
+
+// @route   POST /api/jobs/:id/submit-proof
+// @desc    Freelancer records the proof-photo URL (uploaded separately via SAS) against the job
+// @access  Private (Freelancer only)
+router.post(
+  '/:id/submit-proof',
+  authenticate,
+  [
+    param('id').isMongoId().withMessage('Invalid job id'),
+    body('photoUrl')
+      .notEmpty()
+      .withMessage('photoUrl is required')
+      .bail()
+      .custom((value) => {
+        if (!isValidProofPhotoUrl(value)) {
+          if (env.AZURE_BLOB_BASE_URL) {
+            throw new Error('photoUrl must be a valid HTTPS URL within the configured storage container');
+          }
+          throw new Error('photoUrl must be a valid HTTPS URL');
+        }
+        return true;
+      }),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    const { photoUrl } = req.body;
+
+    try {
+      const job = await Job.findById(req.params.id);
+      if (!job) {
+        return res.status(404).json({ success: false, error: 'Job not found' });
+      }
+
+      const approved = job.applicants.find(
+        a => a.status === 'approved' && a.userId.toString() === req.user.id
+      );
+      if (!approved) {
+        return res.status(403).json({ success: false, error: 'Not authorized to submit proof for this job' });
+      }
+
+      if (!['ongoing', 'waiting_approval'].includes(job.status)) {
+        return res.status(400).json({ success: false, error: 'Job must be ongoing or waiting approval to submit proof' });
+      }
+
+      job.proofPhoto = photoUrl;
+      await job.save();
+
+      return res.json({ success: true, data: job });
+    } catch (error) {
+      console.error('[POST /jobs/:id/submit-proof]', error.message);
+      return res.status(500).json({ success: false, error: 'Server error' });
+    }
+  }
+);
 
 // ─── Constants for upload-sas ─────────────────────────────────────────────────
 

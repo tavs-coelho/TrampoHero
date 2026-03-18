@@ -14,7 +14,7 @@ import {
   DashboardView, TalentsView, EmployerProfileView, EmployerWalletView, EmployerChatView, EmployerActiveView,
   BrowseView, ActiveJobView, WalletView, AcademyView, ProfileView, ChatView,
   CoinsView, InsuranceView, CreditView, ReferralsView, AnalyticsView, ChallengesView,
-  RankingView, StoreView, AdsView, KycView
+  RankingView, StoreView, AdsView, KycView, AdminView
 } from './components/views';
 import { useToast } from './hooks/useToast';
 import { useJobActions } from './hooks/useJobActions';
@@ -395,7 +395,20 @@ const App: React.FC = () => {
               />
             )}
             {view === 'active' && (
-              <EmployerActiveView setView={setView} />
+              <EmployerActiveView
+                setView={setView}
+                waitingApprovalJobs={jobs.filter(j => j.employerId === user.id && j.status === 'waiting_approval')}
+                onApproveCompletion={async (jobId) => {
+                  try {
+                    await apiService.approveJobCompletion(jobId);
+                    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'completed' } : j));
+                    showToast("Conclusão aprovada! Pagamento liberado.", "success");
+                  } catch (error) {
+                    console.error('Failed to approve job completion', error);
+                    showToast("Falha ao aprovar conclusão. Tente novamente.", "error");
+                  }
+                }}
+              />
             )}
           </div>
         ) : (
@@ -539,6 +552,12 @@ const App: React.FC = () => {
                 setUser={setUser}
                 showToast={showToast}
                 setView={setView}
+              />
+            )}
+            {view === 'admin' && (
+              <AdminView
+                user={user}
+                showToast={showToast}
               />
             )}
           </>

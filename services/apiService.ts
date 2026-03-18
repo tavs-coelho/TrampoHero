@@ -137,6 +137,54 @@ class ApiService {
     });
   }
 
+  async getUploadSasUrl(contentType: string = 'image/jpeg') {
+    return this.request<{ sasUrl: string; blobName: string; containerUrl: string }>('/jobs/upload-sas', {
+      method: 'POST',
+      body: JSON.stringify({ contentType }),
+    });
+  }
+
+  async getJobApplicants(id: string) {
+    return this.request<{ userId: string; name: string; rating: number; niche: string; status: string; appliedAt: string }[]>(`/jobs/${id}/applicants`);
+  }
+
+  async selectCandidate(jobId: string, candidateId: string) {
+    return this.request(`/jobs/${jobId}/select-candidate`, {
+      method: 'POST',
+      body: JSON.stringify({ candidateId }),
+    });
+  }
+
+  async checkoutJob(jobId: string) {
+    return this.request(`/jobs/${jobId}/checkout`, {
+      method: 'POST',
+    });
+  }
+
+  async submitProofPhoto(jobId: string, photoUrl: string) {
+    return this.request(`/jobs/${jobId}/submit-proof`, {
+      method: 'POST',
+      body: JSON.stringify({ photoUrl }),
+    });
+  }
+
+  async approveJobCompletion(jobId: string) {
+    return this.request(`/jobs/${jobId}/complete`, {
+      method: 'POST',
+    });
+  }
+
+  async createReview(data: { rating: number; comment?: string; targetId: string; jobId: string }) {
+    return this.request('/reviews', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getReviews(targetId: string) {
+    return this.request(`/reviews?targetId=${targetId}`);
+  }
+
   async checkInJob(id: string, latitude: number, longitude: number, timestamp: string) {
     return this.request(`/jobs/${id}/checkin`, {
       method: 'POST',
@@ -254,6 +302,36 @@ class ApiService {
         error: error instanceof Error ? error.message : 'Network error',
       };
     }
+  }
+
+  // Admin
+  async adminGetStats() {
+    return this.request('/admin/stats');
+  }
+
+  async adminGetUsers(search?: string) {
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+    return this.request(`/admin/users${query}`);
+  }
+
+  async adminGetJobs(status?: string) {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return this.request(`/admin/jobs${query}`);
+  }
+
+  async adminDeleteJob(id: string) {
+    return this.request(`/admin/jobs/${id}`, { method: 'DELETE' });
+  }
+
+  async adminGetKyc(status: string = 'pending') {
+    return this.request(`/admin/kyc?status=${encodeURIComponent(status)}`);
+  }
+
+  async adminDecideKyc(userId: string, decision: 'approved' | 'rejected', rejectionReason?: string) {
+    return this.request(`/admin/kyc/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ decision, ...(rejectionReason ? { rejectionReason } : {}) }),
+    });
   }
 }
 

@@ -276,6 +276,184 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// ─── User Management ──────────────────────────────────────────────────────────
+
+// @route   GET /api/admin/users
+// @desc    List all users with optional filters
+// @access  Admin
+router.get(
+  '/users',
+  [
+    query('role').optional().isIn(['freelancer', 'employer', 'admin']),
+    query('page').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    query('search').optional().trim().isLength({ max: 100 }),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    try {
+      const { role } = req.query;
+      const rawSearch = req.query.search;
+      const search = typeof rawSearch === 'string' ? rawSearch : '';
+      const page = req.query.page ?? 1;
+      const limit = req.query.limit ?? 20;
+      const skip = (page - 1) * limit;
+
+      const filter = {};
+      if (role) filter.role = role;
+      if (search) {
+        const safeSearch = escapeRegex(search);
+        filter.$or = [
+          { name: { $regex: safeSearch, $options: 'i' } },
+          { email: { $regex: safeSearch, $options: 'i' } },
+        ];
+      }
+
+      const [users, total] = await Promise.all([
+        User.find(filter)
+          .select('-password')
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        User.countDocuments(filter),
+      ]);
+
+      res.json({
+        success: true,
+        data: users,
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+      });
+    } catch (error) {
+      console.error('[GET /admin/users]', error.message);
+      res.status(500).json({ success: false, error: 'Server error' });
+    }
+  }
+);
+
+// @route   GET /api/admin/users/:id
+// @desc    Get user details
+// @access  Admin
+router.get(
+  '/users/:id',
+  [param('id').isMongoId().withMessage('Invalid user id')],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    try {
+      const user = await User.findById(req.params.id).select('-password').lean();
+      if (!user) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+      }
+      res.json({ success: true, data: user });
+    } catch (error) {
+      console.error('[GET /admin/users/:id]', error.message);
+      res.status(500).json({ success: false, error: 'Server error' });
+    }
+  }
+);
+
+// @route   PATCH /api/admin/users/:id
+// @desc    Update a user (tier, isPrime, suspend, etc.)
+// @access  Admin
+router.patch(
+  '/users/:id',
+  [
+    param('id').isMongoId().withMessage('Invalid user id'),
+    body('tier').optional().isIn(['Free', 'Pro', 'Ultra']),
+    body('isPrime').optional().isBoolean(),
+    body('analyticsAccess').optional().isIn(['free', 'premium']),
+    body('niche').optional().trim().isLength({ max: 50 }),
+    body('bio').optional().trim().isLength({ max: 500 }),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    try {
+      const allowedFields = ['tier', 'isPrime', 'analyticsAccess', 'bio', 'niche'];
+      const updates = {};
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          updates[field] = req.body[field];
+        }
+      }
+
+      const user = await User.findByIdAndUpdate(req.params.id, updates, {
+        new: true,
+        runValidators: true,
+      }).select('-password');
+
+      if (!user) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+      }
+
+      res.json({ success: true, data: user });
+    } catch (error) {
+      console.error('[PATCH /admin/users/:id]', error.message);
+      res.status(500).json({ success: false, error: 'Server error' });
+    }
+  }
+);
+
+// ─── Dashboard Stats ──────────────────────────────────────────────────────────
+
+// @route   GET /api/admin/stats
+// @desc    Platform overview (users, jobs, revenue)
+// @access  Admin
+router.get('/stats', async (req, res) => {
+  try {
+    const [
+      totalUsers,
+      freelancerCount,
+      employerCount,
+      totalJobs,
+      openJobs,
+      completedJobs,
+      pendingKyc,
+      recentTransactions,
+    ] = await Promise.all([
+      User.countDocuments({ role: { $ne: 'admin' } }),
+      User.countDocuments({ role: 'freelancer' }),
+      User.countDocuments({ role: 'employer' }),
+      Job.countDocuments(),
+      Job.countDocuments({ status: 'open' }),
+      Job.countDocuments({ status: { $in: ['completed', 'paid'] } }),
+      User.countDocuments({ 'kyc.status': 'pending' }),
+      Transaction.find().sort({ createdAt: -1 }).limit(5).lean(),
+    ]);
+
+    const revenueAgg = await Transaction.aggregate([
+      { $match: { type: { $in: ['fee_charge', 'subscription'] }, amount: { $lt: 0 } } },
+      { $group: { _id: null, total: { $sum: { $abs: '$amount' } } } },
+    ]);
+    const totalRevenue = revenueAgg[0]?.total ?? 0;
+
+    res.json({
+      success: true,
+      data: {
+        users: { total: totalUsers, freelancers: freelancerCount, employers: employerCount },
+        jobs: { total: totalJobs, open: openJobs, completed: completedJobs },
+        kyc: { pendingReview: pendingKyc },
+        revenue: { total: totalRevenue },
+        recentTransactions,
+      },
+    });
+  } catch (error) {
+    console.error('[GET /admin/stats]', error.message);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
 // @route   PUT /api/admin/users/:id/ban
 // @desc    Ban a user
 // @access  Private (admin)
@@ -373,9 +551,7 @@ router.put(
 router.get(
   '/jobs',
   [
-    query('status')
-      .optional()
-      .isIn(['open', 'applied', 'ongoing', 'completed', 'waiting_approval', 'paid', 'cancelled']),
+    query('status').optional().isIn(['open', 'applied', 'ongoing', 'completed', 'waiting_approval', 'paid', 'cancelled']),
     query('niche').optional().trim(),
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
@@ -531,10 +707,7 @@ router.patch(
   [
     param('userId').isMongoId().withMessage('Invalid user id'),
     body('decision').isIn(['approved', 'rejected']).withMessage('decision must be "approved" or "rejected"'),
-    body('rejectionReason')
-      .if(body('decision').equals('rejected'))
-      .notEmpty()
-      .withMessage('rejectionReason is required when rejecting'),
+    body('rejectionReason').if(body('decision').equals('rejected')).notEmpty().withMessage('rejectionReason is required when rejecting'),
   ],
   async (req, res) => {
     const errors = validationResult(req);

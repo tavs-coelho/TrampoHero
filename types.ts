@@ -170,7 +170,7 @@ export interface UserProfile {
     transactions: Transaction[];
   };
   activeJobId?: string;
-  role: 'freelancer' | 'employer';
+  role: 'freelancer' | 'employer' | 'admin';
   medals: Medal[];
   history: WorkHistory[];
   favorites?: string[]; // IDs de empregadores favoritos (ou vice-versa)

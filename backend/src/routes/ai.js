@@ -1,5 +1,6 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
+import { env } from '../config/env.js';
 
 const router = express.Router();
 
@@ -57,7 +58,7 @@ router.post('/generate', aiLimiter, async (req, res) => {
         .json({ success: false, error: 'prompt exceeds maximum allowed length of 10,000 characters' });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = env.GEMINI_API_KEY;
     if (!apiKey) {
       return res
         .status(503)
