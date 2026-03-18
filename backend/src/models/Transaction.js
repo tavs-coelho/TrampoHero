@@ -73,8 +73,26 @@ const transactionSchema = new mongoose.Schema({
   timestamps: true,
 });
 
+/** Locale used when formatting dates in model serialization (e.g. Transaction.date). */
+const SERIALIZATION_LOCALE = 'pt-BR';
+
 // Index for efficient wallet history queries
 transactionSchema.index({ userId: 1, createdAt: -1 });
 transactionSchema.index({ stripePaymentIntentId: 1 });
+
+transactionSchema.set('toJSON', {
+  virtuals: true,
+  transform: (_doc, ret) => {
+    ret.id = ret._id.toString();
+    // Map createdAt to a formatted date string matching the frontend Transaction.date type
+    ret.date = ret.createdAt
+      ? new Date(ret.createdAt).toLocaleDateString(SERIALIZATION_LOCALE)
+      : '';
+    delete ret._id;
+    delete ret.__v;
+    // userId is a backend-only field, not part of the frontend Transaction type
+    delete ret.userId;
+  },
+});
 
 export default mongoose.model('Transaction', transactionSchema);

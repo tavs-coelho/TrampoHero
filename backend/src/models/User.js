@@ -22,8 +22,30 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['freelancer', 'employer'],
+    enum: ['freelancer', 'employer', 'admin'],
     required: true,
+  },
+  // Email verification
+  isEmailVerified: {
+    type: Boolean,
+    default: false,
+  },
+  emailVerificationToken: {
+    type: String,
+    select: false,
+  },
+  emailVerificationExpiry: {
+    type: Date,
+    select: false,
+  },
+  // Password reset
+  resetPasswordToken: {
+    type: String,
+    select: false,
+  },
+  resetPasswordExpiry: {
+    type: Date,
+    select: false,
   },
   bio: {
     type: String,
@@ -140,6 +162,18 @@ const userSchema = new mongoose.Schema({
     tags: [{ type: String }],
     updatedAt: { type: Date, default: Date.now },
   }],
+  isBanned: {
+    type: Boolean,
+    default: false,
+  },
+  bannedAt: {
+    type: Date,
+    default: null,
+  },
+  banReason: {
+    type: String,
+    default: null,
+  },
 }, {
   timestamps: true,
 });

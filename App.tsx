@@ -4,6 +4,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import { Niche, Job, UserProfile, SubscriptionTier, Message, Course, Certificate, WeeklyChallenge, TalentRanking, StoreProduct, Advertisement, Review } from './types';
 import { supportAssistant, getRecurrentSuggestion } from './services/geminiService';
 import { WEEKLY_CHALLENGES, TALENT_RANKINGS, STORE_PRODUCTS, ADVERTISEMENTS, INITIAL_JOBS, INITIAL_USER } from './data/mockData';
+import { apiService } from './services/apiService';
 import { Toast } from './components/Toast';
 import { SplashScreen } from './components/SplashScreen';
 import { Header } from './components/Header';
@@ -13,7 +14,7 @@ import {
   DashboardView, TalentsView, EmployerProfileView, EmployerWalletView, EmployerChatView, EmployerActiveView,
   BrowseView, ActiveJobView, WalletView, AcademyView, ProfileView, ChatView,
   CoinsView, InsuranceView, CreditView, ReferralsView, AnalyticsView, ChallengesView,
-  RankingView, StoreView, AdsView, KycView
+  RankingView, StoreView, AdsView, KycView, AdminView
 } from './components/views';
 import { useToast } from './hooks/useToast';
 import { useJobActions } from './hooks/useJobActions';
@@ -201,9 +202,49 @@ const App: React.FC = () => {
     setTimeout(() => setShowSplash(false), 2000);
   }, []);
 
+  // Validate JWT and load initial data from API on mount
   useEffect(() => {
-    const timer = setTimeout(() => setIsJobsLoading(false), 1500);
-    return () => clearTimeout(timer);
+    const initializeFromApi = async () => {
+      // Validate token and sync user profile from backend
+      if (apiService.getToken()) {
+        const profileResult = await apiService.getProfile();
+        if (profileResult.success) {
+          const profile = profileResult.data as UserProfile | undefined;
+          // Basic shape validation to avoid corrupting state with invalid data
+          if (profile && typeof profile === 'object') {
+            setUser(profile);
+            try {
+              localStorage.setItem('trampoHeroUser', JSON.stringify(profile));
+            } catch {
+              // Ignore storage errors; in-memory state is already updated
+            }
+          } else {
+            // Successful response but invalid shape — clear local session
+            apiService.logout();
+            localStorage.removeItem('trampoHeroUser');
+            setUser(INITIAL_USER);
+          }
+        } else {
+          if (profileResult.statusCode === 401) {
+            // Token is definitively invalid or expired — clear local session
+            apiService.logout();
+            localStorage.removeItem('trampoHeroUser');
+            setUser(INITIAL_USER);
+          }
+          // For network errors (statusCode === 0) or server errors (5xx),
+          // keep the session — the token may still be valid once the server recovers
+        }
+      }
+
+      // Load jobs from backend; fall back to mock data if API is unavailable
+      const jobsResult = await apiService.getJobs();
+      if (jobsResult.success && Array.isArray(jobsResult.data)) {
+        setJobs(jobsResult.data as Job[]);
+      }
+      setIsJobsLoading(false);
+    };
+
+    initializeFromApi();
   }, []);
 
   useEffect(() => {
@@ -354,7 +395,20 @@ const App: React.FC = () => {
               />
             )}
             {view === 'active' && (
-              <EmployerActiveView setView={setView} />
+              <EmployerActiveView
+                setView={setView}
+                waitingApprovalJobs={jobs.filter(j => j.employerId === user.id && j.status === 'waiting_approval')}
+                onApproveCompletion={async (jobId) => {
+                  try {
+                    await apiService.approveJobCompletion(jobId);
+                    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'completed' } : j));
+                    showToast("Conclusão aprovada! Pagamento liberado.", "success");
+                  } catch (error) {
+                    console.error('Failed to approve job completion', error);
+                    showToast("Falha ao aprovar conclusão. Tente novamente.", "error");
+                  }
+                }}
+              />
             )}
           </div>
         ) : (
@@ -498,6 +552,12 @@ const App: React.FC = () => {
                 setUser={setUser}
                 showToast={showToast}
                 setView={setView}
+              />
+            )}
+            {view === 'admin' && (
+              <AdminView
+                user={user}
+                showToast={showToast}
               />
             )}
           </>

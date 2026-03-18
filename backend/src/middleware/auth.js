@@ -1,25 +1,35 @@
 import jwt from 'jsonwebtoken';
+import { env } from '../config/env.js';
 
+/**
+ * authenticate – verifies a Bearer access token.
+ * Attaches the decoded payload to req.user.
+ */
 export const authenticate = (req, res, next) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
-    
+
     if (!token) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return res.status(401).json({ success: false, error: 'Authentication required' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, env.JWT_SECRET);
     req.user = decoded;
     next();
-  } catch (error) {
-    res.status(401).json({ error: 'Invalid or expired token' });
+  } catch {
+    res.status(401).json({ success: false, error: 'Invalid or expired token' });
   }
 };
 
+/**
+ * authorize – RBAC guard.
+ * Must be used after authenticate.
+ * Usage: authorize('admin'), authorize('employer', 'admin')
+ */
 export const authorize = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Access forbidden' });
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({ success: false, error: 'Access forbidden' });
     }
     next();
   };

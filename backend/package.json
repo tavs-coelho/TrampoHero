@@ -21,6 +21,7 @@
   "dependencies": {
     "@azure/notification-hubs": "^2.0.2",
     "@azure/storage-blob": "^12.31.0",
+    "@azure/web-pubsub": "^1.2.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
@@ -32,9 +33,9 @@
     "mongoose": "^8.23.0",
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
+    "nodemailer": "^8.0.2",
     "pdfkit": "^0.17.2",
-    "stripe": "^20.4.0",
-    "@azure/web-pubsub": "^1.2.0"
+    "stripe": "^20.4.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2",
