@@ -21,9 +21,13 @@ router.get('/users', async (req, res) => {
     const skip = (page - 1) * limit;
 
     const [users, total] = await Promise.all([
-      User.find({}).skip(skip).limit(limit).select(
-        '-password -emailVerificationToken -emailVerificationExpiry -resetPasswordToken -resetPasswordExpiry'
-      ),
+      User.find({})
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select(
+          '-password -emailVerificationToken -emailVerificationExpiry -resetPasswordToken -resetPasswordExpiry'
+        ),
       User.countDocuments(),
     ]);
 
