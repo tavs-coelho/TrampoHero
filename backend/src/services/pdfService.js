@@ -213,15 +213,19 @@ export async function generateJobContract(freelancer, employer, job) {
   await Contract.findOneAndUpdate(
     { jobId: job._id },
     {
-      jobId: job._id,
-      freelancerId: freelancer._id,
-      employerId: employer._id,
-      pdfUrl: downloadUrl,
-      validationHash: hash,
-      value: job.payment,
-      paymentType: job.paymentType ?? 'dia',
-      jobDate: job.date,
-      status: 'generated',
+      $set: {
+        jobId: job._id,
+        freelancerId: freelancer._id,
+        employerId: employer._id,
+        pdfUrl: downloadUrl,
+        validationHash: hash,
+        value: job.payment,
+        paymentType: job.paymentType ?? 'dia',
+        jobDate: job.date,
+      },
+      $setOnInsert: {
+        status: 'generated',
+      },
     },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
