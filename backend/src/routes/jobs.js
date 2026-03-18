@@ -224,41 +224,54 @@ router.post('/:id/complete', authenticate, authorize('employer'), async (req, re
 // @route   GET /api/jobs/:id/applicants
 // @desc    Get applicants for a job with user details (name, rating)
 // @access  Private (Employer only)
-router.get('/:id/applicants', authenticate, authorize('employer'), async (req, res) => {
-  try {
-    const job = await Job.findById(req.params.id);
-    if (!job) {
-      return res.status(404).json({ success: false, error: 'Job not found' });
+router.get(
+  '/:id/applicants',
+  [
+    param('id').isMongoId().withMessage('Invalid job id'),
+  ],
+  authenticate,
+  authorize('employer'),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    if (job.employerId.toString() !== req.user.id) {
-      return res.status(403).json({ success: false, error: 'Not authorized' });
+    try {
+      const job = await Job.findById(req.params.id);
+      if (!job) {
+        return res.status(404).json({ success: false, error: 'Job not found' });
+      }
+
+      if (job.employerId.toString() !== req.user.id) {
+        return res.status(403).json({ success: false, error: 'Not authorized' });
+      }
+
+      const applicantIds = job.applicants.map(a => a.userId);
+      const users = await User.find({ _id: { $in: applicantIds } }, 'name rating niche');
+
+      const userMap = {};
+      users.forEach(u => { userMap[u._id.toString()] = u; });
+
+      const applicants = job.applicants.map(a => {
+        const u = userMap[a.userId.toString()] || {};
+        return {
+          userId: a.userId,
+          appliedAt: a.appliedAt,
+          status: a.status,
+          name: u.name || 'Desconhecido',
+          rating: u.rating ?? null,
+          niche: u.niche || null,
+        };
+      });
+
+      res.json({ success: true, count: applicants.length, data: applicants });
+    } catch (error) {
+      console.error('[GET /jobs/:id/applicants]', error.message);
+      res.status(500).json({ success: false, error: 'Server error' });
     }
-
-    const applicantIds = job.applicants.map(a => a.userId);
-    const users = await User.find({ _id: { $in: applicantIds } }, 'name rating niche');
-
-    const userMap = {};
-    users.forEach(u => { userMap[u._id.toString()] = u; });
-
-    const applicants = job.applicants.map(a => {
-      const u = userMap[a.userId.toString()] || {};
-      return {
-        userId: a.userId,
-        appliedAt: a.appliedAt,
-        status: a.status,
-        name: u.name || 'Desconhecido',
-        rating: u.rating ?? null,
-        niche: u.niche || null,
-      };
-    });
-
-    res.json({ success: true, count: applicants.length, data: applicants });
-  } catch (error) {
-    console.error('[GET /jobs/:id/applicants]', error.message);
-    res.status(500).json({ success: false, error: 'Server error' });
   }
-});
+);
 
 // @route   POST /api/jobs/:id/select-candidate
 // @desc    Employer approves one candidate, rejects all others, transitions job to applied
