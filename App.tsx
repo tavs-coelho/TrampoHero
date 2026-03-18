@@ -208,7 +208,23 @@ const App: React.FC = () => {
       // Validate token and sync user profile from backend
       if (apiService.getToken()) {
         const profileResult = await apiService.getProfile();
-        if (!profileResult.success) {
+        if (profileResult.success) {
+          const profile = profileResult.data as UserProfile | undefined;
+          // Basic shape validation to avoid corrupting state with invalid data
+          if (profile && typeof profile === 'object') {
+            setUser(profile);
+            try {
+              localStorage.setItem('trampoHeroUser', JSON.stringify(profile));
+            } catch {
+              // Ignore storage errors; in-memory state is already updated
+            }
+          } else {
+            // Successful response but invalid shape — clear local session
+            apiService.logout();
+            localStorage.removeItem('trampoHeroUser');
+            setUser(INITIAL_USER);
+          }
+        } else {
           if (profileResult.statusCode === 401) {
             // Token is definitively invalid or expired — clear local session
             apiService.logout();
