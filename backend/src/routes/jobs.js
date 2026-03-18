@@ -276,45 +276,60 @@ router.get(
 // @route   POST /api/jobs/:id/select-candidate
 // @desc    Employer approves one candidate, rejects all others, transitions job to applied
 // @access  Private (Employer only)
-router.post('/:id/select-candidate', authenticate, authorize('employer'), async (req, res) => {
-  try {
-    const { candidateId } = req.body;
-    if (!candidateId) {
-      return res.status(400).json({ success: false, error: 'candidateId is required' });
+router.post(
+  '/:id/select-candidate',
+  authenticate,
+  authorize('employer'),
+  [
+    param('id').isMongoId().withMessage('Invalid job ID'),
+    body('candidateId').optional().isMongoId().withMessage('candidateId must be a valid MongoId'),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        const firstError = errors.array()[0];
+        return res.status(400).json({ success: false, error: firstError.msg });
+      }
+
+      const { candidateId } = req.body;
+      if (!candidateId) {
+        return res.status(400).json({ success: false, error: 'candidateId is required' });
+      }
+
+      const job = await Job.findById(req.params.id);
+      if (!job) {
+        return res.status(404).json({ success: false, error: 'Job not found' });
+      }
+
+      if (job.employerId.toString() !== req.user.id) {
+        return res.status(403).json({ success: false, error: 'Not authorized' });
+      }
+
+      if (!['open', 'applied'].includes(job.status)) {
+        return res.status(400).json({ success: false, error: 'Job is not accepting candidate selection in its current status' });
+      }
+
+      const targetApplicant = job.applicants.find(a => a.userId.toString() === candidateId);
+      if (!targetApplicant) {
+        return res.status(404).json({ success: false, error: 'Candidate not found in applicants list' });
+      }
+
+      // Approve selected candidate, reject all others
+      job.applicants.forEach(a => {
+        a.status = a.userId.toString() === candidateId ? 'approved' : 'rejected';
+      });
+
+      job.status = 'applied';
+      await job.save();
+
+      res.json({ success: true, message: 'Candidate selected successfully', data: job });
+    } catch (error) {
+      console.error('[POST /jobs/:id/select-candidate]', error.message);
+      res.status(500).json({ success: false, error: 'Server error' });
     }
-
-    const job = await Job.findById(req.params.id);
-    if (!job) {
-      return res.status(404).json({ success: false, error: 'Job not found' });
-    }
-
-    if (job.employerId.toString() !== req.user.id) {
-      return res.status(403).json({ success: false, error: 'Not authorized' });
-    }
-
-    if (!['open', 'applied'].includes(job.status)) {
-      return res.status(400).json({ success: false, error: 'Job is not accepting candidate selection in its current status' });
-    }
-
-    const targetApplicant = job.applicants.find(a => a.userId.toString() === candidateId);
-    if (!targetApplicant) {
-      return res.status(404).json({ success: false, error: 'Candidate not found in applicants list' });
-    }
-
-    // Approve selected candidate, reject all others
-    job.applicants.forEach(a => {
-      a.status = a.userId.toString() === candidateId ? 'approved' : 'rejected';
-    });
-
-    job.status = 'applied';
-    await job.save();
-
-    res.json({ success: true, message: 'Candidate selected successfully', data: job });
-  } catch (error) {
-    console.error('[POST /jobs/:id/select-candidate]', error.message);
-    res.status(500).json({ success: false, error: 'Server error' });
   }
-});
+);
 
 // @route   POST /api/jobs/:id/submit-proof
 // @desc    Freelancer records the proof-photo URL (uploaded separately via SAS) against the job
