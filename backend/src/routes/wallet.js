@@ -3,9 +3,17 @@ import { authenticate } from '../middleware/auth.js';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
 import Withdrawal from '../models/Withdrawal.js';
-import { env } from '../config/env.js';
 
-const WITHDRAWAL_FEE = parseFloat(process.env.WITHDRAWAL_FEE ?? '2.50');
+const WITHDRAWAL_FEE = (() => {
+  const raw = process.env.WITHDRAWAL_FEE;
+  const parsed = raw === undefined ? 2.50 : Number(raw);
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error('Invalid WITHDRAWAL_FEE configuration: expected a non-negative number.');
+  }
+
+  return parsed;
+})();
 const MIN_WITHDRAWAL = 10; // Minimum BRL amount for a withdrawal request
 
 const router = express.Router();
