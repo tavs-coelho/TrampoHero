@@ -18,10 +18,29 @@ interface FrontendEnv {
   VITE_STRIPE_PUBLISHABLE_KEY: string;
 }
 
+function requireEnvVar(name: keyof FrontendEnv, value: string | undefined): string {
+  if (value !== undefined && value.trim() !== '') {
+    return value;
+  }
+
+  const mode = (import.meta.env.MODE as string | undefined) ?? 'development';
+  const message = `Missing required environment variable: ${name}`;
+
+  if (mode === 'development' || mode === 'test') {
+    throw new Error(message);
+  }
+
+  // In production, log a warning but allow the app to continue.
+  // This preserves the existing behavior of returning an empty string.
+  console.warn(message);
+  return '';
+}
+
 function getEnv(): FrontendEnv {
   const VITE_API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:5000/api';
   const VITE_APP_NAME = (import.meta.env.VITE_APP_NAME as string | undefined) ?? 'TrampoHero';
-  const VITE_STRIPE_PUBLISHABLE_KEY = (import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined) ?? '';
+  const rawStripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
+  const VITE_STRIPE_PUBLISHABLE_KEY = requireEnvVar('VITE_STRIPE_PUBLISHABLE_KEY', rawStripeKey);
 
   return {
     VITE_API_URL,
