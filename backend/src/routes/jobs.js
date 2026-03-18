@@ -14,6 +14,32 @@ import { env } from '../config/env.js';
 
 const router = express.Router();
 
+/**
+ * Validate that the proof photo URL is:
+ * - a syntactically valid URL
+ * - served over HTTPS
+ * - (optionally) within the configured Azure blob storage base URL
+ */
+function isValidProofPhotoUrl(photoUrl) {
+  try {
+    const parsed = new URL(photoUrl);
+
+    if (parsed.protocol !== 'https:') {
+      return false;
+    }
+
+    // If a specific Azure blob base URL is configured, enforce that prefix.
+    if (env.AZURE_BLOB_BASE_URL) {
+      return photoUrl.startsWith(env.AZURE_BLOB_BASE_URL);
+    }
+
+    // Fallback: accept any HTTPS URL when no base URL is configured.
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // @route   GET /api/jobs
 // @desc    Get all jobs
 // @access  Public
@@ -339,7 +365,19 @@ router.post(
   authenticate,
   [
     param('id').isMongoId().withMessage('Invalid job id'),
-    body('photoUrl').notEmpty().withMessage('photoUrl is required'),
+    body('photoUrl')
+      .notEmpty()
+      .withMessage('photoUrl is required')
+      .bail()
+      .custom((value) => {
+        if (!isValidProofPhotoUrl(value)) {
+          if (env.AZURE_BLOB_BASE_URL) {
+            throw new Error('photoUrl must be a valid HTTPS URL within the configured storage container');
+          }
+          throw new Error('photoUrl must be a valid HTTPS URL');
+        }
+        return true;
+      }),
   ],
   async (req, res) => {
     const errors = validationResult(req);
