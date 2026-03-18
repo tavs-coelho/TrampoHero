@@ -54,12 +54,19 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({
 
   const handleSelect = async (candidate: Applicant) => {
     setSelectingId(candidate.userId);
-    const result = await apiService.selectCandidate(job.id, candidate.userId);
-    setSelectingId(null);
-    if (result.success) {
-      handleApproveCandidate(candidate.name, candidate.userId);
+    try {
+      const result = await apiService.selectCandidate(job.id, candidate.userId);
+      if (result.success) {
+        handleApproveCandidate(candidate.name, candidate.userId);
+      }
+    } catch (error) {
+      // Ensure errors from selectCandidate do not leave the UI stuck
+      console.error('Failed to select candidate', error);
+    } finally {
+      setSelectingId(null);
+      // Always refresh applicants, even if the API call fails
+      loadApplicants();
     }
-    loadApplicants();
   };
 
   return (
