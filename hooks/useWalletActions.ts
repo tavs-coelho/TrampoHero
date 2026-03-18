@@ -40,8 +40,13 @@ export const useWalletActions = (deps: {
       return;
     }
     
-    const amountToWithdraw = user.wallet.balance;
     const fee = user.isPrime ? 0 : 2.50; // Taxa de saque para não-Prime
+    const maxWithdrawable = user.wallet.balance - fee;
+    if (maxWithdrawable <= 0) {
+      showToast("Saldo insuficiente para cobrir a taxa de saque.", "error");
+      return;
+    }
+    const amountToWithdraw = maxWithdrawable;
     
     if (confirm(`Confirmar saque de R$ ${amountToWithdraw.toFixed(2)} para a chave PIX: ${pixKey}?\nTaxa: R$ ${fee.toFixed(2)} ${user.isPrime ? '(Prime: Isento)' : ''}`)) {
         showToast("Processando transferência...", "info");
@@ -63,7 +68,11 @@ export const useWalletActions = (deps: {
         };
         setUser(prev => ({
             ...prev,
-            wallet: { ...prev.wallet, balance: 0, transactions: [newTransaction, ...prev.wallet.transactions] }
+            wallet: { 
+              ...prev.wallet, 
+              balance: prev.wallet.balance - (amountToWithdraw + fee), 
+              transactions: [newTransaction, ...prev.wallet.transactions] 
+            }
         }));
         showToast("PIX realizado com sucesso!", "success");
     }
