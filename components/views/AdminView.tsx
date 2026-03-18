@@ -306,6 +306,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, showToast }) => {
                   onClick={() => handleDeleteJob(job._id)}
                   className="ml-2 w-8 h-8 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors"
                   title="Remover vaga"
+                  aria-label="Remover vaga"
                 >
                   <i className="fas fa-trash text-xs"></i>
                 </button>
