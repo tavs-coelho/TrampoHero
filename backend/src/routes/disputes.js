@@ -14,7 +14,7 @@ import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
 import Dispute from '../models/Dispute.js';
 import Refund from '../models/Refund.js';
-import { createRefund } from '../services/paymentService.js';
+import { gateway, gatewayProviderName } from '../services/gatewayAdapter.js';
 
 // Floating-point tolerance when validating that split amounts don't exceed the job payment
 const SPLIT_AMOUNT_TOLERANCE = 0.01;
@@ -232,7 +232,7 @@ router.post('/:id/resolve', authenticate, authorize('admin'), async (req, res) =
     // Issue refund to employer if applicable
     if (resolvedEmployerBRL > 0 && job.escrowPaymentIntentId) {
       const refundAmountCents = Math.round(resolvedEmployerBRL * 100);
-      const gatewayProvider = process.env.PAYMENT_GATEWAY_PROVIDER ?? 'stripe';
+      const gatewayProvider = gatewayProviderName;
       let gatewayRefundId = null;
       let refundRecord;
 
@@ -242,12 +242,12 @@ router.post('/:id/resolve', authenticate, authorize('admin'), async (req, res) =
           throw new Error('Cannot process refund while escrow is held (payment not captured).');
         }
 
-        const stripeRefund = await createRefund({
+        const gatewayRefund = await gateway.createRefund({
           paymentIntentId: job.escrowPaymentIntentId,
           // Omit amountCents for a full refund (Stripe default); pass it for partial refunds.
           amountCents: refundAmountCents < jobPaymentCents ? refundAmountCents : undefined,
         });
-        gatewayRefundId = stripeRefund.id;
+        gatewayRefundId = gatewayRefund.id;
 
         refundRecord = await Refund.create({
           userId: dispute.employerId,
