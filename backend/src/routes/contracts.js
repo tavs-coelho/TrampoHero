@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticate, authorize } from '../middleware/auth.js';
 import Contract from '../models/Contract.js';
 import AdminAction from '../models/AdminAction.js';
+import { param, validationResult } from 'express-validator';
 
 const router = express.Router();
 
@@ -38,31 +39,41 @@ router.get('/', authenticate, async (req, res) => {
 // @route   GET /api/contracts/:id
 // @desc    Get a single contract
 // @access  Private (employer or freelancer of that contract)
-router.get('/:id', authenticate, async (req, res) => {
-  try {
-    const contract = await Contract.findById(req.params.id)
-      .populate('jobId', 'title date payment paymentType niche location')
-      .populate('freelancerId', 'name email rating')
-      .populate('employerId', 'name email rating');
-
-    if (!contract) {
-      return res.status(404).json({ success: false, error: 'Contract not found' });
+router.get(
+  '/:id',
+  authenticate,
+  param('id').isMongoId().withMessage('Invalid contract ID'),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    const userId = req.user.id;
-    const isParty =
-      contract.freelancerId._id.toString() === userId ||
-      contract.employerId._id.toString() === userId;
+    try {
+      const contract = await Contract.findById(req.params.id)
+        .populate('jobId', 'title date payment paymentType niche location')
+        .populate('freelancerId', 'name email rating')
+        .populate('employerId', 'name email rating');
 
-    if (!isParty && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, error: 'Not authorized' });
+      if (!contract) {
+        return res.status(404).json({ success: false, error: 'Contract not found' });
+      }
+
+      const userId = req.user.id;
+      const isParty =
+        contract.freelancerId._id.toString() === userId ||
+        contract.employerId._id.toString() === userId;
+
+      if (!isParty && req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, error: 'Not authorized' });
+      }
+
+      res.json({ success: true, data: contract });
+    } catch (error) {
+      res.status(500).json({ success: false, error: 'Server error' });
     }
-
-    res.json({ success: true, data: contract });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Server error' });
   }
-});
+);
 
 // @route   POST /api/contracts/:id/void
 // @desc    Void a contract (admin only)
