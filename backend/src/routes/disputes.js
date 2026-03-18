@@ -193,12 +193,29 @@ router.post('/:id/resolve', authenticate, authorize('admin'), async (req, res) =
       resolvedFreelancerBRL = job.payment;
     } else {
       // split
-      resolvedEmployerBRL = parseFloat(employerAmount) || 0;
-      resolvedFreelancerBRL = parseFloat(freelancerAmount) || 0;
-      const total = parseFloat((resolvedEmployerBRL + resolvedFreelancerBRL).toFixed(2));
-      if (total > job.payment + SPLIT_AMOUNT_TOLERANCE) {
-        return res.status(400).json({ success: false, error: `Split amounts (${total}) exceed job payment (${job.payment})` });
+      const employerSplit = parseFloat(employerAmount);
+      const freelancerSplit = parseFloat(freelancerAmount);
+
+      if (!Number.isFinite(employerSplit) || !Number.isFinite(freelancerSplit)) {
+        return res.status(400).json({ success: false, error: 'Invalid split amounts: must be finite numbers' });
       }
+
+      if (employerSplit < 0 || freelancerSplit < 0) {
+        return res.status(400).json({ success: false, error: 'Invalid split amounts: values cannot be negative' });
+      }
+
+      const total = parseFloat((employerSplit + freelancerSplit).toFixed(2));
+
+      // Require that the split exactly matches the job payment within a small tolerance.
+      if (total < job.payment - SPLIT_AMOUNT_TOLERANCE || total > job.payment + SPLIT_AMOUNT_TOLERANCE) {
+        return res.status(400).json({
+          success: false,
+          error: `Split amounts (${total}) must sum to the job payment (${job.payment}) within a tolerance of ${SPLIT_AMOUNT_TOLERANCE}`,
+        });
+      }
+
+      resolvedEmployerBRL = employerSplit;
+      resolvedFreelancerBRL = freelancerSplit;
     }
 
     // Issue refund to employer if applicable
