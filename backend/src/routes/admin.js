@@ -41,29 +41,38 @@ router.get('/users', async (req, res) => {
 // @route   PATCH /api/admin/users/:id/role
 // @desc    Update a user's role (admin only)
 // @access  Admin
-router.patch('/users/:id/role', async (req, res) => {
-  try {
-    const { role } = req.body;
-    if (!['freelancer', 'employer', 'admin'].includes(role)) {
-      return res.status(400).json({ success: false, error: 'Invalid role' });
+router.patch(
+  '/users/:id/role',
+  [param('id').isMongoId()],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { role },
-      { new: true, runValidators: true }
-    );
+    try {
+      const { role } = req.body;
+      if (!['freelancer', 'employer', 'admin'].includes(role)) {
+        return res.status(400).json({ success: false, error: 'Invalid role' });
+      }
 
-    if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+      const user = await User.findByIdAndUpdate(
+        req.params.id,
+        { role },
+        { new: true, runValidators: true }
+      );
+
+      if (!user) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+      }
+
+      res.json({ success: true, data: { id: user._id, email: user.email, role: user.role } });
+    } catch (error) {
+      console.error('[admin/users/:id/role]', error);
+      res.status(500).json({ success: false, error: 'Server error' });
     }
-
-    res.json({ success: true, data: { id: user._id, email: user.email, role: user.role } });
-  } catch (error) {
-    console.error('[admin/users/:id/role]', error);
-    res.status(500).json({ success: false, error: 'Server error' });
   }
-});
+);
 // @route   GET /api/admin/actions
 // @desc    List admin audit log entries (paginated)
 // @access  Private (admin)
