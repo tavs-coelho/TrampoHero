@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Job } from '../../types';
 import { apiService } from '../../services/apiService';
 
@@ -15,6 +15,10 @@ export const ActiveJobView: React.FC<ActiveJobViewProps> = ({ activeJob, isCheck
   const [isUploadingProof, setIsUploadingProof] = useState(false);
   const [proofUploadError, setProofUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setProofPhotoUrl(activeJob?.proofPhoto ?? null);
+  }, [activeJob?.id, activeJob?.proofPhoto]);
 
   const handleProofUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
