@@ -28,6 +28,8 @@ import referralRoutes from './routes/referral.js';
 import paymentsRoutes from './routes/payments.js';
 import reviewRoutes from './routes/reviews.js';
 import analyticsRoutes from './routes/analytics.js';
+import contractsRoutes from './routes/contracts.js';
+import supportRoutes from './routes/support.js';
 import adminRoutes from './routes/admin.js';
 
 import mongoose from 'mongoose';
@@ -99,10 +101,12 @@ app.use('/api/referral', referralRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/support', supportRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Serve generated PDF contracts for download
-app.use('/api/contracts', express.static(path.join(__dirname, '..', 'contracts')));
+// Serve generated PDF contracts for download (static files at /api/contracts/files/)
+app.use('/api/contracts/files', express.static(path.join(__dirname, '..', 'contracts')));
+app.use('/api/contracts', contractsRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
