@@ -44,7 +44,11 @@ function getTransporter() {
         console.log('[emailService] Email disabled or not configured – logging instead:');
         console.log(`  To: ${opts.to}`);
         console.log(`  Subject: ${opts.subject}`);
-        if (opts.text) console.log(`  Body: ${opts.text}`);
+        if (env.NODE_ENV !== 'production') {
+          if (opts.text) console.log(`  Body: ${opts.text}`);
+        } else if (opts.text) {
+          console.log('  Body: [omitted in production logs]');
+        }
         return { messageId: 'dev-noop' };
       },
     };
