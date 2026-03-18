@@ -50,9 +50,30 @@ const userSchema = new mongoose.Schema({
     default: false,
   },
   wallet: {
+    /**
+     * Available (released) balance – freely withdrawable by the user.
+     * Increases when: escrow is released, deposit confirmed, referral bonus.
+     * Decreases when: withdrawal requested, fee charged.
+     */
     balance: { type: Number, default: 0 },
+    /**
+     * Pending balance – funds held in escrow (employer) or earned but not yet
+     * released by the employer (freelancer, future flow).
+     * Updated when escrow is created or cancelled.
+     */
     pending: { type: Number, default: 0 },
+    /**
+     * Processing balance – withdrawal amount that has been deducted from
+     * `balance` and is being transferred by the payment gateway.
+     * Increases when a withdrawal request is submitted.
+     * Decreases when the withdrawal is confirmed (completed/failed).
+     */
     scheduled: { type: Number, default: 0 },
+    /**
+     * Cumulative total successfully withdrawn (audit/display only).
+     * Increases when a Withdrawal transitions to `completed`.
+     */
+    withdrawn: { type: Number, default: 0 },
   },
   activeJobId: {
     type: mongoose.Schema.Types.ObjectId,

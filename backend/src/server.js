@@ -28,6 +28,7 @@ import referralRoutes from './routes/referral.js';
 import paymentsRoutes from './routes/payments.js';
 import reviewRoutes from './routes/reviews.js';
 import analyticsRoutes from './routes/analytics.js';
+import disputesRoutes from './routes/disputes.js';
 
 import mongoose from 'mongoose';
 
@@ -98,6 +99,7 @@ app.use('/api/referral', referralRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/disputes', disputesRoutes);
 
 // Serve generated PDF contracts for download
 app.use('/api/contracts', express.static(path.join(__dirname, '..', 'contracts')));

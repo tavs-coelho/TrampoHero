@@ -8,12 +8,19 @@ const transactionSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['deposit', 'withdrawal', 'anticipation', 'job_payment', 'coin_earned', 'coin_redeemed', 'loan', 'loan_repayment', 'referral_bonus', 'challenge_reward', 'escrow', 'escrow_release', 'subscription', 'fee_charge'],
+    enum: [
+      'deposit', 'withdrawal', 'anticipation', 'job_payment',
+      'coin_earned', 'coin_redeemed', 'loan', 'loan_repayment',
+      'referral_bonus', 'challenge_reward',
+      'escrow', 'escrow_release', 'escrow_refund',
+      'subscription', 'fee_charge',
+      'refund', 'dispute_hold', 'dispute_release',
+    ],
     required: true,
   },
   status: {
     type: String,
-    enum: ['pending', 'completed', 'failed', 'refunded'],
+    enum: ['pending', 'processing', 'completed', 'failed', 'refunded', 'disputed'],
     default: 'completed',
   },
   amount: {
@@ -42,6 +49,24 @@ const transactionSchema = new mongoose.Schema({
   },
   stripeSubscriptionId: {
     type: String,
+    default: null,
+  },
+  /** Reference to a Withdrawal record (for withdrawal transactions). */
+  withdrawalId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Withdrawal',
+    default: null,
+  },
+  /** Reference to a Refund record (for refund transactions). */
+  refundId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Refund',
+    default: null,
+  },
+  /** Reference to a Dispute record (for dispute-related transactions). */
+  disputeId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Dispute',
     default: null,
   },
 }, {
