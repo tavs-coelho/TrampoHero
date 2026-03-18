@@ -14,6 +14,9 @@ dotenv.config();
 
 const REQUIRED = ['JWT_SECRET', 'MONGODB_URI'];
 
+// Optional env vars that have safe defaults
+// SMTP_* – required only when EMAIL_ENABLED=true
+
 function validateEnv() {
   const missing = REQUIRED.filter((key) => !process.env[key]);
 
@@ -44,7 +47,27 @@ export const env = {
   NODE_ENV: process.env.NODE_ENV ?? 'development',
   MONGODB_URI: process.env.MONGODB_URI,
   JWT_SECRET: process.env.JWT_SECRET,
-  JWT_EXPIRE: process.env.JWT_EXPIRE ?? '30d',
+  JWT_EXPIRE: process.env.JWT_EXPIRE ?? '1h',
+  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET ?? (() => {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[TrampoHero Backend] JWT_REFRESH_SECRET is not set. Set a dedicated secret in production.');
+    }
+    // Derive a distinct secret so it is not identical to JWT_SECRET, while still
+    // working out-of-the-box in development without extra config.
+    return (process.env.JWT_SECRET ?? '') + '_refresh_trampohero';
+  })(),
+  JWT_REFRESH_EXPIRE: process.env.JWT_REFRESH_EXPIRE ?? '30d',
+  // Auth rate limiting
+  AUTH_RATE_LIMIT_MAX: parsePositiveInt(process.env.AUTH_RATE_LIMIT_MAX, 'AUTH_RATE_LIMIT_MAX', 10),
+  AUTH_RATE_LIMIT_WINDOW_MS: parsePositiveInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS, 'AUTH_RATE_LIMIT_WINDOW_MS', 900000),
+  // Email (SMTP) – optional; features degrade gracefully when not configured
+  EMAIL_ENABLED: process.env.EMAIL_ENABLED === 'true',
+  SMTP_HOST: process.env.SMTP_HOST ?? '',
+  SMTP_PORT: parsePositiveInt(process.env.SMTP_PORT, 'SMTP_PORT', 587),
+  SMTP_SECURE: process.env.SMTP_SECURE === 'true',
+  SMTP_USER: process.env.SMTP_USER ?? '',
+  SMTP_PASS: process.env.SMTP_PASS ?? '',
+  EMAIL_FROM: process.env.EMAIL_FROM ?? 'noreply@trampohero.com.br',
   GEMINI_API_KEY: process.env.GEMINI_API_KEY ?? '',
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? '',
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET ?? '',

@@ -25,6 +25,28 @@ const userSchema = new mongoose.Schema({
     enum: ['freelancer', 'employer', 'admin'],
     required: true,
   },
+  // Email verification
+  isEmailVerified: {
+    type: Boolean,
+    default: false,
+  },
+  emailVerificationToken: {
+    type: String,
+    select: false,
+  },
+  emailVerificationExpiry: {
+    type: Date,
+    select: false,
+  },
+  // Password reset
+  resetPasswordToken: {
+    type: String,
+    select: false,
+  },
+  resetPasswordExpiry: {
+    type: Date,
+    select: false,
+  },
   bio: {
     type: String,
     default: '',
