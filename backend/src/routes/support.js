@@ -189,9 +189,18 @@ router.put(
         return res.status(404).json({ success: false, error: 'Ticket not found' });
       }
 
+      const prevStatus = ticket.status;
       ticket.status = req.body.status;
-      if (req.body.status === 'resolved') ticket.resolvedAt = new Date();
-      if (req.body.status === 'closed') ticket.closedAt = new Date();
+      if (req.body.status === 'resolved') {
+        ticket.resolvedAt = new Date();
+      } else if (prevStatus === 'resolved') {
+        ticket.resolvedAt = null;
+      }
+      if (req.body.status === 'closed') {
+        ticket.closedAt = new Date();
+      } else if (prevStatus === 'closed') {
+        ticket.closedAt = null;
+      }
 
       await ticket.save();
 
