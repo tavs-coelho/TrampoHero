@@ -70,6 +70,20 @@ vi.mock('../models/Job.js', () => ({
   },
 }));
 
+vi.mock('../models/AdminAction.js', () => ({
+  default: {
+    create: vi.fn(),
+    find: vi.fn(),
+    countDocuments: vi.fn(),
+  },
+}));
+
+vi.mock('../models/Review.js', () => ({
+  default: {
+    findById: vi.fn(),
+  },
+}));
+
 vi.mock('../models/Transaction.js', () => ({
   default: {
     find: vi.fn(),
