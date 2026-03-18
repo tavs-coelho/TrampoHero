@@ -132,6 +132,54 @@ class ApiService {
     });
   }
 
+  async getUploadSasUrl(contentType: string = 'image/jpeg') {
+    return this.request<{ sasUrl: string; blobName: string; containerUrl: string }>('/jobs/upload-sas', {
+      method: 'POST',
+      body: JSON.stringify({ contentType }),
+    });
+  }
+
+  async getJobApplicants(id: string) {
+    return this.request<{ userId: string; name: string; rating: number; niche: string; status: string; appliedAt: string }[]>(`/jobs/${id}/applicants`);
+  }
+
+  async selectCandidate(jobId: string, candidateId: string) {
+    return this.request(`/jobs/${jobId}/select-candidate`, {
+      method: 'POST',
+      body: JSON.stringify({ candidateId }),
+    });
+  }
+
+  async checkoutJob(jobId: string) {
+    return this.request(`/jobs/${jobId}/checkout`, {
+      method: 'POST',
+    });
+  }
+
+  async submitProofPhoto(jobId: string, photoUrl: string) {
+    return this.request(`/jobs/${jobId}/submit-proof`, {
+      method: 'POST',
+      body: JSON.stringify({ photoUrl }),
+    });
+  }
+
+  async approveJobCompletion(jobId: string) {
+    return this.request(`/jobs/${jobId}/complete`, {
+      method: 'POST',
+    });
+  }
+
+  async createReview(data: { rating: number; comment?: string; targetId: string; jobId: string }) {
+    return this.request('/reviews', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getReviews(targetId: string) {
+    return this.request(`/reviews?targetId=${targetId}`);
+  }
+
   // User Profile
   async getProfile() {
     return this.request('/users/profile');

@@ -354,7 +354,14 @@ const App: React.FC = () => {
               />
             )}
             {view === 'active' && (
-              <EmployerActiveView setView={setView} />
+              <EmployerActiveView
+                setView={setView}
+                waitingApprovalJobs={jobs.filter(j => j.employerId === user.id && j.status === 'waiting_approval')}
+                onApproveCompletion={(jobId) => {
+                  setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'completed' } : j));
+                  showToast("Conclusão aprovada! Pagamento liberado.", "success");
+                }}
+              />
             )}
           </div>
         ) : (
