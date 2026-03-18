@@ -84,7 +84,7 @@ export const useJobActions = (deps: {
       }
     };
 
-    const handleError = () => showToast("Falha no check-in. Tente novamente.", "error");
+    const handleError = () => showToast("Falha no check-in. Não foi possível obter a localização GPS. Verifique as permissões de localização e tente novamente.", "error");
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -92,14 +92,14 @@ export const useJobActions = (deps: {
           doCheckIn(position.coords.latitude, position.coords.longitude).catch(handleError);
         },
         () => {
-          // Fallback to job coordinates if GPS access is denied
-          doCheckIn(activeJob.coordinates.lat, activeJob.coordinates.lng).catch(handleError);
+          // Não realizar check-in se o acesso ao GPS for negado
+          handleError();
         },
         { timeout: 5000 }
       );
     } else {
-      // Fallback: use job coordinates when Geolocation API is unavailable
-      doCheckIn(activeJob.coordinates.lat, activeJob.coordinates.lng).catch(handleError);
+      // Não realizar check-in se a API de Geolocalização não estiver disponível
+      handleError();
     }
   };
   
