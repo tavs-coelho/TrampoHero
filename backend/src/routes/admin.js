@@ -7,6 +7,14 @@ import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Escape special characters in a string intended for use in a RegExp.
+// This helps avoid unexpected regex behavior and excessive backtracking
+// from user-controlled input.
+const escapeRegex = (value) =>
+  typeof value === 'string'
+    ? value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    : value;
+
 // All admin routes require authentication + admin role
 router.use(authenticate, authorize('admin'));
 
@@ -70,7 +78,7 @@ router.get(
     query('role').optional().isIn(['freelancer', 'employer', 'admin']),
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
-    query('search').optional().trim(),
+    query('search').optional().trim().isLength({ max: 100 }),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -79,7 +87,9 @@ router.get(
     }
 
     try {
-      const { role, search } = req.query;
+      const { role } = req.query;
+      const rawSearch = req.query.search;
+      const search = typeof rawSearch === 'string' ? rawSearch : '';
       const page = req.query.page ?? 1;
       const limit = req.query.limit ?? 20;
       const skip = (page - 1) * limit;
@@ -87,9 +97,10 @@ router.get(
       const filter = {};
       if (role) filter.role = role;
       if (search) {
+        const safeSearch = escapeRegex(search);
         filter.$or = [
-          { name: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } },
+          { name: { $regex: safeSearch, $options: 'i' } },
+          { email: { $regex: safeSearch, $options: 'i' } },
         ];
       }
 
