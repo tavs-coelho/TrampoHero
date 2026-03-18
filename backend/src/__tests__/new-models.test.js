@@ -1,17 +1,7 @@
 /**
- * Tests for new production architecture models and routes:
- *  - GET  /api/contracts
- *  - GET  /api/contracts/:id
- *  - POST /api/contracts/:id/void
- *  - POST /api/support
- *  - GET  /api/support
- *  - GET  /api/support/:id
- *  - POST /api/support/:id/reply
- *  - PUT  /api/support/:id/status
- *  - GET  /api/admin/actions
- *  - PUT  /api/admin/users/:id/ban
- *  - PUT  /api/admin/users/:id/unban
- *  - DELETE /api/admin/jobs/:id
+ * Tests for new production architecture models and related API routes.
+ *
+ * Note: This file does not attempt to provide exhaustive endpoint coverage.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
