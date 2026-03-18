@@ -119,7 +119,7 @@
 1. **Documentos e selfie (KYC)** sem retenção/expurgo no código.  
 2. **Geolocalização** armazenada sem prazo definido.  
 3. **Provas fotográficas** armazenadas com URLs permanentes.  
-4. **Contratos PDF** expostos via rota estática sem autenticação.  
+4. **Contratos PDF** expostos via rota estática sem autenticação (**severidade crítica**).  
 5. **PixKey** gravada em descrição de transações (pode ser CPF/telefone/email).  
 6. **Token em localStorage** (risco XSS) sem mitigação (HttpOnly/CSP).  
 7. **Ausência de consentimentos** explícitos (KYC, geolocalização, marketing, cookies).  
@@ -129,14 +129,14 @@
 ---
 
 ## ✅ Ações técnicas obrigatórias (curto prazo)
-1. **Controle de acesso para contratos**: exigir autenticação antes de servir PDF.  
-2. **Mascarar/omitir `pixKey`** em `Transaction.description` e mover para campo dedicado com criptografia.  
+1. **Controle de acesso para contratos (prioridade imediata)**: exigir autenticação antes de servir PDF.  
+2. **Mascarar/omitir `pixKey` (prioridade alta)** em `Transaction.description` e mover para campo dedicado com criptografia.  
 3. **Implementar retenção** (cron + política) para KYC, fotos, geolocalização e suporte.  
 4. **Registro de consentimentos** (coleção `consents` com propósito/base legal/dados e revogação).  
 5. **Rotas de direitos do titular**: exportar dados e excluir conta.  
 6. **Limitar URLs de mídia** (SAS de leitura com expiração).  
 7. **Auditoria de acesso** a documentos sensíveis (logs).  
-8. **Mitigar token em localStorage**: migrar para cookies HttpOnly + CSP.  
+8. **Mitigar token em localStorage (prioridade alta)**: migrar para cookies HttpOnly + CSP.  
 9. **Minimizar dados antes de IA** (redação/anonimização do prompt).  
 
 ---
