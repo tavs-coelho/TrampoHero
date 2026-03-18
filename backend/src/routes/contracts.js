@@ -11,9 +11,17 @@ const router = express.Router();
 router.get('/', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
-    const query = req.user.role === 'employer'
-      ? { employerId: userId }
-      : { freelancerId: userId };
+    let query;
+
+    if (req.user.role === 'employer') {
+      query = { employerId: userId };
+    } else if (req.user.role === 'admin') {
+      // Admins can list all contracts
+      query = {};
+    } else {
+      // Default to freelancer view
+      query = { freelancerId: userId };
+    }
 
     const contracts = await Contract.find(query)
       .populate('jobId', 'title date payment')
