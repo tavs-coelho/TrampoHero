@@ -380,7 +380,6 @@ describe('POST /api/auth/forgot-password', () => {
     const res = await request(app).post('/api/auth/forgot-password').send({ email: 'test@example.com' });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    await new Promise((r) => setTimeout(r, 50));
     expect(sendPasswordResetEmail).toHaveBeenCalled();
   });
 
@@ -389,7 +388,6 @@ describe('POST /api/auth/forgot-password', () => {
     const res = await request(app).post('/api/auth/forgot-password').send({ email: 'nobody@example.com' });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    await new Promise((r) => setTimeout(r, 50));
     expect(sendPasswordResetEmail).not.toHaveBeenCalled();
   });
 
