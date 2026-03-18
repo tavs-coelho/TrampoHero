@@ -401,10 +401,12 @@ router.delete(
     }
 
     try {
-      const job = await Job.findByIdAndDelete(req.params.id);
+      const job = await Job.findById(req.params.id);
       if (!job) {
         return res.status(404).json({ success: false, error: 'Job not found' });
       }
+
+      await job.deleteOne();
 
       await AdminAction.create({
         adminId: req.user.id,

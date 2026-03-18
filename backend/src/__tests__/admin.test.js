@@ -66,7 +66,7 @@ vi.mock('../models/Job.js', () => ({
   default: {
     countDocuments: vi.fn(),
     find: vi.fn(),
-    findByIdAndDelete: vi.fn(),
+    findById: vi.fn(),
   },
 }));
 
@@ -336,7 +336,7 @@ describe('GET /api/admin/jobs', () => {
 
 describe('DELETE /api/admin/jobs/:id', () => {
   it('removes a job and returns success', async () => {
-    Job.findByIdAndDelete.mockResolvedValue(mockJobs[0]);
+    Job.findById.mockResolvedValue({ ...mockJobs[0], deleteOne: vi.fn().mockResolvedValue() });
     const token = makeToken();
     const res = await request(app)
       .delete('/api/admin/jobs/507f1f77bcf86cd799439011')
@@ -347,7 +347,7 @@ describe('DELETE /api/admin/jobs/:id', () => {
   });
 
   it('returns 404 when job not found', async () => {
-    Job.findByIdAndDelete.mockResolvedValue(null);
+    Job.findById.mockResolvedValue(null);
     const token = makeToken();
     const res = await request(app)
       .delete('/api/admin/jobs/507f1f77bcf86cd799439011')
