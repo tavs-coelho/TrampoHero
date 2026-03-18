@@ -303,48 +303,6 @@ router.post('/:id/select-candidate', authenticate, authorize('employer'), async 
   }
 });
 
-// @route   POST /api/jobs/:id/checkout
-// @desc    Freelancer records checkout time; transitions job to waiting_approval
-// @access  Private (Freelancer only)
-router.post(
-  '/:id/checkout',
-  authenticate,
-  [param('id').isMongoId().withMessage('Invalid job id')],
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
-
-    try {
-      const job = await Job.findById(req.params.id);
-      if (!job) {
-        return res.status(404).json({ success: false, error: 'Job not found' });
-      }
-
-      const approved = job.applicants.find(
-        a => a.status === 'approved' && a.userId.toString() === req.user.id
-      );
-      if (!approved) {
-        return res.status(403).json({ success: false, error: 'Not authorized to check out for this job' });
-      }
-
-      if (job.status !== 'ongoing') {
-        return res.status(400).json({ success: false, error: 'Job must be ongoing to check out' });
-      }
-
-      job.checkOutTime = new Date().toISOString();
-      job.status = 'waiting_approval';
-      await job.save();
-
-      return res.json({ success: true, data: job });
-    } catch (error) {
-      console.error('[POST /jobs/:id/checkout]', error.message);
-      return res.status(500).json({ success: false, error: 'Server error' });
-    }
-  }
-);
-
 // @route   POST /api/jobs/:id/submit-proof
 // @desc    Freelancer records the proof-photo URL (uploaded separately via SAS) against the job
 // @access  Private (Freelancer only)
