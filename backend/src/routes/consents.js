@@ -97,10 +97,16 @@ router.post(
             return res.status(200).json({ success: true, data: existing });
           }
         } catch (lookupError) {
-          console.error('[POST /consents] Duplicate lookup failed', lookupError.message);
+          console.error(
+            '[POST /consents] Failed to retrieve existing consent record during duplicate handling',
+            lookupError.message
+          );
         }
         console.warn('[POST /consents] Duplicate key without existing record', criteria);
-        return res.status(409).json({ success: false, error: 'Consent already exists' });
+        return res.status(409).json({
+          success: false,
+          error: 'Consent record already exists for this purpose and policy version',
+        });
       }
       console.error('[POST /consents]', error.message);
       res.status(500).json({ success: false, error: 'Server error' });
