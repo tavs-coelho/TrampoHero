@@ -88,6 +88,30 @@ vi.mock('../models/Transaction.js', () => ({
   default: {
     find: vi.fn(),
     aggregate: vi.fn(),
+    countDocuments: vi.fn(),
+  },
+}));
+
+vi.mock('../models/JobApplication.js', () => ({
+  default: {
+    find: vi.fn(),
+    countDocuments: vi.fn(),
+  },
+}));
+
+vi.mock('../models/Contract.js', () => ({
+  default: {
+    find: vi.fn(),
+    countDocuments: vi.fn(),
+  },
+}));
+
+vi.mock('../models/SupportTicket.js', () => ({
+  default: {
+    find: vi.fn(),
+    findById: vi.fn(),
+    findByIdAndUpdate: vi.fn(),
+    countDocuments: vi.fn(),
   },
 }));
 
@@ -98,6 +122,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import Job from '../models/Job.js';
 import Transaction from '../models/Transaction.js';
+import SupportTicket from '../models/SupportTicket.js';
 import adminRouter from '../routes/admin.js';
 
 // ─── Test App setup ───────────────────────────────────────────────────────────
@@ -162,6 +187,7 @@ describe('GET /api/admin/stats', () => {
       .mockResolvedValueOnce(1)   // total
       .mockResolvedValueOnce(1)   // open
       .mockResolvedValueOnce(0);  // completed
+    SupportTicket.countDocuments.mockResolvedValueOnce(2); // open tickets
     Transaction.find.mockReturnValue({ sort: vi.fn().mockReturnThis(), limit: vi.fn().mockReturnThis(), lean: vi.fn().mockResolvedValue([]) });
     Transaction.aggregate.mockResolvedValue([{ total: 500 }]);
   });

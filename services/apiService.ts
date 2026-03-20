@@ -333,6 +333,86 @@ class ApiService {
       body: JSON.stringify({ decision, ...(rejectionReason ? { rejectionReason } : {}) }),
     });
   }
+
+  async adminBanUser(userId: string, reason?: string) {
+    return this.request(`/admin/users/${userId}/ban`, {
+      method: 'PUT',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async adminUnbanUser(userId: string) {
+    return this.request(`/admin/users/${userId}/unban`, { method: 'PUT' });
+  }
+
+  async adminChangeUserRole(userId: string, role: string) {
+    return this.request(`/admin/users/${userId}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+  }
+
+  async adminGetApplications(filters?: { status?: string; jobId?: string; page?: number }) {
+    const params = new URLSearchParams();
+    if (filters?.status) params.set('status', filters.status);
+    if (filters?.jobId) params.set('jobId', filters.jobId);
+    if (filters?.page) params.set('page', String(filters.page));
+    const q = params.toString() ? `?${params.toString()}` : '';
+    return this.request(`/admin/applications${q}`);
+  }
+
+  async adminGetContracts(filters?: { status?: string; page?: number }) {
+    const params = new URLSearchParams();
+    if (filters?.status) params.set('status', filters.status);
+    if (filters?.page) params.set('page', String(filters.page));
+    const q = params.toString() ? `?${params.toString()}` : '';
+    return this.request(`/admin/contracts${q}`);
+  }
+
+  async adminGetTransactions(filters?: { type?: string; userId?: string; page?: number }) {
+    const params = new URLSearchParams();
+    if (filters?.type) params.set('type', filters.type);
+    if (filters?.userId) params.set('userId', filters.userId);
+    if (filters?.page) params.set('page', String(filters.page));
+    const q = params.toString() ? `?${params.toString()}` : '';
+    return this.request(`/admin/transactions${q}`);
+  }
+
+  async adminGetTickets(filters?: { status?: string; priority?: string; page?: number }) {
+    const params = new URLSearchParams();
+    if (filters?.status) params.set('status', filters.status);
+    if (filters?.priority) params.set('priority', filters.priority);
+    if (filters?.page) params.set('page', String(filters.page));
+    const q = params.toString() ? `?${params.toString()}` : '';
+    return this.request(`/admin/tickets${q}`);
+  }
+
+  async adminGetTicket(ticketId: string) {
+    return this.request(`/admin/tickets/${ticketId}`);
+  }
+
+  async adminUpdateTicket(ticketId: string, updates: { status?: string; priority?: string; assignedAdminId?: string }) {
+    return this.request(`/admin/tickets/${ticketId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async adminReplyTicket(ticketId: string, message: string) {
+    return this.request(`/admin/tickets/${ticketId}/reply`, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
+  }
+
+  async adminGetAuditLog(filters?: { action?: string; adminId?: string; page?: number }) {
+    const params = new URLSearchParams();
+    if (filters?.action) params.set('action', filters.action);
+    if (filters?.adminId) params.set('adminId', filters.adminId);
+    if (filters?.page) params.set('page', String(filters.page));
+    const q = params.toString() ? `?${params.toString()}` : '';
+    return this.request(`/admin/actions${q}`);
+  }
 }
 
 export const apiService = new ApiService();
