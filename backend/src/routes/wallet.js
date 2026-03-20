@@ -2,9 +2,12 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
+import Withdrawal from '../models/Withdrawal.js';
 import { env } from '../config/env.js';
 
 const WITHDRAWAL_FEE = env.WITHDRAWAL_FEE;
+const MIN_WITHDRAWAL = env.MIN_WITHDRAWAL ?? 0;
+const PAYMENT_GATEWAY_PROVIDER = env.PAYMENT_GATEWAY_PROVIDER ?? 'stripe';
 
 const router = express.Router();
 
@@ -109,7 +112,7 @@ router.post('/deposit', authenticate, async (req, res) => {
 });
 
 // @route   POST /api/wallet/withdraw
-// @desc    Request withdrawal
+// @desc    Request withdrawal – deducts from balance, creates pending Withdrawal record
 // @access  Private
 router.post('/withdraw', authenticate, async (req, res) => {
   try {
@@ -121,34 +124,81 @@ router.post('/withdraw', authenticate, async (req, res) => {
     if (!pixKey || typeof pixKey !== 'string' || !pixKey.trim()) {
       return res.status(400).json({ success: false, error: 'pixKey is required' });
     }
+    if (amount < MIN_WITHDRAWAL) {
+      return res.status(400).json({
+        success: false,
+        error: `Minimum withdrawal amount is R$ ${MIN_WITHDRAWAL.toFixed(2)}`,
+      });
+    }
 
     const user = await User.findById(req.user.id);
-    if (!user || user.wallet.balance < amount) {
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    if (user.wallet.balance < amount) {
       return res.status(400).json({ success: false, error: 'Insufficient balance' });
     }
 
     const fee = user.isPrime ? 0 : WITHDRAWAL_FEE;
+    const netAmount = parseFloat((amount - fee).toFixed(2));
     const pixKeyMasked = maskPixKey(pixKey);
     const pixKeyType = detectPixKeyType(pixKey);
 
-    // Create transaction
+    if (netAmount <= 0) {
+      return res.status(400).json({ success: false, error: 'Net amount after fee must be positive' });
+    }
+
+    // Create the Withdrawal record (pending – awaiting gateway processing)
+    const withdrawal = await Withdrawal.create({
+      userId: req.user.id,
+      amount,
+      fee,
+      netAmount,
+      pixKey: pixKey.trim(),
+      status: 'pending',
+      gatewayProvider: PAYMENT_GATEWAY_PROVIDER,
+    });
+
+    // Record the wallet transaction
     const transaction = await Transaction.create({
       userId: req.user.id,
       type: 'withdrawal',
-      amount: -(amount + fee),
+      status: 'pending',
+      amount: -amount,
       description: `Saque PIX (${pixKeyMasked})`,
       fee,
+      withdrawalId: withdrawal._id,
       pixKeyMasked,
       pixKeyType,
     });
 
-    // Update user wallet
+    // Move amount from balance → scheduled (processing)
     await User.findByIdAndUpdate(req.user.id, {
-      $inc: { 'wallet.balance': -(amount + fee) },
+      $inc: {
+        'wallet.balance': -amount,
+        'wallet.scheduled': amount,
+      },
     });
 
-    res.json({ success: true, data: transaction });
+    res.status(201).json({ success: true, data: { withdrawal, transaction } });
   } catch (error) {
+    console.error('[wallet/withdraw]', error.message);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// @route   GET /api/wallet/withdrawals
+// @desc    List the user's withdrawal requests
+// @access  Private
+router.get('/withdrawals', authenticate, async (req, res) => {
+  try {
+    const withdrawals = await Withdrawal.find({ userId: req.user.id })
+      .sort({ createdAt: -1 })
+      .limit(20);
+    res.json({ success: true, data: withdrawals });
+  } catch (error) {
+    console.error('[wallet/withdrawals]', error.message);
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });

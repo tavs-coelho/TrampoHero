@@ -132,7 +132,7 @@
 1. **Controle de acesso para contratos (prioridade imediata)**: autenticação aplicada ao download de PDF.  
 2. **Mascarar/omitir `pixKey` (prioridade alta)** em `Transaction.description` e manter apenas campo dedicado mascarado (sem armazenar raw; considerar criptografia).  
 3. **Implementar retenção** (cron + política) para KYC, fotos, geolocalização e suporte.  
-4. **Registro de consentimentos** (coleção `consents` com propósito/base legal/dados e revogação).  
+4. **Registro de consentimentos** implementado (`/api/consents` com propósito/base legal/revogação).  
 5. **Rotas de direitos do titular**: exportar dados e excluir conta.  
 6. **Limitar URLs de mídia** (SAS de leitura com expiração).  
 7. **Auditoria de acesso** a documentos sensíveis (logs).  

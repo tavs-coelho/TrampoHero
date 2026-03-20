@@ -45,12 +45,83 @@ export interface WorkHistory {
 
 export interface Transaction {
   id: string;
-  type: 'deposit' | 'withdrawal' | 'anticipation' | 'job_payment' | 'coin_earned' | 'coin_redeemed' | 'loan' | 'loan_repayment' | 'referral_bonus';
+  type:
+    | 'deposit' | 'withdrawal' | 'anticipation' | 'job_payment'
+    | 'coin_earned' | 'coin_redeemed' | 'loan' | 'loan_repayment'
+    | 'referral_bonus' | 'challenge_reward'
+    | 'escrow' | 'escrow_release' | 'escrow_refund'
+    | 'subscription' | 'fee_charge'
+    | 'refund' | 'dispute_hold' | 'dispute_release';
+  status?: 'pending' | 'processing' | 'completed' | 'failed' | 'refunded' | 'disputed';
   amount: number;
   date: string;
   description: string;
   fee?: number;
   coins?: number; // TrampoCoins relacionados
+  withdrawalId?: string;
+  refundId?: string;
+  disputeId?: string;
+}
+
+/** Tracks a freelancer withdrawal request through its lifecycle. */
+export interface Withdrawal {
+  id: string;
+  userId: string;
+  /** Gross amount requested (BRL). */
+  amount: number;
+  /** Fee deducted (BRL). */
+  fee: number;
+  /** Net amount sent to recipient (amount - fee). */
+  netAmount: number;
+  pixKey: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+  gatewayTransferId?: string | null;
+  gatewayProvider: string;
+  failureReason?: string | null;
+  processedAt?: string | null;
+  createdAt: string;
+}
+
+/** Tracks a refund operation against an escrow or direct payment. */
+export interface Refund {
+  id: string;
+  userId: string;
+  jobId: string;
+  originalTransactionId?: string | null;
+  amount: number;
+  reason: 'job_cancelled' | 'dispute_resolved' | 'duplicate' | 'fraudulent' | 'other';
+  status: 'pending' | 'completed' | 'failed';
+  gatewayRefundId?: string | null;
+  gatewayProvider: string;
+  failureReason?: string | null;
+  processedAt?: string | null;
+  createdAt: string;
+}
+
+/** Represents a formal dispute between employer and freelancer over a job. */
+export interface Dispute {
+  id: string;
+  initiatedBy: string;
+  employerId: string;
+  freelancerId: string;
+  jobId: string;
+  reason: string;
+  status:
+    | 'open'
+    | 'under_review'
+    | 'resolved_employer'
+    | 'resolved_freelancer'
+    | 'resolved_split'
+    | 'cancelled';
+  resolvedBy?: string | null;
+  resolution?: {
+    employerAmount: number;
+    freelancerAmount: number;
+    notes?: string | null;
+  };
+  resolvedAt?: string | null;
+  evidenceUrls?: string[];
+  createdAt: string;
 }
 
 export interface Job {
@@ -164,9 +235,14 @@ export interface UserProfile {
   tier: SubscriptionTier;
   isPrime?: boolean;
   wallet: {
+    /** Available (released) balance – freely withdrawable. */
     balance: number;
+    /** Funds held in escrow or earned but not yet released by the employer. */
     pending: number;
+    /** Withdrawal amount currently being processed by the payment gateway. */
     scheduled: number;
+    /** Cumulative total successfully withdrawn (audit/display). */
+    withdrawn: number;
     transactions: Transaction[];
   };
   activeJobId?: string;

@@ -28,9 +28,11 @@ import referralRoutes from './routes/referral.js';
 import paymentsRoutes from './routes/payments.js';
 import reviewRoutes from './routes/reviews.js';
 import analyticsRoutes from './routes/analytics.js';
+import disputesRoutes from './routes/disputes.js';
 import contractsRoutes from './routes/contracts.js';
 import supportRoutes from './routes/support.js';
 import adminRoutes from './routes/admin.js';
+import consentRoutes from './routes/consents.js';
 
 import mongoose from 'mongoose';
 
@@ -101,8 +103,10 @@ app.use('/api/referral', referralRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/disputes', disputesRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/consents', consentRoutes);
 
 // Serve generated PDF contracts via authenticated route in contracts router
 app.use('/api/contracts', contractsRoutes);

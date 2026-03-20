@@ -12,15 +12,8 @@ import { authenticate } from '../middleware/auth.js';
 import Job from '../models/Job.js';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
-import {
-  createPaymentIntent,
-  createEscrowPaymentIntent,
-  releaseEscrow,
-  getOrCreateCustomer,
-  createSubscriptionCheckoutSession,
-  cancelSubscription,
-  constructWebhookEvent,
-} from '../services/paymentService.js';
+import Refund from '../models/Refund.js';
+import { gateway, gatewayProviderName } from '../services/gatewayAdapter.js';
 import { env } from '../config/env.js';
 
 const router = express.Router();
@@ -48,7 +41,7 @@ router.post('/create-intent', authenticate, async (req, res) => {
 
     const amountCents = Math.round(amountNumber * 100);
 
-    const paymentIntent = await createPaymentIntent({
+    const paymentIntent = await gateway.createPaymentIntent({
       amountCents,
       userId: req.user.id,
       description: 'Depósito na carteira TrampoHero',
@@ -99,7 +92,7 @@ router.post('/escrow', authenticate, async (req, res) => {
     // Convert BRL to cents
     const amountCents = Math.round(job.payment * 100);
 
-    const paymentIntent = await createEscrowPaymentIntent({
+    const paymentIntent = await gateway.createEscrowPaymentIntent({
       amountCents,
       employerId: req.user.id,
       jobId: job._id.toString(),
@@ -178,7 +171,7 @@ router.post('/release-escrow/:jobId', authenticate, async (req, res) => {
     const jobAmountCents = Math.round(job.payment * 100);
     const freelancerIsPrime = freelancer.isPrime || freelancer.subscription?.plan === 'hero_prime';
 
-    const { capturedIntent, freelancerNetCents, platformFeeCents } = await releaseEscrow({
+    const { capturedIntent, freelancerNetCents, platformFeeCents } = await gateway.releaseEscrow({
       paymentIntentId: job.escrowPaymentIntentId,
       jobAmountCents,
       freelancerIsPrime,
@@ -237,6 +230,76 @@ router.post('/release-escrow/:jobId', authenticate, async (req, res) => {
   }
 });
 
+// ─── Cancel Escrow (Refund) ───────────────────────────────────────────────────
+
+/**
+ * @route  POST /api/payments/cancel-escrow/:jobId
+ * @desc   Employer cancels the job before escrow is captured, triggering a full refund.
+ * @access Private (employer)
+ */
+router.post('/cancel-escrow/:jobId', authenticate, async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.jobId);
+    if (!job) {
+      return res.status(404).json({ success: false, error: 'Job not found' });
+    }
+
+    if (job.employerId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, error: 'Not authorized' });
+    }
+
+    if (job.escrowStatus !== 'held') {
+      return res.status(400).json({ success: false, error: 'No held escrow to cancel for this job' });
+    }
+
+    if (!job.escrowPaymentIntentId) {
+      return res.status(400).json({ success: false, error: 'No escrow payment intent found' });
+    }
+
+    // Cancel (void) the uncaptured PaymentIntent – Stripe refunds the authorised hold
+    await gateway.cancelEscrow(job.escrowPaymentIntentId);
+
+    // Create a Refund record for audit trail
+    const refundRecord = await Refund.create({
+      userId: req.user.id,
+      jobId: job._id,
+      amount: job.payment,
+      reason: 'job_cancelled',
+      status: 'completed',
+      gatewayProvider: gatewayProviderName,
+      processedAt: new Date(),
+    });
+
+    // Record the refund transaction
+    await Transaction.create({
+      userId: req.user.id,
+      type: 'escrow_refund',
+      status: 'completed',
+      amount: job.payment,
+      description: `Reembolso de escrow: ${job.title}`,
+      relatedJobId: job._id,
+      stripePaymentIntentId: job.escrowPaymentIntentId,
+      refundId: refundRecord._id,
+    });
+
+    // Mark the original escrow transaction as refunded
+    await Transaction.findOneAndUpdate(
+      { stripePaymentIntentId: job.escrowPaymentIntentId, type: 'escrow' },
+      { status: 'refunded' },
+    );
+
+    // Update job
+    job.escrowStatus = 'refunded';
+    job.status = 'cancelled';
+    await job.save();
+
+    res.json({ success: true, data: { refund: refundRecord } });
+  } catch (error) {
+    console.error('[payments/cancel-escrow]', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ─── Subscription ─────────────────────────────────────────────────────────────
 
 /**
@@ -255,7 +318,7 @@ router.post('/subscription', authenticate, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Already subscribed to Hero Prime' });
     }
 
-    const stripeCustomerId = await getOrCreateCustomer(user);
+    const stripeCustomerId = await gateway.getOrCreateCustomer(user);
 
     // Persist the Stripe customer ID immediately so future calls reuse it
     if (!user.subscription?.stripeCustomerId) {
@@ -267,7 +330,7 @@ router.post('/subscription', authenticate, async (req, res) => {
     const successUrl = req.body.successUrl || `${env.FRONTEND_URL}/subscription/success`;
     const cancelUrl  = req.body.cancelUrl  || `${env.FRONTEND_URL}/subscription/cancel`;
 
-    const session = await createSubscriptionCheckoutSession({
+    const session = await gateway.createSubscriptionCheckoutSession({
       stripeCustomerId,
       userId: req.user.id,
       successUrl,
@@ -303,7 +366,7 @@ router.delete('/subscription', authenticate, async (req, res) => {
       return res.status(400).json({ success: false, error: 'No active subscription found' });
     }
 
-    await cancelSubscription(user.subscription.stripeSubscriptionId);
+    await gateway.cancelSubscription(user.subscription.stripeSubscriptionId);
 
     await User.findByIdAndUpdate(req.user.id, {
       isPrime: false,
@@ -332,7 +395,7 @@ router.post('/webhook', async (req, res) => {
 
   let event;
   try {
-    event = constructWebhookEvent(req.body, signature);
+    event = gateway.constructWebhookEvent(req.body, signature);
   } catch (err) {
     console.error('[webhook] Signature verification failed:', err.message);
     return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });

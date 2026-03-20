@@ -84,6 +84,20 @@ export const env = {
     }
     return parsed;
   })(),
+  /** Minimum gross withdrawal amount (R$). Default: 0. */
+  MIN_WITHDRAWAL: (() => {
+    const raw = process.env.MIN_WITHDRAWAL;
+    const parsed = parseFloat(raw ?? '0');
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      console.error(
+        `[TrampoHero Backend] Invalid value for MIN_WITHDRAWAL: "${raw}". Must be a non-negative number. Using default: 0.`
+      );
+      return 0;
+    }
+    return parsed;
+  })(),
+  /** Payment gateway provider identifier (e.g. "stripe", "asaas"). Default: "stripe". */
+  PAYMENT_GATEWAY_PROVIDER: (process.env.PAYMENT_GATEWAY_PROVIDER ?? 'stripe').toLowerCase(),
   // Azure Blob Storage (required for photo upload endpoints)
   AZURE_STORAGE_ACCOUNT_NAME: process.env.AZURE_STORAGE_ACCOUNT_NAME ?? '',
   AZURE_STORAGE_ACCOUNT_KEY: process.env.AZURE_STORAGE_ACCOUNT_KEY ?? '',
