@@ -23,6 +23,8 @@ import { useCourseActions } from './hooks/useCourseActions';
 import { useChallengeActions } from './hooks/useChallengeActions';
 import { useStoreActions } from './hooks/useStoreActions';
 import { ViewType } from './contexts/AppContext';
+import { applySeoMeta, getSeoMetaByView } from './utils/seo';
+import { analyticsService } from './services/analyticsService';
 
 declare const L: any;
 
@@ -291,6 +293,59 @@ const App: React.FC = () => {
     }]);
   }, [inputText, user.id, user.role]);
 
+  const handleOpenPrimeModal = useCallback(() => {
+    analyticsService.trackEvent('cta_prime_click', {
+      role: user.role,
+      source_view: view,
+    });
+    setShowPrimeModal(true);
+  }, [user.role, view]);
+
+  const handleOpenCreateJobModal = useCallback(() => {
+    analyticsService.trackEvent('cta_empresa_criar_vaga_click', {
+      role: user.role,
+      source_view: view,
+    });
+    setShowCreateJobModal(true);
+  }, [user.role, view]);
+
+  const handleApplyWithAnalytics = useCallback(
+    async (job: Job) => {
+      analyticsService.trackEvent('activation_apply_job_click', {
+        role: user.role,
+        job_id: job.id,
+        niche: job.niche,
+        payment: job.payment,
+      });
+      await handleApply(job);
+    },
+    [handleApply, user.role]
+  );
+
+  const handleShareWithAnalytics = useCallback(
+    async (job: Job) => {
+      analyticsService.trackEvent('share_job_click', {
+        role: user.role,
+        job_id: job.id,
+        niche: job.niche,
+      });
+      await handleShare(job);
+    },
+    [handleShare, user.role]
+  );
+
+  const handleInviteTalentWithAnalytics = useCallback(
+    (talentName: string, talentId?: string) => {
+      analyticsService.trackEvent('cta_empresa_convidar_talento_click', {
+        role: user.role,
+        source_view: view,
+        talent_id: talentId || null,
+      });
+      handleInviteTalent(talentName, talentId);
+    },
+    [handleInviteTalent, user.role, view]
+  );
+
   // --- Effects ---
   useEffect(() => {
     setTimeout(() => setShowSplash(false), 2000);
@@ -407,6 +462,15 @@ const App: React.FC = () => {
   }, [messages]);
 
   useEffect(() => {
+    applySeoMeta(view);
+    const seo = getSeoMetaByView(view);
+    analyticsService.trackPageView(seo.path, {
+      role: user.role,
+      app_view: view,
+    });
+  }, [view, user.role]);
+
+  useEffect(() => {
     if (view === 'browse' && browseMode === 'map' && mapContainerRef.current) {
       if (!mapRef.current) {
         mapRef.current = L.map(mapContainerRef.current, { zoomControl: false, attributionControl: false }).setView([-23.5614, -46.6559], 14);
@@ -496,11 +560,11 @@ const App: React.FC = () => {
                 handleManageJob={handleManageJob}
                 simulateVoiceCreate={simulateVoiceCreate}
                 isRecording={isRecording}
-                setShowCreateJobModal={setShowCreateJobModal}
+                setShowCreateJobModal={handleOpenCreateJobModal}
                 aiSuggestion={aiSuggestion}
                 handleShowInvoices={handleShowInvoices}
                 handleOpenAddBalance={handleOpenAddBalance}
-                handleInviteTalent={handleInviteTalent}
+                handleInviteTalent={handleInviteTalentWithAnalytics}
                 setView={navigateTo}
                 isLoading={isJobsLoading}
                 error={jobsError}
@@ -509,7 +573,7 @@ const App: React.FC = () => {
             )}
             {view === 'talents' && (
               <TalentsView
-                handleInviteTalent={handleInviteTalent}
+                handleInviteTalent={handleInviteTalentWithAnalytics}
                 setView={setView}
               />
             )}
@@ -568,7 +632,7 @@ const App: React.FC = () => {
                 mapContainerRef={mapContainerRef}
                 user={user}
                 setView={navigateTo}
-                setShowPrimeModal={setShowPrimeModal}
+                setShowPrimeModal={handleOpenPrimeModal}
                 isLoading={isJobsLoading}
               />
             )}
@@ -586,7 +650,7 @@ const App: React.FC = () => {
                 user={user}
                 handleWithdraw={handleWithdraw}
                 handleAnticipate={handleAnticipate}
-                setShowPrimeModal={setShowPrimeModal}
+                setShowPrimeModal={handleOpenPrimeModal}
                 isLoading={isWalletLoading}
                 error={walletError}
                 onRetry={retryLoadWallet}
@@ -828,8 +892,8 @@ const App: React.FC = () => {
           job={selectedJob}
           user={user}
           isApplying={isApplying}
-          handleApply={handleApply}
-          handleShare={handleShare}
+          handleApply={handleApplyWithAnalytics}
+          handleShare={handleShareWithAnalytics}
           handleApproveCandidate={handleApproveCandidate}
           handleCloseJob={handleCloseJob}
           onClose={() => setSelectedJob(null)}
