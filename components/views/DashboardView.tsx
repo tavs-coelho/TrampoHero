@@ -17,7 +17,7 @@ interface DashboardViewProps {
   handleManageJob: (job: Job) => void;
   simulateVoiceCreate: () => void;
   isRecording: boolean;
-  onCreateJobClick: () => void;
+  setShowCreateJobModal: (v: boolean) => void;
   aiSuggestion: string | null;
   handleShowInvoices: () => void;
   handleOpenAddBalance: () => void;
@@ -40,7 +40,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   handleManageJob,
   simulateVoiceCreate,
   isRecording,
-  onCreateJobClick,
+  setShowCreateJobModal,
   aiSuggestion,
   handleShowInvoices,
   handleOpenAddBalance,
@@ -57,7 +57,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <button onClick={simulateVoiceCreate} className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all ${isRecording ? 'bg-red-500 animate-pulse text-white' : 'bg-slate-900 text-white hover:bg-slate-800'}`}>
           <i className={`fas ${isRecording ? 'fa-microphone' : 'fa-microphone-lines'}`}></i>
         </button>
-        <button onClick={onCreateJobClick} className="bg-indigo-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg hover:bg-indigo-700 transition-colors"><i className="fas fa-plus"></i></button>
+        <button onClick={() => setShowCreateJobModal(true)} className="bg-indigo-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg hover:bg-indigo-700 transition-colors"><i className="fas fa-plus"></i></button>
       </div>
     </header>
 
@@ -116,7 +116,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           title="Nenhuma vaga criada"
           description="Crie sua primeira vaga para começar a contratar talentos."
           actionLabel="Criar Primeira Vaga"
-          onAction={onCreateJobClick}
+          onAction={() => setShowCreateJobModal(true)}
           className="bg-white rounded-[2rem] border border-dashed border-slate-200 py-10"
         />
       ) : (
