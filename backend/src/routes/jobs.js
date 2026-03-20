@@ -50,7 +50,20 @@ router.get('/', async (req, res) => {
     const filter = {};
     if (niche) filter.niche = niche;
     if (status) filter.status = status;
-    if (location) filter.location = { $regex: location, $options: 'i' };
+    if (location !== undefined) {
+      if (Array.isArray(location)) {
+        return res.status(400).json({ success: false, error: 'location must be a string' });
+      }
+      if (typeof location !== 'string') {
+        return res.status(400).json({ success: false, error: 'location must be a string' });
+      }
+      const normalizedLocation = location.trim();
+      if (normalizedLocation) {
+        // Escape special regex characters to prevent ReDoS
+        const escapedLocation = normalizedLocation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        filter.location = { $regex: escapedLocation, $options: 'i' };
+      }
+    }
 
     const jobs = await Job.find(filter).sort({ isBoosted: -1, payment: -1 });
 
@@ -130,7 +143,28 @@ router.put('/:id', authenticate, authorize('employer'), async (req, res) => {
       return res.status(403).json({ success: false, error: 'Not authorized' });
     }
 
-    const updatedJob = await Job.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const allowedFields = [
+      'title',
+      'payment',
+      'niche',
+      'location',
+      'coordinates',
+      'description',
+      'date',
+      'startTime',
+      'paymentType',
+      'isBoosted',
+      'isEscrowGuaranteed',
+      'minRatingRequired',
+    ];
+    const updates = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    }
+
+    const updatedJob = await Job.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
     res.json({ success: true, data: updatedJob });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Server error' });

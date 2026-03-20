@@ -103,7 +103,7 @@ router.post('/', authenticate, async (req, res) => {
     res.status(201).json({ success: true, data: dispute });
   } catch (error) {
     console.error('[disputes/open]', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
@@ -122,7 +122,7 @@ router.get('/', authenticate, async (req, res) => {
     res.json({ success: true, data: disputes });
   } catch (error) {
     console.error('[disputes/list]', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
@@ -152,7 +152,7 @@ router.get('/:id', authenticate, async (req, res) => {
     res.json({ success: true, data: dispute });
   } catch (error) {
     console.error('[disputes/get]', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
@@ -351,7 +351,7 @@ router.post('/:id/resolve', authenticate, authorize('admin'), async (req, res) =
     res.json({ success: true, data: dispute });
   } catch (error) {
     console.error('[disputes/resolve]', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
@@ -383,7 +383,7 @@ router.post('/:id/cancel', authenticate, async (req, res) => {
     res.json({ success: true, data: dispute });
   } catch (error) {
     console.error('[disputes/cancel]', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 

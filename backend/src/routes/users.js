@@ -25,25 +25,39 @@ router.get('/profile', authenticate, async (req, res) => {
 // @route   PUT /api/users/profile
 // @desc    Update user profile
 // @access  Private
-router.put('/profile', authenticate, async (req, res) => {
-  try {
-    const allowedFields = ['name', 'bio', 'niche'];
-    const updates = {};
-    for (const field of allowedFields) {
-      if (req.body[field] !== undefined) {
-        updates[field] = req.body[field];
-      }
+router.put(
+  '/profile',
+  authenticate,
+  [
+    body('name').optional().trim().notEmpty().withMessage('name cannot be blank').isLength({ max: 100 }).withMessage('name must be at most 100 characters'),
+    body('bio').optional({ nullable: true }).trim().isLength({ max: 500 }).withMessage('bio must be at most 500 characters'),
+    body('niche').optional().trim().notEmpty().withMessage('niche cannot be blank').isLength({ max: 100 }).withMessage('niche must be at most 100 characters'),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true, runValidators: true });
-    if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+    try {
+      const allowedFields = ['name', 'bio', 'niche'];
+      const updates = {};
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          updates[field] = req.body[field];
+        }
+      }
+
+      const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true, runValidators: true });
+      if (!user) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+      }
+      res.json({ success: true, data: user });
+    } catch (error) {
+      res.status(500).json({ success: false, error: 'Server error' });
     }
-    res.json({ success: true, data: user });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Server error' });
   }
-});
+);
 
 // @route   POST /api/users/push-device
 // @desc    Register or update a device push token for the authenticated user
