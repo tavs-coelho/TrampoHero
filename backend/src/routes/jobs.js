@@ -50,10 +50,19 @@ router.get('/', async (req, res) => {
     const filter = {};
     if (niche) filter.niche = niche;
     if (status) filter.status = status;
-    if (location) {
-      // Escape special regex characters to prevent ReDoS
-      const escapedLocation = location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      filter.location = { $regex: escapedLocation, $options: 'i' };
+    if (location !== undefined) {
+      if (Array.isArray(location)) {
+        return res.status(400).json({ success: false, error: 'location must be a string' });
+      }
+      if (typeof location !== 'string') {
+        return res.status(400).json({ success: false, error: 'location must be a string' });
+      }
+      const normalizedLocation = location.trim();
+      if (normalizedLocation) {
+        // Escape special regex characters to prevent ReDoS
+        const escapedLocation = normalizedLocation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        filter.location = { $regex: escapedLocation, $options: 'i' };
+      }
     }
 
     const jobs = await Job.find(filter).sort({ isBoosted: -1, payment: -1 });
