@@ -136,7 +136,7 @@ router.post('/withdraw', authenticate, async (req, res) => {
       amount: -(amount + fee),
       description: `Saque PIX (${pixKeyMasked})`,
       fee,
-      pixKeyMasked: pixKeyMasked || null,
+      pixKeyMasked,
       pixKeyType,
     });
 

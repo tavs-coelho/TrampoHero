@@ -119,7 +119,8 @@ router.get(
       const filePath = path.join(CONTRACTS_DIR, fileName);
       const resolvedDir = path.resolve(CONTRACTS_DIR);
       const resolvedPath = path.resolve(filePath);
-      if (!resolvedPath.startsWith(`${resolvedDir}${path.sep}`)) {
+      const relativePath = path.relative(resolvedDir, resolvedPath);
+      if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
         return res.status(400).json({ success: false, error: 'Invalid file path' });
       }
       try {
