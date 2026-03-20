@@ -33,7 +33,13 @@ function maskPixKey(pixKey) {
   if (trimmed.includes('@')) {
     const [localPart, domain] = trimmed.split('@');
     const firstChar = localPart?.[0] ?? '*';
-    return `${firstChar}***@${domain || '***'}`;
+    const domainParts = domain?.split('.') ?? [];
+    const baseDomain = domainParts[0] ?? '';
+    const tld = domainParts.length > 1 ? domainParts.slice(1).join('.') : '';
+    const maskedDomain = baseDomain
+      ? `${baseDomain[0]}${'*'.repeat(Math.max(baseDomain.length - 1, 0))}`
+      : '***';
+    return `${firstChar}***@${maskedDomain}${tld ? `.${tld}` : ''}`;
   }
   const digits = trimmed.replace(/\D/g, '');
   if (digits.length >= 4) {
@@ -128,7 +134,7 @@ router.post('/withdraw', authenticate, async (req, res) => {
       userId: req.user.id,
       type: 'withdrawal',
       amount: -(amount + fee),
-      description: `Saque PIX (${pixKeyMasked || 'chave protegida'})`,
+      description: `Saque PIX (${pixKeyMasked})`,
       fee,
       pixKeyMasked: pixKeyMasked || null,
       pixKeyType,

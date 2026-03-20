@@ -11,7 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CONTRACTS_DIR = path.join(__dirname, '..', '..', 'contracts');
 
 function isSafeFileName(fileName) {
-  return fileName === path.basename(fileName) && !fileName.includes('..');
+  return fileName === path.basename(fileName);
 }
 
 // @route   GET /api/contracts
@@ -120,7 +120,10 @@ router.get(
         if (err) {
           console.error('[GET /contracts/files]', err.message);
           if (!res.headersSent) {
-            res.status(404).json({ success: false, error: 'Contract file not found' });
+            const message = err.code === 'ENOENT'
+              ? 'Contract file not found'
+              : 'Error retrieving contract file';
+            res.status(err.code === 'ENOENT' ? 404 : 500).json({ success: false, error: message });
           }
         }
       });
