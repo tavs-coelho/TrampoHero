@@ -49,22 +49,138 @@
 - Secundário: **"Completar perfil e aumentar convites"**
 - Apoio: **"Assinar Hero Prime"**
 
-## 6) Analytics e eventos a instrumentar
-### Eventos implementados nesta entrega
+## 6) Camada de métricas (produto + negócio + operação)
+### 6.1 Objetivo da camada
+Medir ponta a ponta:
+- **aquisição** (entrada e cadastro),
+- **ativação** (primeiras ações de valor por papel),
+- **conversão** (job e pagamento),
+- **operação** (suporte, SLA, risco/fraude),
+- **retenção** (repetição de uso),
+- **financeiro** (GMV, take rate, saque, receita líquida).
+
+### 6.2 Nomenclatura padronizada
+- Padrão de nome de evento: **`snake_case`**.
+- Prefixos por domínio (recomendado): `auth_`, `job_`, `application_`, `payment_`, `withdrawal_`, `support_`, `review_`, `fraud_`.
+- Campos comuns em todos os eventos:
+  - `event_name`
+  - `occurred_at` (ISO-8601 UTC)
+  - `user_id` (ou `anonymous_id` quando público)
+  - `user_role` (`freelancer` | `employer` | `admin`)
+  - `session_id`
+  - `source` (`web` | `backend`)
+  - `route` (endpoint HTTP ou view)
+  - `job_id`, `transaction_id`, `support_ticket_id` (quando aplicável)
+
+### 6.3 Eventos mínimos (obrigatórios)
+1. `signup_started`
+2. `signup_completed`
+3. `login_success`
+4. `job_created`
+5. `application_submitted`
+6. `application_accepted`
+7. `checkin_done`
+8. `checkout_done`
+9. `proof_uploaded`
+10. `job_approved`
+11. `payment_released`
+12. `withdrawal_requested`
+13. `withdrawal_paid`
+14. `review_submitted`
+15. `support_ticket_created`
+
+### 6.4 Locais do código para instrumentar os eventos mínimos
+> Implementar tracking no **backend (fonte de verdade)**; no frontend manter eventos de intenção/UX como complemento.
+
+- `signup_started`  
+  - **Frontend**: início do fluxo de cadastro/formulário (tela/ação de abrir cadastro) em `App.tsx` e componentes de auth.
+- `signup_completed`  
+  - **Backend**: `backend/src/routes/auth.js` em `POST /register` (após `User.create` com sucesso).
+- `login_success`  
+  - **Backend**: `backend/src/routes/auth.js` em `POST /login` (na resposta 200).
+- `job_created`  
+  - **Backend**: `backend/src/routes/jobs.js` em `POST /` (após criação da vaga).
+- `application_submitted`  
+  - **Backend**: `backend/src/routes/jobs.js` em `POST /:id/apply`.
+- `application_accepted`  
+  - **Backend**: `backend/src/routes/jobs.js` em `POST /:id/select-candidate` (candidato aprovado).
+- `checkin_done`  
+  - **Backend**: `backend/src/routes/jobs.js` em `POST /:id/checkin`.
+- `checkout_done`  
+  - **Backend**: `backend/src/routes/jobs.js` em `POST /:id/checkout`.
+- `proof_uploaded`  
+  - **Backend**: `backend/src/routes/jobs.js` em `POST /:id/submit-proof`.
+- `job_approved`  
+  - **Backend**: `backend/src/routes/jobs.js` em `POST /:id/complete`.
+- `payment_released`  
+  - **Backend**: `backend/src/routes/payments.js` em `POST /release-escrow/:jobId`.
+- `withdrawal_requested`  
+  - **Backend**: `backend/src/routes/wallet.js` em `POST /withdraw`.
+- `withdrawal_paid`  
+  - **Backend**: processador/worker de liquidação de saque e/ou webhook de pagamento (gateway), com persistência no `Withdrawal.status = paid` e `Transaction.status = completed`.
+- `review_submitted`  
+  - **Backend**: `backend/src/routes/reviews.js` em `POST /`.
+- `support_ticket_created`  
+  - **Backend**: `backend/src/routes/support.js` em `POST /`.
+
+### 6.5 KPIs de negócio
+- **Aquisição**
+  - visitantes únicos
+  - taxa de `signup_started`/visitante
+  - taxa de `signup_completed`/`signup_started`
+- **Ativação**
+  - freelancer: `% que fez application_submitted em até D+1`
+  - empresa: `% que fez job_created em até D+1`
+- **Conversão marketplace**
+  - `application_accepted` / `application_submitted`
+  - `job_approved` / `job_created`
+  - `payment_released` / `job_approved`
+
+### 6.6 Métricas operacionais
+- tempo médio de preenchimento de vaga (`job_created` → `application_accepted`)
+- tempo médio de execução (`checkin_done` → `checkout_done`)
+- tempo médio de aprovação (`checkout_done` → `job_approved`)
+- tickets por 100 jobs e SLA de atendimento (`support_ticket_created` + dados de SLA)
+
+### 6.7 Métricas de fraude
+- taxa de tickets de fraude (`support_ticket_created` com `category = fraud`) por 100 jobs
+- % jobs com `proof_uploaded` ausente antes de aprovação
+- divergência de geolocalização de check-in (distância do ponto do job)
+- taxa de reversão/cancelamento de pagamentos e saques sob revisão manual
+
+### 6.8 Métricas de retenção
+- retenção D7 e D30 por papel (`freelancer` e `employer`)
+- frequência de uso (jobs por usuário ativo/semana)
+- repeat rate:
+  - freelancer com 2+ `checkout_done` em 30 dias
+  - empresa com 2+ `job_created` em 30 dias
+
+### 6.9 Métricas financeiras
+- **GMV**: soma bruta de jobs pagos (`payment_released`)
+- **Take rate**: taxa média capturada (fee / GMV)
+- receita líquida de taxas
+- volume e taxa de sucesso de saque (`withdrawal_requested` → `withdrawal_paid`)
+- aging de saldo em carteira (tempo até saque)
+
+### 6.10 Dashboard mínimo recomendado (v1)
+- **Painel 1 — Funil (Aquisição → Ativação → Conversão)**
+  - `signup_started`, `signup_completed`, `job_created`, `application_submitted`, `application_accepted`, `job_approved`, `payment_released`
+- **Painel 2 — Operação**
+  - tempos médios por etapa, tickets, SLA
+- **Painel 3 — Fraude/Risco**
+  - incidentes de fraude, anomalias de prova/check-in, saques em revisão
+- **Painel 4 — Retenção**
+  - coortes D7/D30 por papel, frequência semanal, repeat rate
+- **Painel 5 — Financeiro**
+  - GMV diário/semanal, take rate, receita líquida, funil de saque
+
+### 6.11 Eventos já implementados nesta entrega de growth/SEO
 - `page_view` (por view com `app_view` e `role`)
 - `cta_prime_click`
 - `cta_empresa_criar_vaga_click`
 - `cta_empresa_convidar_talento_click`
 - `activation_apply_job_click`
 - `share_job_click`
-
-### Eventos recomendados (próxima sprint)
-- `activation_first_job_completed`
-- `activation_first_withdrawal_requested`
-- `activation_first_job_posted`
-- `activation_first_candidate_selected`
-- `onboarding_role_selected`
-- `kyc_submitted`
 
 ## 7) Funil de ativação (MVP)
 ### Freelancer
