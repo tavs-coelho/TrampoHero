@@ -97,4 +97,22 @@ describe('POST /api/consents', () => {
       { new: true, upsert: true, setDefaultsOnInsert: true },
     );
   });
+
+  it('returns existing consent when duplicate key error occurs', async () => {
+    Consent.findOneAndUpdate.mockRejectedValue({ code: 11000 });
+    Consent.findOne.mockResolvedValue({ id: 'consent-existing' });
+
+    const res = await request(buildApp())
+      .post('/api/consents')
+      .set('Authorization', 'Bearer token')
+      .send({ purpose: 'marketing', policyVersion: 'v1' });
+
+    expect(res.status).toBe(200);
+    expect(Consent.findOne).toHaveBeenCalledWith({
+      userId: 'user-1',
+      purpose: 'marketing',
+      policyVersion: 'v1',
+    });
+    expect(res.body.data.id).toBe('consent-existing');
+  });
 });

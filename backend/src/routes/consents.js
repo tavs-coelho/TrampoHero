@@ -3,6 +3,12 @@ import { body, validationResult } from 'express-validator';
 import { authenticate } from '../middleware/auth.js';
 import Consent from '../models/Consent.js';
 
+const buildCriteria = (userId, body) => ({
+  userId,
+  purpose: body.purpose,
+  policyVersion: body.policyVersion ?? null,
+});
+
 const router = express.Router();
 
 // @route   GET /api/consents
@@ -54,13 +60,7 @@ router.post(
       return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    const buildCriteria = (userId, body) => ({
-      userId,
-      purpose: body.purpose,
-      policyVersion: body.policyVersion ?? null,
-    });
-
-    let criteria;
+    const criteria = buildCriteria(req.user.id, req.body);
     try {
       const {
         purpose,
@@ -69,8 +69,6 @@ router.post(
         policyVersion = null,
         source = 'app',
       } = req.body;
-
-      criteria = buildCriteria(req.user.id, req.body);
       const update = {
         legalBasis,
         granted,
@@ -89,9 +87,6 @@ router.post(
     } catch (error) {
       if (error?.code === 11000) {
         try {
-          if (!criteria) {
-            criteria = buildCriteria(req.user.id, req.body);
-          }
           const existing = await Consent.findOne(criteria);
           if (existing) {
             return res.status(200).json({ success: true, data: existing });
