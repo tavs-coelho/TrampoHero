@@ -37,7 +37,7 @@ const consentSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-consentSchema.index({ userId: 1, purpose: 1, policyVersion: 1 });
+consentSchema.index({ userId: 1, purpose: 1, policyVersion: 1 }, { unique: true });
 consentSchema.index({ granted: 1 });
 
 consentSchema.set('toJSON', {
