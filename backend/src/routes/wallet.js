@@ -2,11 +2,57 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
+import Withdrawal from '../models/Withdrawal.js';
 import { env } from '../config/env.js';
 
 const WITHDRAWAL_FEE = env.WITHDRAWAL_FEE;
+const MIN_WITHDRAWAL = env.MIN_WITHDRAWAL ?? 0;
+const PAYMENT_GATEWAY_PROVIDER = env.PAYMENT_GATEWAY_PROVIDER ?? 'stripe';
 
 const router = express.Router();
+
+const PIX_KEY_TYPES = {
+  CPF: 'cpf',
+  CNPJ: 'cnpj',
+  EMAIL: 'email',
+  PHONE: 'phone',
+  RANDOM: 'random',
+};
+
+function detectPixKeyType(pixKey) {
+  if (!pixKey) return null;
+  if (pixKey.includes('@')) return PIX_KEY_TYPES.EMAIL;
+  const digits = pixKey.replace(/\D/g, '');
+  if (digits.length === 11) return PIX_KEY_TYPES.CPF;
+  if (digits.length === 14) return PIX_KEY_TYPES.CNPJ;
+  if (digits.length === 13 && digits.startsWith('55')) return PIX_KEY_TYPES.PHONE;
+  return PIX_KEY_TYPES.RANDOM;
+}
+
+function maskPixKey(pixKey) {
+  if (!pixKey) return '';
+  const trimmed = pixKey.trim();
+  if (!trimmed) return '';
+  if (trimmed.includes('@')) {
+    const atIndex = trimmed.indexOf('@');
+    const localPart = trimmed.slice(0, atIndex);
+    const domain = trimmed.slice(atIndex + 1);
+    const firstChar = localPart[0] ?? '*';
+    const domainParts = domain?.split('.') ?? [];
+    const baseDomain = domainParts[0] ?? '';
+    const tld = domainParts.length > 1 ? domainParts.slice(1).join('.') : '';
+    const maskedDomain = baseDomain
+      ? `${baseDomain[0]}${'*'.repeat(Math.max(baseDomain.length - 1, 0))}`
+      : '***';
+    return `${firstChar}***@${maskedDomain}${tld ? `.${tld}` : ''}`;
+  }
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits.length >= 4) {
+    return `***${digits.slice(-4)}`;
+  }
+  if (trimmed.length <= 4) return '***';
+  return `${'*'.repeat(trimmed.length - 4)}${trimmed.slice(-4)}`;
+}
 
 // @route   GET /api/wallet/balance
 // @desc    Get wallet balance
@@ -75,13 +121,14 @@ router.post('/withdraw', authenticate, async (req, res) => {
     if (!amount || amount <= 0) {
       return res.status(400).json({ success: false, error: 'Invalid amount' });
     }
-
-    if (amount < MIN_WITHDRAWAL) {
-      return res.status(400).json({ success: false, error: `Minimum withdrawal amount is R$ ${MIN_WITHDRAWAL.toFixed(2)}` });
-    }
-
-    if (!pixKey || !pixKey.trim()) {
+    if (!pixKey || typeof pixKey !== 'string' || !pixKey.trim()) {
       return res.status(400).json({ success: false, error: 'PIX key is required' });
+    }
+    if (amount < MIN_WITHDRAWAL) {
+      return res.status(400).json({
+        success: false,
+        error: `Minimum withdrawal amount is R$ ${MIN_WITHDRAWAL.toFixed(2)}`,
+      });
     }
 
     const user = await User.findById(req.user.id);
@@ -95,6 +142,8 @@ router.post('/withdraw', authenticate, async (req, res) => {
 
     const fee = user.isPrime ? 0 : WITHDRAWAL_FEE;
     const netAmount = parseFloat((amount - fee).toFixed(2));
+    const pixKeyMasked = maskPixKey(pixKey);
+    const pixKeyType = detectPixKeyType(pixKey);
 
     if (netAmount <= 0) {
       return res.status(400).json({ success: false, error: 'Net amount after fee must be positive' });
@@ -108,7 +157,7 @@ router.post('/withdraw', authenticate, async (req, res) => {
       netAmount,
       pixKey: pixKey.trim(),
       status: 'pending',
-      gatewayProvider: process.env.PAYMENT_GATEWAY_PROVIDER ?? 'stripe',
+      gatewayProvider: PAYMENT_GATEWAY_PROVIDER,
     });
 
     // Record the wallet transaction
@@ -117,9 +166,11 @@ router.post('/withdraw', authenticate, async (req, res) => {
       type: 'withdrawal',
       status: 'pending',
       amount: -amount,
-      description: `Saque PIX (${pixKey.trim()})`,
+      description: `Saque PIX (${pixKeyMasked})`,
       fee,
       withdrawalId: withdrawal._id,
+      pixKeyMasked,
+      pixKeyType,
     });
 
     // Move amount from balance → scheduled (processing)

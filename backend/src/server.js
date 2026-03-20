@@ -32,6 +32,7 @@ import disputesRoutes from './routes/disputes.js';
 import contractsRoutes from './routes/contracts.js';
 import supportRoutes from './routes/support.js';
 import adminRoutes from './routes/admin.js';
+import consentRoutes from './routes/consents.js';
 
 import mongoose from 'mongoose';
 
@@ -105,9 +106,9 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/disputes', disputesRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/consents', consentRoutes);
 
-// Serve generated PDF contracts for download (static files at /api/contracts/files/)
-app.use('/api/contracts/files', express.static(path.join(__dirname, '..', 'contracts')));
+// Serve generated PDF contracts via authenticated route in contracts router
 app.use('/api/contracts', contractsRoutes);
 
 // Health check endpoint

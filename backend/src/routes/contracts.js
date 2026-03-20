@@ -1,10 +1,39 @@
 import express from 'express';
+import path from 'path';
+import fs from 'fs/promises';
+import { fileURLToPath } from 'url';
 import { authenticate, authorize } from '../middleware/auth.js';
 import Contract from '../models/Contract.js';
 import AdminAction from '../models/AdminAction.js';
 import { param, validationResult } from 'express-validator';
 
 const router = express.Router();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const CONTRACTS_DIR = path.join(__dirname, '..', '..', 'contracts');
+
+function isSafeFileName(fileName) {
+  if (!fileName) return false;
+  if (fileName !== path.basename(fileName)) return false;
+  if (fileName === '.' || fileName === '..') return false;
+  return /^[A-Za-z0-9]+([._-][A-Za-z0-9]+)*\.pdf$/.test(fileName);
+}
+
+async function getReadableFileError(filePath) {
+  try {
+    const stats = await fs.stat(filePath);
+    if (!stats.isFile()) {
+      return { status: 404, message: 'Contract file not found' };
+    }
+    return null;
+  } catch (err) {
+    return {
+      status: err.code === 'ENOENT' ? 404 : 500,
+      message: err.code === 'ENOENT'
+        ? 'Contract file not found'
+        : 'Error retrieving contract file',
+    };
+  }
+}
 
 // @route   GET /api/contracts
 // @desc    List contracts for the authenticated user (as employer or freelancer)
@@ -35,6 +64,60 @@ router.get('/', authenticate, async (req, res) => {
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
+
+// @route   GET /api/contracts/files/:fileName
+// @desc    Download a contract file (authenticated and authorized)
+// @access  Private (party or admin)
+router.get(
+  '/files/:fileName',
+  authenticate,
+  param('fileName').notEmpty().withMessage('File name is required'),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    const { fileName } = req.params;
+    if (!isSafeFileName(fileName)) {
+      return res.status(400).json({ success: false, error: 'Invalid file name' });
+    }
+
+    try {
+      const contract = await Contract.findOne({ pdfUrl: `/api/contracts/files/${fileName}` });
+      if (!contract) {
+        return res.status(404).json({ success: false, error: 'Contract not found' });
+      }
+
+      const userId = req.user.id;
+      const isParty =
+        contract.freelancerId.toString() === userId ||
+        contract.employerId.toString() === userId;
+      if (!isParty && req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, error: 'Not authorized' });
+      }
+
+      const filePath = path.join(CONTRACTS_DIR, fileName);
+      const resolvedDir = path.resolve(CONTRACTS_DIR);
+      const resolvedPath = path.resolve(filePath);
+      const relativePath = path.relative(resolvedDir, resolvedPath);
+      const normalizedRelative = path.normalize(relativePath);
+      if (normalizedRelative.startsWith('..')) {
+        return res.status(400).json({ success: false, error: 'Invalid file path' });
+      }
+
+      const fileError = await getReadableFileError(filePath);
+      if (fileError) {
+        return res.status(fileError.status).json({ success: false, error: fileError.message });
+      }
+
+      return res.sendFile(filePath);
+    } catch (error) {
+      console.error('[GET /contracts/files]', error.message);
+      return res.status(500).json({ success: false, error: 'Server error' });
+    }
+  }
+);
 
 // @route   GET /api/contracts/:id
 // @desc    Get a single contract

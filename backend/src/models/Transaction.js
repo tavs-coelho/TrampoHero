@@ -51,6 +51,14 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  pixKeyMasked: {
+    type: String,
+    default: null,
+  },
+  pixKeyType: {
+    type: String,
+    default: null,
+  },
   /** Reference to a Withdrawal record (for withdrawal transactions). */
   withdrawalId: {
     type: mongoose.Schema.Types.ObjectId,

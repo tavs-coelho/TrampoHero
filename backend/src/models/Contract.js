@@ -67,10 +67,11 @@ const contractSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-contractSchema.index({ jobId: 1 });
-contractSchema.index({ freelancerId: 1 });
-contractSchema.index({ employerId: 1 });
-contractSchema.index({ validationHash: 1 });
-contractSchema.index({ status: 1 });
+  contractSchema.index({ jobId: 1 });
+  contractSchema.index({ freelancerId: 1 });
+  contractSchema.index({ employerId: 1 });
+  contractSchema.index({ validationHash: 1 });
+  contractSchema.index({ status: 1 });
+  contractSchema.index({ pdfUrl: 1 });
 
 export default mongoose.model('Contract', contractSchema);
