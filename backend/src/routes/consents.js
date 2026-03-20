@@ -60,6 +60,7 @@ router.post(
       policyVersion: req.body.policyVersion ?? null,
     });
 
+    let criteria;
     try {
       const {
         purpose,
@@ -69,7 +70,7 @@ router.post(
         source = 'app',
       } = req.body;
 
-      const criteria = buildCriteria();
+      criteria = buildCriteria();
       const update = {
         legalBasis,
         granted,
@@ -88,7 +89,9 @@ router.post(
     } catch (error) {
       if (error?.code === 11000) {
         try {
-          const criteria = buildCriteria();
+          if (!criteria) {
+            criteria = buildCriteria();
+          }
           const existing = await Consent.findOne(criteria);
           if (existing) {
             return res.status(200).json({ success: true, data: existing });
@@ -96,6 +99,7 @@ router.post(
         } catch (lookupError) {
           console.error('[POST /consents] Duplicate lookup failed', lookupError.message);
         }
+        console.warn('[POST /consents] Duplicate key without existing record', criteria);
         return res.status(409).json({ success: false, error: 'Consent already exists' });
       }
       console.error('[POST /consents]', error.message);
