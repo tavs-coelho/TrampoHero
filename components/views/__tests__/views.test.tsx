@@ -9,7 +9,6 @@ import {
   createMockStoreProduct,
   createMockAdvertisement,
 } from '../../../__tests__/testUtils';
-import { Niche } from '../../../types';
 import {
   BrowseView,
   ActiveJobView,
@@ -186,7 +185,6 @@ describe('WalletView', () => {
         handleWithdraw={vi.fn()}
         handleAnticipate={vi.fn()}
         setShowPrimeModal={vi.fn()}
-        setView={vi.fn()}
       />
     );
     expect(screen.getByText('Saldo Total')).toBeInTheDocument();
@@ -199,10 +197,24 @@ describe('WalletView', () => {
         handleWithdraw={vi.fn()}
         handleAnticipate={vi.fn()}
         setShowPrimeModal={vi.fn()}
-        setView={vi.fn()}
       />
     );
     expect(screen.getByText(/Sacar via PIX/)).toBeInTheDocument();
+  });
+
+  it('renders wallet error state with retry', () => {
+    render(
+      <WalletView
+        user={createMockUser()}
+        handleWithdraw={vi.fn()}
+        handleAnticipate={vi.fn()}
+        setShowPrimeModal={vi.fn()}
+        error="Falha ao carregar carteira"
+        onRetry={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Falha ao carregar carteira')).toBeInTheDocument();
+    expect(screen.getByText('Tentar novamente')).toBeInTheDocument();
   });
 });
 
@@ -413,6 +425,17 @@ describe('RankingView', () => {
     );
     expect(screen.getByText('Carlos Oliveira')).toBeInTheDocument();
   });
+
+  it('renders ranking empty state', () => {
+    render(
+      <RankingView
+        rankings={[]}
+        user={createMockUser()}
+        setView={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Ranking indisponível')).toBeInTheDocument();
+  });
 });
 
 describe('ChallengesView', () => {
@@ -434,6 +457,16 @@ describe('ChallengesView', () => {
       />
     );
     expect(screen.getByText(/Desafio da Semana/)).toBeInTheDocument();
+  });
+
+  it('renders empty state when no active challenges', () => {
+    render(
+      <ChallengesView
+        challenges={[createMockChallenge({ isActive: false, isCompleted: false })]}
+        setView={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Sem desafios ativos')).toBeInTheDocument();
   });
 });
 
@@ -633,6 +666,33 @@ describe('DashboardView', () => {
       />
     );
     expect(screen.getByText('Criar Primeira Vaga')).toBeInTheDocument();
+  });
+
+  it('renders dashboard error state with retry', () => {
+    render(
+      <DashboardView
+        user={createMockUser({ role: 'employer' })}
+        filteredEmployerJobs={[]}
+        filterNiche="All"
+        setFilterNiche={vi.fn()}
+        filterStatus="All"
+        setFilterStatus={vi.fn()}
+        filterDate=""
+        setFilterDate={vi.fn()}
+        handleManageJob={vi.fn()}
+        simulateVoiceCreate={vi.fn()}
+        isRecording={false}
+        setShowCreateJobModal={vi.fn()}
+        aiSuggestion={null}
+        handleShowInvoices={vi.fn()}
+        handleOpenAddBalance={vi.fn()}
+        handleInviteTalent={vi.fn()}
+        setView={vi.fn()}
+        error="Falha ao carregar vagas"
+        onRetry={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Falha ao carregar vagas')).toBeInTheDocument();
   });
 });
 

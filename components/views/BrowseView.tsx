@@ -34,7 +34,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
     <div className="flex items-center justify-between">
       <h2 className="text-2xl font-black text-slate-900">Freelas Próximos</h2>
       <div className="flex gap-2">
-        <button onClick={() => setBrowseMode(m => m === 'list' ? 'map' : 'list')} className="w-10 h-10 bg-white border rounded-xl flex items-center justify-center text-slate-600 shadow-sm hover:bg-slate-50 transition-colors">
+        <button aria-label={browseMode === 'list' ? 'Alternar para mapa' : 'Alternar para lista'} onClick={() => setBrowseMode(m => m === 'list' ? 'map' : 'list')} className="w-10 h-10 bg-white border rounded-xl flex items-center justify-center text-slate-600 shadow-sm hover:bg-slate-50 transition-colors">
           <i className={`fas ${browseMode === 'list' ? 'fa-map' : 'fa-list'}`}></i>
         </button>
       </div>

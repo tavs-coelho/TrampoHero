@@ -3,6 +3,7 @@ import { UserProfile, Certificate, Review } from '../../types';
 import { MAX_RECENT_ITEMS } from '../../data/constants';
 import { MEDALS_REPO } from '../../data/mockData';
 import { StarRating } from '../StarRating';
+import { Skeleton } from '../Skeleton';
 
 interface ProfileViewProps {
   user: UserProfile;
@@ -10,10 +11,25 @@ interface ProfileViewProps {
   handleDownloadCertificate: (cert: Certificate) => void;
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   reviews?: Review[];
+  isLoading?: boolean;
 }
 
-export const ProfileView: React.FC<ProfileViewProps> = ({ user, setView, handleDownloadCertificate, showToast, reviews = [] }) => (
+export const ProfileView: React.FC<ProfileViewProps> = ({
+  user,
+  setView,
+  handleDownloadCertificate,
+  showToast,
+  reviews = [],
+  isLoading = false,
+}) => (
   <div className="space-y-6 animate-in fade-in duration-500">
+    {isLoading ? (
+      <>
+        <Skeleton className="h-72 rounded-[3rem]" />
+        <Skeleton className="h-56 rounded-[2.5rem]" />
+      </>
+    ) : (
+      <>
     <div className="bg-white p-8 rounded-[3rem] text-center border border-slate-100 shadow-lg">
         <div className="w-24 h-24 bg-slate-200 rounded-full mx-auto mb-4 overflow-hidden border-4 border-white shadow-xl flex items-center justify-center">
             <div className="w-full h-full flex items-center justify-center bg-slate-900 text-white text-3xl font-black">{user.name.charAt(0)}</div>
@@ -242,5 +258,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user, setView, handleD
     <button onClick={() => setView('academy')} className="w-full py-4 bg-slate-900 text-white rounded-[2rem] font-black uppercase tracking-widest shadow-lg">
         Ir para Hero Academy
     </button>
+      </>
+    )}
   </div>
 );

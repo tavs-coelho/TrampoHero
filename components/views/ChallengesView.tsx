@@ -1,13 +1,27 @@
 import React, { useMemo } from 'react';
 import { WeeklyChallenge } from '../../types';
+import { EmptyState } from '../EmptyState';
+import { ErrorState } from '../ErrorState';
+import { Skeleton } from '../Skeleton';
 
 interface ChallengesViewProps {
   challenges: WeeklyChallenge[];
   setView: (v: 'browse') => void;
+  isLoading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
-export const ChallengesView: React.FC<ChallengesViewProps> = ({ challenges, setView }) => {
+export const ChallengesView: React.FC<ChallengesViewProps> = ({
+  challenges,
+  setView,
+  isLoading = false,
+  error = null,
+  onRetry,
+}) => {
   const now = useMemo(() => Date.now(), []);
+  const activeChallenges = challenges.filter(c => c.isActive && !c.isCompleted);
+  const completedChallenges = challenges.filter(c => c.isCompleted);
   return (
   <div className="space-y-6 animate-in fade-in duration-500">
     <header className="flex items-center justify-between">
@@ -20,7 +34,21 @@ export const ChallengesView: React.FC<ChallengesViewProps> = ({ challenges, setV
 
     {/* Active Challenges */}
     <div className="space-y-4">
-      {challenges.filter(c => c.isActive && !c.isCompleted).map(challenge => (
+      {error ? (
+        <ErrorState message={error} onRetry={onRetry} className="bg-white rounded-[2.5rem] border border-slate-100" />
+      ) : isLoading ? (
+        <>
+          <Skeleton className="h-48 rounded-[2.5rem]" />
+          <Skeleton className="h-48 rounded-[2.5rem]" />
+        </>
+      ) : activeChallenges.length === 0 ? (
+        <EmptyState
+          icon="fa-fire"
+          title="Sem desafios ativos"
+          description="Novos desafios semanais serão liberados em breve."
+          className="bg-white rounded-[2.5rem] border border-slate-100"
+        />
+      ) : activeChallenges.map(challenge => (
         <div key={challenge.id} className="bg-white p-6 rounded-[2.5rem] border-2 border-slate-100 hover:border-indigo-200 transition-all">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
@@ -65,11 +93,11 @@ export const ChallengesView: React.FC<ChallengesViewProps> = ({ challenges, setV
     </div>
 
     {/* Completed Challenges */}
-    {challenges.filter(c => c.isCompleted).length > 0 && (
+    {!isLoading && !error && completedChallenges.length > 0 && (
       <div>
         <h3 className="font-black text-slate-900 mb-3">✅ Completados</h3>
         <div className="space-y-3">
-          {challenges.filter(c => c.isCompleted).map(challenge => (
+          {completedChallenges.map(challenge => (
             <div key={challenge.id} className="bg-slate-50 p-4 rounded-2xl opacity-70">
               <p className="font-bold text-sm">{challenge.title}</p>
               <p className="text-xs text-slate-500">Recompensa recebida!</p>
