@@ -286,6 +286,56 @@ describe('POST /api/support', () => {
     expect(SupportTicket.create).toHaveBeenCalled();
   });
 
+  it('auto-prioritizes fraud reports with manual review and SLA', async () => {
+    SupportTicket.create.mockResolvedValue({ ...mockTicket, _id: 'fraud-ticket-id', category: 'fraud', status: 'manual_review' });
+
+    const token = makeToken();
+    const res = await request(app)
+      .post('/api/support')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        subject: 'Suspeita de fraude',
+        description: 'Pedido de pagamento fora da plataforma',
+        category: 'fraud',
+      });
+
+    expect(res.status).toBe(201);
+    expect(SupportTicket.create).toHaveBeenCalledWith(expect.objectContaining({
+      category: 'fraud',
+      priority: 'critical',
+      status: 'manual_review',
+      incidentType: 'fraud_report',
+      manualReviewRequired: true,
+      slaTargetAt: expect.any(Date),
+      history: expect.arrayContaining([
+        expect.objectContaining({ type: 'ticket_opened' }),
+        expect.objectContaining({ type: 'priority_changed' }),
+        expect.objectContaining({ type: 'manual_review' }),
+      ]),
+    }));
+  });
+
+  it('forces manual review for dispute category even when incidentType is omitted', async () => {
+    SupportTicket.create.mockResolvedValue({ ...mockTicket, _id: 'dispute-ticket-id', category: 'dispute', status: 'manual_review' });
+
+    const token = makeToken();
+    const res = await request(app)
+      .post('/api/support')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        subject: 'Disputa de entrega',
+        description: 'Há divergência entre empresa e freelancer',
+        category: 'dispute',
+      });
+
+    expect(res.status).toBe(201);
+    expect(SupportTicket.create).toHaveBeenCalledWith(expect.objectContaining({
+      category: 'dispute',
+      status: 'manual_review',
+      manualReviewRequired: true,
+    }));
+  });
+
   it('returns 400 when subject is missing', async () => {
     const token = makeToken();
     const res = await request(app)
@@ -338,6 +388,30 @@ describe('GET /api/support', () => {
   it('returns 401 without auth', async () => {
     const res = await request(app).get('/api/support');
     expect(res.status).toBe(401);
+  });
+
+  it('returns 400 for invalid status filter', async () => {
+    const token = makeToken();
+    const res = await request(app)
+      .get('/api/support?status[$ne]=open')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('GET /api/support/operations/meta', () => {
+  it('returns support operational metadata', async () => {
+    const token = makeToken();
+    const res = await request(app)
+      .get('/api/support/operations/meta')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.categories).toContain('fraud');
+    expect(res.body.data.statuses).toContain('manual_review');
+    expect(res.body.data.slaHoursByCategory.fraud).toBe(1);
   });
 });
 

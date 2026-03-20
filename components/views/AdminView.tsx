@@ -115,6 +115,7 @@ const STATUS_COLORS: Record<string, string> = {
   open: 'bg-emerald-50 text-emerald-700',
   in_progress: 'bg-blue-50 text-blue-700',
   waiting_user: 'bg-amber-50 text-amber-700',
+  manual_review: 'bg-rose-50 text-rose-700',
   resolved: 'bg-indigo-50 text-indigo-700',
   closed: 'bg-slate-100 text-slate-600',
   pending: 'bg-amber-50 text-amber-700',
@@ -711,7 +712,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, showToast }) => {
 
             {/* Status controls */}
             <div className="flex gap-2 flex-wrap">
-              {['in_progress', 'waiting_user', 'resolved', 'closed'].map(s => (
+              {['in_progress', 'waiting_user', 'manual_review', 'resolved', 'closed'].map(s => (
                 <button
                   key={s}
                   onClick={() => handleTicketStatus(selectedTicket._id, s)}

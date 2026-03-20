@@ -742,6 +742,16 @@ describe('GET /api/admin/tickets', () => {
 
     expect(res.status).toBe(400);
   });
+
+  it('accepts manual_review as status filter', async () => {
+    const token = makeToken();
+    const res = await request(app)
+      .get('/api/admin/tickets?status=manual_review')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
 });
 
 describe('GET /api/admin/tickets/:id', () => {

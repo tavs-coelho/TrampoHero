@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
-import { Niche, Job, UserProfile, SubscriptionTier, Message, Course, Certificate, WeeklyChallenge, TalentRanking, StoreProduct, Advertisement, Review } from './types';
-import { supportAssistant, getRecurrentSuggestion } from './services/geminiService';
+import { Niche, Job, UserProfile, SubscriptionTier, Course, Certificate, WeeklyChallenge, TalentRanking, StoreProduct, Advertisement, Review } from './types';
+import { getRecurrentSuggestion } from './services/geminiService';
 import { WEEKLY_CHALLENGES, TALENT_RANKINGS, STORE_PRODUCTS, ADVERTISEMENTS, INITIAL_JOBS, INITIAL_USER } from './data/mockData';
 import { apiService } from './services/apiService';
 import { Toast } from './components/Toast';
@@ -11,10 +11,10 @@ import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { ExamModal, PrimeModal, PaymentModal, CreateJobModal, JobDetailModal, ReviewFormModal, ConfirmDialog } from './components/modals';
 import {
-  DashboardView, TalentsView, EmployerProfileView, EmployerWalletView, EmployerChatView, EmployerActiveView,
-  BrowseView, ActiveJobView, WalletView, AcademyView, ProfileView, ChatView,
+  DashboardView, TalentsView, EmployerProfileView, EmployerWalletView, EmployerActiveView,
+  BrowseView, ActiveJobView, WalletView, AcademyView, ProfileView,
   CoinsView, InsuranceView, CreditView, ReferralsView, AnalyticsView, ChallengesView,
-  RankingView, StoreView, AdsView, KycView, AdminView
+  RankingView, StoreView, AdsView, KycView, AdminView, SupportCenterView
 } from './components/views';
 import { useToast } from './hooks/useToast';
 import { useJobActions } from './hooks/useJobActions';
@@ -54,16 +54,6 @@ const App: React.FC = () => {
     const jobId = params.get('jobId');
     return jobId ? (INITIAL_JOBS.find(j => j.id === jobId) ?? null) : null;
   });
-  const [messages, setMessages] = useState<Message[]>(() => {
-    try {
-      const saved = localStorage.getItem('trampoHeroMessages');
-      return saved ? JSON.parse(saved) : [];
-    } catch (error) {
-      console.error('Failed to parse messages from localStorage:', error);
-      return [];
-    }
-  });
-  const [inputText, setInputText] = useState('');
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
@@ -108,7 +98,6 @@ const App: React.FC = () => {
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersLayerRef = useRef<any>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const navigationTimeoutRef = useRef<number | null>(null);
 
   const navigateTo = useCallback((nextView: ViewType) => {
@@ -274,25 +263,6 @@ const App: React.FC = () => {
     }
   }, [showToast]);
 
-  const handleSendMessage = useCallback(async () => {
-    if (!inputText.trim()) return;
-    const newMessage: Message = { id: Date.now().toString(), senderId: user.id, text: inputText, timestamp: new Date().toISOString() };
-    setMessages(prev => [...prev, newMessage]);
-    setInputText('');
-
-    const fallbackMessage = user.role === 'employer'
-      ? "Olá! Sou o assistente TrampoHero para empregadores. Como posso ajudá-lo com suas vagas e contratações?"
-      : "Olá! Como posso ajudá-lo?";
-
-    const response = await supportAssistant(inputText);
-    setMessages(prev => [...prev, {
-      id: Date.now().toString(),
-      senderId: 'bot',
-      text: response || fallbackMessage,
-      timestamp: new Date().toISOString()
-    }]);
-  }, [inputText, user.id, user.role]);
-
   const handleOpenPrimeModal = useCallback(() => {
     analyticsService.trackEvent('cta_prime_click', {
       role: user.role,
@@ -448,18 +418,10 @@ const App: React.FC = () => {
   }, [user]);
 
   useEffect(() => {
-    localStorage.setItem('trampoHeroMessages', JSON.stringify(messages));
-  }, [messages]);
-
-  useEffect(() => {
     if (user.role === 'employer') {
       getRecurrentSuggestion("Alex Silva", 5).then(setAiSuggestion);
     }
   }, [user.role]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   useEffect(() => {
     applySeoMeta(view);
@@ -592,14 +554,10 @@ const App: React.FC = () => {
               />
             )}
             {view === 'chat' && (
-              <EmployerChatView
+              <SupportCenterView
                 user={user}
-                messages={messages}
-                inputText={inputText}
-                setInputText={setInputText}
-                handleSendMessage={handleSendMessage}
-                messagesEndRef={messagesEndRef}
                 setView={setView}
+                showToast={showToast}
               />
             )}
             {view === 'active' && (
@@ -675,14 +633,10 @@ const App: React.FC = () => {
               />
             )}
             {view === 'chat' && (
-              <ChatView
+              <SupportCenterView
                 user={user}
-                messages={messages}
-                inputText={inputText}
-                setInputText={setInputText}
-                handleSendMessage={handleSendMessage}
-                messagesEndRef={messagesEndRef}
                 setView={setView}
+                showToast={showToast}
               />
             )}
             {view === 'coins' && user.trampoCoins && (
