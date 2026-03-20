@@ -54,10 +54,10 @@ router.post(
       return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    const buildCriteria = () => ({
-      userId: req.user.id,
-      purpose: req.body.purpose,
-      policyVersion: req.body.policyVersion ?? null,
+    const buildCriteria = (userId, body) => ({
+      userId,
+      purpose: body.purpose,
+      policyVersion: body.policyVersion ?? null,
     });
 
     let criteria;
@@ -70,7 +70,7 @@ router.post(
         source = 'app',
       } = req.body;
 
-      criteria = buildCriteria();
+      criteria = buildCriteria(req.user.id, req.body);
       const update = {
         legalBasis,
         granted,
@@ -90,7 +90,7 @@ router.post(
       if (error?.code === 11000) {
         try {
           if (!criteria) {
-            criteria = buildCriteria();
+            criteria = buildCriteria(req.user.id, req.body);
           }
           const existing = await Consent.findOne(criteria);
           if (existing) {
@@ -99,7 +99,7 @@ router.post(
         } catch (lookupError) {
           console.error(
             '[POST /consents] Failed to retrieve existing consent record during duplicate handling',
-            lookupError.message
+            lookupError
           );
         }
         console.warn('[POST /consents] Duplicate key without existing record', criteria);
