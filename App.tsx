@@ -107,13 +107,30 @@ const App: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersLayerRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const navigationTimeoutRef = useRef<number | null>(null);
 
   const navigateTo = useCallback((nextView: ViewType) => {
     if (nextView === view) return;
     setIsNavigating(true);
     setView(nextView);
-    window.setTimeout(() => setIsNavigating(false), 250);
+
+    if (navigationTimeoutRef.current !== null) {
+      window.clearTimeout(navigationTimeoutRef.current);
+    }
+
+    navigationTimeoutRef.current = window.setTimeout(() => {
+      setIsNavigating(false);
+      navigationTimeoutRef.current = null;
+    }, 250);
   }, [view]);
+
+  useEffect(() => {
+    return () => {
+      if (navigationTimeoutRef.current !== null) {
+        window.clearTimeout(navigationTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const retryLoadJobs = useCallback(async () => {
     setIsJobsLoading(true);

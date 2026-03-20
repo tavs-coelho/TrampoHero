@@ -93,7 +93,7 @@ export const ChallengesView: React.FC<ChallengesViewProps> = ({
     </div>
 
     {/* Completed Challenges */}
-    {!isLoading && completedChallenges.length > 0 && (
+    {!isLoading && !error && completedChallenges.length > 0 && (
       <div>
         <h3 className="font-black text-slate-900 mb-3">✅ Completados</h3>
         <div className="space-y-3">

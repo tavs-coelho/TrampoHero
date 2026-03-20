@@ -105,7 +105,7 @@ export const RankingView: React.FC<RankingViewProps> = ({
     </div>
 
     {/* Your Position */}
-    {!isLoading && rankings.length > 0 && <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-[2.5rem] text-white">
+    {!isLoading && !error && rankings.length > 0 && <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-[2.5rem] text-white">
       <p className="text-xs font-bold opacity-80 uppercase tracking-widest mb-2">Sua Posição</p>
       <div className="flex items-center justify-between">
         <div>

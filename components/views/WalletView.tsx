@@ -29,8 +29,9 @@ export const WalletView: React.FC<WalletViewProps> = ({
   isAnticipating = false,
 }) => (
   <div className="space-y-6 animate-in fade-in duration-500">
-    {error && <ErrorState message={error} onRetry={onRetry} className="py-6" />}
-    {isLoading ? (
+    {error ? (
+      <ErrorState message={error} onRetry={onRetry} className="py-8" />
+    ) : isLoading ? (
       <>
         <Skeleton className="h-52 rounded-[4rem]" />
         <Skeleton className="h-48 rounded-[3rem]" />
