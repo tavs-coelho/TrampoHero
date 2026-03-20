@@ -23,7 +23,10 @@ export const analyticsService = {
     };
     pushToDataLayer(payload);
     if (typeof window.gtag === 'function') {
-      window.gtag('event', 'page_view', payload);
+      window.gtag('event', 'page_view', {
+        page_path: pagePath,
+        ...params,
+      });
     }
   },
 
@@ -36,4 +39,3 @@ export const analyticsService = {
     }
   },
 };
-

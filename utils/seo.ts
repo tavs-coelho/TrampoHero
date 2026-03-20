@@ -132,26 +132,48 @@ const SEO_BY_VIEW: Record<ViewType, SeoMeta> = {
   },
 };
 
-const setMeta = (selector: string, attr: 'content' | 'href', value: string) => {
-  const element = document.querySelector(selector);
-  if (element) {
-    element.setAttribute(attr, value);
+const getOrCreateMetaTag = ({
+  name,
+  property,
+}: {
+  name?: string;
+  property?: string;
+}) => {
+  const selector = name ? `meta[name="${name}"]` : `meta[property="${property}"]`;
+  const existing = document.querySelector<HTMLMetaElement>(selector);
+  if (existing) return existing;
+
+  const tag = document.createElement('meta');
+  if (name) tag.setAttribute('name', name);
+  if (property) tag.setAttribute('property', property);
+  document.head.appendChild(tag);
+  return tag;
+};
+
+const setMetaContent = ({
+  name,
+  property,
+  content,
+}: {
+  name?: string;
+  property?: string;
+  content: string;
+}) => {
+  const tag = getOrCreateMetaTag({ name, property });
+  tag.setAttribute('content', content);
+};
+
+const setCanonical = (href: string) => {
+  const existing = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+  if (existing) {
+    existing.setAttribute('href', href);
     return;
   }
-  const meta = document.createElement(selector.includes('link') ? 'link' : 'meta');
-  if (selector.includes('property=')) {
-    const property = selector.match(/property="([^"]+)"/)?.[1];
-    if (property) meta.setAttribute('property', property);
-  }
-  if (selector.includes('name=')) {
-    const name = selector.match(/name="([^"]+)"/)?.[1];
-    if (name) meta.setAttribute('name', name);
-  }
-  if (meta.tagName.toLowerCase() === 'link') {
-    meta.setAttribute('rel', 'canonical');
-  }
-  meta.setAttribute(attr, value);
-  document.head.appendChild(meta);
+
+  const tag = document.createElement('link');
+  tag.setAttribute('rel', 'canonical');
+  tag.setAttribute('href', href);
+  document.head.appendChild(tag);
 };
 
 export const getSeoMetaByView = (view: ViewType): SeoMeta => SEO_BY_VIEW[view] ?? SEO_BY_VIEW.browse;
@@ -161,14 +183,13 @@ export const applySeoMeta = (view: ViewType) => {
   const canonicalUrl = `${BASE_URL}${meta.path}`;
 
   document.title = meta.title;
-  setMeta('meta[name="description"]', 'content', meta.description);
-  setMeta('meta[property="og:title"]', 'content', meta.title);
-  setMeta('meta[property="og:description"]', 'content', meta.description);
-  setMeta('meta[property="og:url"]', 'content', canonicalUrl);
-  setMeta('meta[property="og:image"]', 'content', DEFAULT_IMAGE);
-  setMeta('meta[name="twitter:title"]', 'content', meta.title);
-  setMeta('meta[name="twitter:description"]', 'content', meta.description);
-  setMeta('meta[name="twitter:image"]', 'content', DEFAULT_IMAGE);
-  setMeta('link[rel="canonical"]', 'href', canonicalUrl);
+  setMetaContent({ name: 'description', content: meta.description });
+  setMetaContent({ property: 'og:title', content: meta.title });
+  setMetaContent({ property: 'og:description', content: meta.description });
+  setMetaContent({ property: 'og:url', content: canonicalUrl });
+  setMetaContent({ property: 'og:image', content: DEFAULT_IMAGE });
+  setMetaContent({ name: 'twitter:title', content: meta.title });
+  setMetaContent({ name: 'twitter:description', content: meta.description });
+  setMetaContent({ name: 'twitter:image', content: DEFAULT_IMAGE });
+  setCanonical(canonicalUrl);
 };
-

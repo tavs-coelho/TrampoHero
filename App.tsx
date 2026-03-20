@@ -560,7 +560,7 @@ const App: React.FC = () => {
                 handleManageJob={handleManageJob}
                 simulateVoiceCreate={simulateVoiceCreate}
                 isRecording={isRecording}
-                setShowCreateJobModal={handleOpenCreateJobModal}
+                onCreateJobClick={handleOpenCreateJobModal}
                 aiSuggestion={aiSuggestion}
                 handleShowInvoices={handleShowInvoices}
                 handleOpenAddBalance={handleOpenAddBalance}
