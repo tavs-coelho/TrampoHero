@@ -1,5 +1,5 @@
 import express from 'express';
-import { body, param, validationResult } from 'express-validator';
+import { body, param, query, validationResult } from 'express-validator';
 import { authenticate, authorize } from '../middleware/auth.js';
 import SupportTicket from '../models/SupportTicket.js';
 import AdminAction from '../models/AdminAction.js';
@@ -162,7 +162,9 @@ router.post(
         normalizedIncidentType === 'fraud_report' ||
         normalizedIncidentType === 'dispute_company_freelancer' ||
         parseBoolean(isFraudReported) ||
-        category === 'fraud';
+        category === 'fraud' ||
+        category === 'dispute' ||
+        parseBoolean(isCompanyVsFreelancerDispute);
       const resolvedPriority =
         priority ||
         getPriorityByContext({
@@ -211,25 +213,39 @@ router.post(
 // @route   GET /api/support
 // @desc    List support tickets for the authenticated user (or all for admin)
 // @access  Private
-router.get('/', authenticate, async (req, res) => {
-  try {
-    const query = req.user.role === 'admin' ? {} : { userId: req.user.id };
-    const { status, category, incidentType } = req.query;
-    if (status) query.status = status;
-    if (category) query.category = category;
-    if (incidentType) query.incidentType = incidentType;
+router.get(
+  '/',
+  authenticate,
+  [
+    query('status').optional().isString().isIn(STATUSES),
+    query('category').optional().isString().isIn(CATEGORIES),
+    query('incidentType').optional().isString().isIn(INCIDENT_TYPES),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
 
-    const tickets = await SupportTicket.find(query)
-      .populate('userId', 'name email role')
-      .populate('assignedAdminId', 'name email')
-      .sort({ createdAt: -1 })
-      .limit(100);
+    try {
+      const ticketQuery = req.user.role === 'admin' ? {} : { userId: req.user.id };
+      const { status, category, incidentType } = req.query;
+      if (status) ticketQuery.status = status;
+      if (category) ticketQuery.category = category;
+      if (incidentType) ticketQuery.incidentType = incidentType;
 
-    res.json({ success: true, count: tickets.length, data: tickets });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Server error' });
+      const tickets = await SupportTicket.find(ticketQuery)
+        .populate('userId', 'name email role')
+        .populate('assignedAdminId', 'name email')
+        .sort({ createdAt: -1 })
+        .limit(100);
+
+      res.json({ success: true, count: tickets.length, data: tickets });
+    } catch (error) {
+      res.status(500).json({ success: false, error: 'Server error' });
+    }
   }
-});
+);
 
 // @route   GET /api/support/:id
 // @desc    Get a single ticket (owner or admin)
@@ -379,14 +395,16 @@ router.put(
       } else if (prevStatus === 'closed') {
         ticket.closedAt = null;
       }
-      ticket.history.push({
-        type: req.body.status === 'manual_review' ? 'manual_review' : 'status_changed',
-        actorId: req.user.id,
-        actorRole: 'admin',
-        description: `Status alterado de ${prevStatus} para ${req.body.status}`,
-        fromStatus: prevStatus,
-        toStatus: req.body.status,
-      });
+      if (prevStatus !== req.body.status) {
+        ticket.history.push({
+          type: req.body.status === 'manual_review' ? 'manual_review' : 'status_changed',
+          actorId: req.user.id,
+          actorRole: 'admin',
+          description: `Status alterado de ${prevStatus} para ${req.body.status}`,
+          fromStatus: prevStatus,
+          toStatus: req.body.status,
+        });
+      }
 
       await ticket.save();
 

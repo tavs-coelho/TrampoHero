@@ -769,7 +769,7 @@ describe('Gemini Service', () => {
 ## Categorias e incidentes
 
 - Categorias: `payment`, `job`, `account`, `kyc`, `technical`, `dispute`, `fraud`, `compliance`, `other`
-- Incidentes: `general`, `dispute_company_freelancer`, `fraud_report`, `manual_review`
+- Incidentes: `general`, `dispute_company_freelancer`, `fraud_report`
 
 ## SLA por categoria (horas)
 

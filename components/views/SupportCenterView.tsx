@@ -31,7 +31,7 @@ interface SupportMeta {
 }
 
 const HELP_ITEMS = [
-  { question: 'Como abrir ticket de disputa?', answer: 'Selecione categoria "dispute" e vincule o job relacionado.' },
+  { question: 'Como abrir ticket de disputa?', answer: 'Selecione a categoria "dispute" e descreva os detalhes da transação na mensagem.' },
   { question: 'Como denunciar fraude?', answer: 'Abra ticket em "fraud". O caso entra em revisão manual automaticamente.' },
   { question: 'Como acompanho SLA?', answer: 'Cada ticket mostra prioridade, status e prazo alvo para resposta.' },
 ];
@@ -63,8 +63,15 @@ export const SupportCenterView: React.FC<SupportCenterViewProps> = ({ user, setV
       apiService.supportGetTickets(),
     ]);
     if (metaRes.success && metaRes.data) {
-      setMeta(metaRes.data as SupportMeta);
-      setCategory(((metaRes.data as SupportMeta).categories[0]) ?? 'other');
+      const metaData = metaRes.data as SupportMeta;
+      setMeta(metaData);
+      const categories = metaData.categories || [];
+      setCategory((prevCategory) => {
+        if (prevCategory && categories.includes(prevCategory)) {
+          return prevCategory;
+        }
+        return categories[0] ?? 'other';
+      });
     } else {
       showToast('Erro ao carregar metadados de suporte', 'error');
     }
@@ -97,14 +104,24 @@ export const SupportCenterView: React.FC<SupportCenterViewProps> = ({ user, setV
       return;
     }
 
-    const result = await apiService.supportCreateTicket({
+    const payload: {
+      subject: string;
+      description: string;
+      category: string;
+      isCompanyVsFreelancerDispute: boolean;
+      isFraudReported: boolean;
+      incidentType?: string;
+    } = {
       subject: subject.trim(),
       description: description.trim(),
       category,
-      incidentType,
       isCompanyVsFreelancerDispute: category === 'dispute',
       isFraudReported: category === 'fraud',
-    });
+    };
+    if (incidentType && incidentType !== 'general') {
+      payload.incidentType = incidentType;
+    }
+    const result = await apiService.supportCreateTicket(payload);
 
     if (!result.success || !result.data) {
       showToast(result.error || 'Erro ao abrir ticket', 'error');
@@ -184,7 +201,7 @@ export const SupportCenterView: React.FC<SupportCenterViewProps> = ({ user, setV
             <p className="text-xs text-slate-500">{item.answer}</p>
           </div>
         ))}
-        {meta && (
+        {meta && meta.prioritizationRules.length > 0 && (
           <div className="pt-2">
             <p className="text-xs font-bold text-slate-700 mb-1">Regras de priorização</p>
             <ul className="text-xs text-slate-500 list-disc pl-5 space-y-1">

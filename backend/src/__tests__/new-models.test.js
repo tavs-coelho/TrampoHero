@@ -315,6 +315,27 @@ describe('POST /api/support', () => {
     }));
   });
 
+  it('forces manual review for dispute category even when incidentType is omitted', async () => {
+    SupportTicket.create.mockResolvedValue({ ...mockTicket, _id: 'dispute-ticket-id', category: 'dispute', status: 'manual_review' });
+
+    const token = makeToken();
+    const res = await request(app)
+      .post('/api/support')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        subject: 'Disputa de entrega',
+        description: 'Há divergência entre empresa e freelancer',
+        category: 'dispute',
+      });
+
+    expect(res.status).toBe(201);
+    expect(SupportTicket.create).toHaveBeenCalledWith(expect.objectContaining({
+      category: 'dispute',
+      status: 'manual_review',
+      manualReviewRequired: true,
+    }));
+  });
+
   it('returns 400 when subject is missing', async () => {
     const token = makeToken();
     const res = await request(app)
@@ -367,6 +388,15 @@ describe('GET /api/support', () => {
   it('returns 401 without auth', async () => {
     const res = await request(app).get('/api/support');
     expect(res.status).toBe(401);
+  });
+
+  it('returns 400 for invalid status filter', async () => {
+    const token = makeToken();
+    const res = await request(app)
+      .get('/api/support?status[$ne]=open')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(400);
   });
 });
 
