@@ -122,7 +122,7 @@ router.post('/withdraw', authenticate, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid amount' });
     }
     if (!pixKey || typeof pixKey !== 'string' || !pixKey.trim()) {
-      return res.status(400).json({ success: false, error: 'pixKey is required' });
+      return res.status(400).json({ success: false, error: 'PIX key is required' });
     }
     if (amount < MIN_WITHDRAWAL) {
       return res.status(400).json({
