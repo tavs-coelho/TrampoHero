@@ -107,6 +107,7 @@ router.post('/register', authLimiter, [
       console.error('[auth] Failed to send verification email:', err.message)
     );
 
+    // Generate JWT
     const token = issueAccessToken(user);
     const refreshToken = issueRefreshToken(user);
 
@@ -155,6 +156,7 @@ router.post('/login', authLimiter, [
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
 
+    // Generate JWT
     const token = issueAccessToken(user);
     const refreshToken = issueRefreshToken(user);
 
