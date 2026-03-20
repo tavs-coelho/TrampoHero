@@ -32,7 +32,7 @@ function maskPixKey(pixKey) {
   if (!trimmed) return '';
   if (trimmed.includes('@')) {
     const [localPart, domain] = trimmed.split('@');
-    const firstChar = localPart?.[0] ?? '*';
+    const firstChar = localPart[0] ?? '*';
     const domainParts = domain?.split('.') ?? [];
     const baseDomain = domainParts[0] ?? '';
     const tld = domainParts.length > 1 ? domainParts.slice(1).join('.') : '';
@@ -136,7 +136,7 @@ router.post('/withdraw', authenticate, async (req, res) => {
       amount: -(amount + fee),
       description: `Saque PIX (${pixKeyMasked})`,
       fee,
-      pixKeyMasked: pixKeyMasked || null,
+      pixKeyMasked: pixKeyMasked ? pixKeyMasked : null,
       pixKeyType,
     });
 

@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { authenticate, authorize } from '../middleware/auth.js';
 import Contract from '../models/Contract.js';
@@ -116,17 +117,16 @@ router.get(
       }
 
       const filePath = path.join(CONTRACTS_DIR, fileName);
-      return res.sendFile(filePath, (err) => {
-        if (err) {
-          console.error('[GET /contracts/files]', err.message);
-          if (!res.headersSent) {
-            const message = err.code === 'ENOENT'
-              ? 'Contract file not found'
-              : 'Error retrieving contract file';
-            res.status(err.code === 'ENOENT' ? 404 : 500).json({ success: false, error: message });
-          }
-        }
-      });
+      try {
+        await fs.access(filePath);
+      } catch (err) {
+        const message = err.code === 'ENOENT'
+          ? 'Contract file not found'
+          : 'Error retrieving contract file';
+        return res.status(err.code === 'ENOENT' ? 404 : 500).json({ success: false, error: message });
+      }
+
+      return res.sendFile(filePath);
     } catch (error) {
       console.error('[GET /contracts/files]', error.message);
       return res.status(500).json({ success: false, error: 'Server error' });
