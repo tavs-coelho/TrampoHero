@@ -139,6 +139,9 @@ describe('POST /api/jobs/:id/complete', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset mutable fields so tests don't bleed into each other
+    mockFreelancer.referredBy = null;
+    mockFreelancer.referralBonusPaid = false;
     mockJob = buildJob();
     Job.findById.mockResolvedValue(mockJob);
     User.findById.mockImplementation((id) => {
@@ -298,7 +301,7 @@ describe('POST /api/jobs/:id/complete', () => {
   // ── Referral bonus (concurrency safety) ────────────────────────────────────
 
   it('does not pay referral bonus when freelancer was not referred', async () => {
-    mockFreelancer.referredBy = null;
+    // mockFreelancer.referredBy is already null from beforeEach
     const token = makeToken();
     await request(app)
       .post(`/api/jobs/${JOB_ID}/complete`)
