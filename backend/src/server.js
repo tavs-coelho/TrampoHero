@@ -113,8 +113,16 @@ app.use('/api/contracts', contractsRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
+  const dbReadyState = mongoose.connection.readyState;
+  const db = dbReadyState === 1 ? 'connected' : 'disconnected';
+  const status = db === 'connected' ? 'ok' : 'degraded';
+
+  res.set('Cache-Control', 'no-store');
+  res.status(status === 'ok' ? 200 : 503).json({
+    status,
+    db,
+    environment: env.NODE_ENV,
+    uptimeSeconds: Math.round(process.uptime()),
     timestamp: new Date().toISOString(),
   });
 });
@@ -126,18 +134,35 @@ app.use((req, res) => {
 
 // Centralized error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`, err.stack);
   res.status(err.status || 500).json({
-    error: err.message || 'Internal Server Error',
+    error: env.NODE_ENV === 'production' ? 'Internal Server Error' : (err.message || 'Internal Server Error'),
     ...(env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });
 
 // Start server
-app.listen(env.PORT, () => {
+const server = app.listen(env.PORT, () => {
   console.log(`🚀 TrampoHero API Server running on port ${env.PORT}`);
   console.log(`📡 Environment: ${env.NODE_ENV}`);
   console.log(`🌐 Allowed origins: ${env.ALLOWED_ORIGINS.join(', ')}`);
+});
+
+function shutdown(signalOrReason) {
+  console.error(`[${new Date().toISOString()}] Shutdown triggered: ${signalOrReason}`);
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(1), 10000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+  shutdown('unhandledRejection');
+});
+process.on('uncaughtException', (error) => {
+  console.error('[uncaughtException]', error);
+  shutdown('uncaughtException');
 });
 
 export default app;
