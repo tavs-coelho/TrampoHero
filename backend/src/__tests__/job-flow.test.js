@@ -171,14 +171,19 @@ describe('GET /api/jobs/:id/applicants', () => {
 
 // ─── POST /api/jobs/:id/select-candidate ─────────────────────────────────────
 
+// MongoId-formatted IDs required by body('candidateId').optional().isMongoId()
+const CANDIDATE_ID = '507f191e810c19729de860ea';
+const OTHER_CANDIDATE_ID = '507f191e810c19729de860eb';
+const UNKNOWN_CANDIDATE_ID = '507f191e810c19729de860ec';
+
 describe('POST /api/jobs/:id/select-candidate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockJob.status = 'open';
     mockJob.save.mockResolvedValue(true);
     mockJob.applicants = [
-      { userId: { toString: () => 'freelancer-id' }, status: 'pending', appliedAt: new Date() },
-      { userId: { toString: () => 'other-freelancer-id' }, status: 'pending', appliedAt: new Date() },
+      { userId: { toString: () => CANDIDATE_ID }, status: 'pending', appliedAt: new Date() },
+      { userId: { toString: () => OTHER_CANDIDATE_ID }, status: 'pending', appliedAt: new Date() },
     ];
     Job.findById.mockResolvedValue(mockJob);
   });
@@ -188,13 +193,13 @@ describe('POST /api/jobs/:id/select-candidate', () => {
     const res = await request(app)
       .post('/api/jobs/507f1f77bcf86cd799439011/select-candidate')
       .set('Authorization', `Bearer ${token}`)
-      .send({ candidateId: 'freelancer-id' });
+      .send({ candidateId: CANDIDATE_ID });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(mockJob.save).toHaveBeenCalled();
-    const approved = mockJob.applicants.find(a => a.userId.toString() === 'freelancer-id');
-    const rejected = mockJob.applicants.find(a => a.userId.toString() === 'other-freelancer-id');
+    const approved = mockJob.applicants.find(a => a.userId.toString() === CANDIDATE_ID);
+    const rejected = mockJob.applicants.find(a => a.userId.toString() === OTHER_CANDIDATE_ID);
     expect(approved.status).toBe('approved');
     expect(rejected.status).toBe('rejected');
     expect(mockJob.status).toBe('applied');
@@ -215,7 +220,7 @@ describe('POST /api/jobs/:id/select-candidate', () => {
     const res = await request(app)
       .post('/api/jobs/507f1f77bcf86cd799439011/select-candidate')
       .set('Authorization', `Bearer ${token}`)
-      .send({ candidateId: 'unknown-user' });
+      .send({ candidateId: UNKNOWN_CANDIDATE_ID });
 
     expect(res.status).toBe(404);
   });
@@ -225,7 +230,7 @@ describe('POST /api/jobs/:id/select-candidate', () => {
     const res = await request(app)
       .post('/api/jobs/507f1f77bcf86cd799439011/select-candidate')
       .set('Authorization', `Bearer ${token}`)
-      .send({ candidateId: 'freelancer-id' });
+      .send({ candidateId: CANDIDATE_ID });
 
     expect(res.status).toBe(403);
   });
@@ -236,7 +241,7 @@ describe('POST /api/jobs/:id/select-candidate', () => {
     const res = await request(app)
       .post('/api/jobs/507f1f77bcf86cd799439011/select-candidate')
       .set('Authorization', `Bearer ${token}`)
-      .send({ candidateId: 'freelancer-id' });
+      .send({ candidateId: CANDIDATE_ID });
 
     expect(res.status).toBe(400);
   });
@@ -247,7 +252,7 @@ describe('POST /api/jobs/:id/select-candidate', () => {
     const res = await request(app)
       .post('/api/jobs/507f1f77bcf86cd799439011/select-candidate')
       .set('Authorization', `Bearer ${token}`)
-      .send({ candidateId: 'freelancer-id' });
+      .send({ candidateId: CANDIDATE_ID });
 
     expect(res.status).toBe(404);
   });
@@ -255,7 +260,7 @@ describe('POST /api/jobs/:id/select-candidate', () => {
   it('returns 401 without auth token', async () => {
     const res = await request(app)
       .post('/api/jobs/507f1f77bcf86cd799439011/select-candidate')
-      .send({ candidateId: 'freelancer-id' });
+      .send({ candidateId: CANDIDATE_ID });
 
     expect(res.status).toBe(401);
   });
