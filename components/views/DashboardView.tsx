@@ -1,6 +1,9 @@
 import React from 'react';
 import { Job, UserProfile } from '../../types';
 import { TOP_TALENTS } from '../../data/mockData';
+import { EmptyState } from '../EmptyState';
+import { ErrorState } from '../ErrorState';
+import { Skeleton } from '../Skeleton';
 
 interface DashboardViewProps {
   user: UserProfile;
@@ -20,6 +23,9 @@ interface DashboardViewProps {
   handleOpenAddBalance: () => void;
   handleInviteTalent: (name: string, id?: string) => void;
   setView: (v: 'talents') => void;
+  isLoading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -40,6 +46,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   handleOpenAddBalance,
   handleInviteTalent,
   setView,
+  isLoading = false,
+  error = null,
+  onRetry,
 }) => (
   <>
     <header className="flex justify-between items-center mb-6">
@@ -94,12 +103,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
     <div className="space-y-4">
       <h3 className="font-black text-xs uppercase tracking-widest text-slate-400 px-2">Gerenciar Minhas Vagas</h3>
-      {filteredEmployerJobs.length === 0 ? (
-        <div className="text-center py-10 opacity-50 bg-white rounded-[2rem] border border-dashed border-slate-200">
-            <i className="fas fa-folder-open text-4xl mb-2 text-slate-300"></i>
-            <p className="text-xs font-bold text-slate-400">Nenhuma vaga criada.</p>
-            <button onClick={() => setShowCreateJobModal(true)} className="mt-4 text-[10px] font-black text-indigo-600 uppercase">Criar Primeira Vaga</button>
-        </div>
+      {error ? (
+        <ErrorState message={error} onRetry={onRetry} className="bg-white rounded-[2rem] border border-slate-100 py-8" />
+      ) : isLoading ? (
+        <>
+          <Skeleton className="h-28 rounded-[2rem]" />
+          <Skeleton className="h-28 rounded-[2rem]" />
+        </>
+      ) : filteredEmployerJobs.length === 0 ? (
+        <EmptyState
+          icon="fa-folder-open"
+          title="Nenhuma vaga criada"
+          description="Crie sua primeira vaga para começar a contratar talentos."
+          actionLabel="Criar Primeira Vaga"
+          onAction={() => setShowCreateJobModal(true)}
+          className="bg-white rounded-[2rem] border border-dashed border-slate-200 py-10"
+        />
       ) : (
         filteredEmployerJobs.map(job => (
             <div key={job.id} onClick={() => handleManageJob(job)} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer flex justify-between items-center active:scale-[0.99]">

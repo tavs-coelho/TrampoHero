@@ -11,7 +11,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ user, setView, setShowPrimeModal, setUser }) => (
   <nav className="bg-white border-b border-slate-200 sticky top-0 z-40 px-6 h-16 flex items-center justify-between shadow-sm">
-    <div className="flex items-center gap-3" onClick={() => setView('browse')}>
+    <div className="flex items-center gap-3" onClick={() => setView('browse')} role="button" aria-label="Ir para início">
       <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg cursor-pointer hover:bg-slate-800 transition-colors">
         <i className="fas fa-bolt text-indigo-400"></i>
       </div>
@@ -23,16 +23,16 @@ export const Header: React.FC<HeaderProps> = ({ user, setView, setShowPrimeModal
     <div className="flex items-center gap-4">
       {user.role === 'freelancer' && (
          user.isPrime ? (
-            <div onClick={() => setShowPrimeModal(true)} className="bg-indigo-600 text-white flex items-center gap-1 text-[8px] font-black px-3 py-1.5 rounded-full animate-pulse shadow-lg shadow-indigo-300 cursor-pointer">
+            <div onClick={() => setShowPrimeModal(true)} className="bg-indigo-600 text-white flex items-center gap-1 text-[8px] font-black px-3 py-1.5 rounded-full animate-pulse shadow-lg shadow-indigo-300 cursor-pointer" role="button" aria-label="Abrir Hero Prime">
                 <i className="fas fa-crown"></i> PRIME ATIVO
             </div>
           ) : (
-            <div onClick={() => setShowPrimeModal(true)} className="text-slate-300 hover:text-amber-500 cursor-pointer transition-colors">
+            <div onClick={() => setShowPrimeModal(true)} className="text-slate-300 hover:text-amber-500 cursor-pointer transition-colors" role="button" aria-label="Conhecer Hero Prime">
                 <i className="fas fa-crown text-xl"></i>
             </div>
           )
       )}
-      <div onClick={() => setView('profile')} className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center cursor-pointer hover:bg-slate-200 transition-colors">
+      <div onClick={() => setView('profile')} className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center cursor-pointer hover:bg-slate-200 transition-colors" role="button" aria-label="Abrir perfil">
          <i className="fas fa-user text-slate-500 text-xs"></i>
       </div>
       <button onClick={() => setUser(prev => ({ ...prev, role: prev.role === 'freelancer' ? 'employer' : 'freelancer' }))} className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border bg-white text-slate-500 border-slate-200 hover:bg-slate-50 transition-colors">

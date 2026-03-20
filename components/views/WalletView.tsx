@@ -1,22 +1,58 @@
 import React from 'react';
 import { UserProfile } from '../../types';
+import { EmptyState } from '../EmptyState';
+import { ErrorState } from '../ErrorState';
+import { LoadingButton } from '../LoadingButton';
+import { Skeleton } from '../Skeleton';
 
 interface WalletViewProps {
   user: UserProfile;
   handleWithdraw: () => void;
   handleAnticipate: () => void;
   setShowPrimeModal: (v: boolean) => void;
-  setView: (v: any) => void;
+  isLoading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
+  isWithdrawing?: boolean;
+  isAnticipating?: boolean;
 }
 
-export const WalletView: React.FC<WalletViewProps> = ({ user, handleWithdraw, handleAnticipate, setShowPrimeModal, setView }) => (
+export const WalletView: React.FC<WalletViewProps> = ({
+  user,
+  handleWithdraw,
+  handleAnticipate,
+  setShowPrimeModal,
+  isLoading = false,
+  error = null,
+  onRetry,
+  isWithdrawing = false,
+  isAnticipating = false,
+}) => (
   <div className="space-y-6 animate-in fade-in duration-500">
+    {error && <ErrorState message={error} onRetry={onRetry} className="py-6" />}
+    {isLoading ? (
+      <>
+        <Skeleton className="h-52 rounded-[4rem]" />
+        <Skeleton className="h-48 rounded-[3rem]" />
+        <Skeleton className="h-32 rounded-[2rem]" />
+      </>
+    ) : (
+      <>
     <div className="bg-slate-900 p-10 rounded-[4rem] text-white shadow-2xl relative overflow-hidden">
        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-500/20 blur-3xl rounded-full"></div>
        <p className="text-[10px] font-black opacity-40 uppercase tracking-[0.2em] mb-2">Saldo Total</p>
        <h3 className="text-6xl font-black mb-10 tracking-tighter">R$ {user.wallet.balance.toFixed(2)}</h3>
        <div className="flex gap-4">
-          <button onClick={handleWithdraw} className="flex-1 py-5 bg-white text-slate-900 rounded-[2rem] font-black text-xs shadow-lg active:scale-95 transition-transform">Sacar via PIX</button>
+          <LoadingButton
+            onClick={handleWithdraw}
+            isLoading={isWithdrawing}
+            loadingLabel="Processando..."
+            variant="secondary"
+            size="lg"
+            className="flex-1 !bg-white !text-slate-900 hover:!bg-slate-100 !normal-case !tracking-normal !text-xs !shadow-lg"
+          >
+            Sacar via PIX
+          </LoadingButton>
           <button onClick={() => setShowPrimeModal(true)} className={`flex-1 py-5 rounded-[2rem] font-black text-xs transition-colors ${user.isPrime ? 'bg-indigo-600/50 text-white' : 'bg-indigo-600 text-white shadow-indigo-400 shadow-lg'}`}>
             {user.isPrime ? 'Hero Prime Ativo' : 'Hero Prime'}
           </button>
@@ -40,9 +76,21 @@ export const WalletView: React.FC<WalletViewProps> = ({ user, handleWithdraw, ha
              <p className="text-slate-400 text-xs mb-1 uppercase tracking-widest font-bold">Saldo Agendado</p>
              <p className="text-3xl font-black text-white">R$ {user.wallet.scheduled.toFixed(2)}</p>
           </div>
-          <button onClick={handleAnticipate} disabled={user.wallet.scheduled === 0} className={`px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${user.wallet.scheduled === 0 ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-amber-400 text-slate-900 hover:bg-amber-300 shadow-lg shadow-amber-900/50 active:scale-95'}`}>
-             Antecipar
-          </button>
+          <LoadingButton
+            onClick={handleAnticipate}
+            isLoading={isAnticipating}
+            loadingLabel="Aguarde..."
+            disabled={user.wallet.scheduled === 0}
+            variant="secondary"
+            size="sm"
+            className={`!normal-case !tracking-normal ${
+              user.wallet.scheduled === 0
+                ? '!bg-slate-700 !text-slate-500'
+                : '!bg-amber-400 !text-slate-900 hover:!bg-amber-300 !shadow-lg !shadow-amber-900/50'
+            }`}
+          >
+            Antecipar
+          </LoadingButton>
        </div>
     </div>
 
@@ -51,7 +99,12 @@ export const WalletView: React.FC<WalletViewProps> = ({ user, handleWithdraw, ha
       <h4 className="font-black text-sm text-slate-900 mb-4">Histórico Recente</h4>
       <div className="space-y-3">
         {user.wallet.transactions.length === 0 ? (
-          <p className="text-xs text-slate-400 text-center py-4">Nenhuma transação.</p>
+          <EmptyState
+            icon="fa-receipt"
+            title="Sem transações ainda"
+            description="Quando você receber pagamentos ou fizer saques, o histórico aparece aqui."
+            className="py-8"
+          />
         ) : (
           user.wallet.transactions.map(t => (
             <div key={t.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex justify-between items-center shadow-sm">
@@ -87,5 +140,7 @@ export const WalletView: React.FC<WalletViewProps> = ({ user, handleWithdraw, ha
         )}
       </div>
     </div>
+      </>
+    )}
   </div>
 );

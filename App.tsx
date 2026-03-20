@@ -9,7 +9,7 @@ import { Toast } from './components/Toast';
 import { SplashScreen } from './components/SplashScreen';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
-import { ExamModal, PrimeModal, PaymentModal, CreateJobModal, JobDetailModal, ReviewFormModal } from './components/modals';
+import { ExamModal, PrimeModal, PaymentModal, CreateJobModal, JobDetailModal, ReviewFormModal, ConfirmDialog } from './components/modals';
 import {
   DashboardView, TalentsView, EmployerProfileView, EmployerWalletView, EmployerChatView, EmployerActiveView,
   BrowseView, ActiveJobView, WalletView, AcademyView, ProfileView, ChatView,
@@ -36,6 +36,15 @@ const App: React.FC = () => {
 
   const [jobs, setJobs] = useState<Job[]>(INITIAL_JOBS);
   const [isJobsLoading, setIsJobsLoading] = useState(true);
+  const [jobsError, setJobsError] = useState<string | null>(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
+  const [isWalletLoading, setIsWalletLoading] = useState(true);
+  const [walletError, setWalletError] = useState<string | null>(null);
+  const [isChallengesLoading, setIsChallengesLoading] = useState(true);
+  const [challengesError, setChallengesError] = useState<string | null>(null);
+  const [isRankingsLoading, setIsRankingsLoading] = useState(true);
+  const [rankingsError, setRankingsError] = useState<string | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [view, setView] = useState<ViewType>('browse');
   const [browseMode, setBrowseMode] = useState<'list' | 'map'>('list');
   const [selectedJob, setSelectedJob] = useState<Job | null>(() => {
@@ -92,11 +101,79 @@ const App: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [completedJob, setCompletedJob] = useState<Job | null>(null);
+  const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
 
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersLayerRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const navigateTo = useCallback((nextView: ViewType) => {
+    if (nextView === view) return;
+    setIsNavigating(true);
+    setView(nextView);
+    window.setTimeout(() => setIsNavigating(false), 250);
+  }, [view]);
+
+  const retryLoadJobs = useCallback(async () => {
+    setIsJobsLoading(true);
+    setJobsError(null);
+    const jobsResult = await apiService.getJobs();
+    if (jobsResult.success && Array.isArray(jobsResult.data)) {
+      setJobs(jobsResult.data as Job[]);
+    } else {
+      setJobsError(jobsResult.error || 'Não foi possível carregar vagas no momento.');
+    }
+    setIsJobsLoading(false);
+  }, []);
+
+  const retryLoadWallet = useCallback(async () => {
+    setIsWalletLoading(true);
+    setWalletError(null);
+    const [balanceResult, txResult] = await Promise.all([
+      apiService.getWalletBalance(),
+      apiService.getTransactions(),
+    ]);
+    if (balanceResult.success && txResult.success) {
+      const balance = (balanceResult.data as { balance?: number } | undefined)?.balance;
+      const transactions = Array.isArray(txResult.data) ? (txResult.data as UserProfile['wallet']['transactions']) : user.wallet.transactions;
+      setUser(prev => ({
+        ...prev,
+        wallet: {
+          ...prev.wallet,
+          balance: typeof balance === 'number' ? balance : prev.wallet.balance,
+          transactions,
+        },
+      }));
+    } else {
+      setWalletError(balanceResult.error || txResult.error || 'Não foi possível carregar sua carteira.');
+    }
+    setIsWalletLoading(false);
+  }, [user.wallet.transactions]);
+
+  const retryLoadChallenges = useCallback(async () => {
+    setIsChallengesLoading(true);
+    setChallengesError(null);
+    const result = await apiService.getChallenges();
+    if (result.success && Array.isArray(result.data)) {
+      setChallenges(result.data as WeeklyChallenge[]);
+    } else {
+      setChallengesError(result.error || 'Não foi possível carregar desafios.');
+    }
+    setIsChallengesLoading(false);
+  }, []);
+
+  const retryLoadRankings = useCallback(async () => {
+    setIsRankingsLoading(true);
+    setRankingsError(null);
+    const result = await apiService.getRankings();
+    if (result.success && Array.isArray(result.data)) {
+      setRankings(result.data as TalentRanking[]);
+    } else {
+      setRankingsError(result.error || 'Não foi possível carregar o ranking.');
+    }
+    setIsRankingsLoading(false);
+  }, []);
 
   // --- Hooks ---
   const { toast, showToast, clearToast } = useToast();
@@ -205,6 +282,7 @@ const App: React.FC = () => {
   // Validate JWT and load initial data from API on mount
   useEffect(() => {
     const initializeFromApi = async () => {
+      setIsProfileLoading(true);
       // Validate token and sync user profile from backend
       if (apiService.getToken()) {
         const profileResult = await apiService.getProfile();
@@ -235,13 +313,59 @@ const App: React.FC = () => {
           // keep the session — the token may still be valid once the server recovers
         }
       }
+      setIsProfileLoading(false);
 
       // Load jobs from backend; fall back to mock data if API is unavailable
       const jobsResult = await apiService.getJobs();
       if (jobsResult.success && Array.isArray(jobsResult.data)) {
         setJobs(jobsResult.data as Job[]);
+        setJobsError(null);
+      } else {
+        setJobsError(jobsResult.error || 'Não foi possível carregar vagas no momento.');
       }
       setIsJobsLoading(false);
+
+      const [walletBalanceResult, transactionsResult, challengesResult, rankingsResult] = await Promise.all([
+        apiService.getWalletBalance(),
+        apiService.getTransactions(),
+        apiService.getChallenges(),
+        apiService.getRankings(),
+      ]);
+
+      if (walletBalanceResult.success && transactionsResult.success) {
+        const walletBalance = (walletBalanceResult.data as { balance?: number } | undefined)?.balance;
+        const walletTransactions = Array.isArray(transactionsResult.data)
+          ? (transactionsResult.data as UserProfile['wallet']['transactions'])
+          : user.wallet.transactions;
+        setUser(prev => ({
+          ...prev,
+          wallet: {
+            ...prev.wallet,
+            balance: typeof walletBalance === 'number' ? walletBalance : prev.wallet.balance,
+            transactions: walletTransactions,
+          },
+        }));
+        setWalletError(null);
+      } else {
+        setWalletError(walletBalanceResult.error || transactionsResult.error || 'Não foi possível carregar sua carteira.');
+      }
+      setIsWalletLoading(false);
+
+      if (challengesResult.success && Array.isArray(challengesResult.data)) {
+        setChallenges(challengesResult.data as WeeklyChallenge[]);
+        setChallengesError(null);
+      } else {
+        setChallengesError(challengesResult.error || 'Não foi possível carregar desafios.');
+      }
+      setIsChallengesLoading(false);
+
+      if (rankingsResult.success && Array.isArray(rankingsResult.data)) {
+        setRankings(rankingsResult.data as TalentRanking[]);
+        setRankingsError(null);
+      } else {
+        setRankingsError(rankingsResult.error || 'Não foi possível carregar o ranking.');
+      }
+      setIsRankingsLoading(false);
     };
 
     initializeFromApi();
@@ -360,7 +484,10 @@ const App: React.FC = () => {
                 handleShowInvoices={handleShowInvoices}
                 handleOpenAddBalance={handleOpenAddBalance}
                 handleInviteTalent={handleInviteTalent}
-                setView={setView}
+                setView={navigateTo}
+                isLoading={isJobsLoading}
+                error={jobsError}
+                onRetry={retryLoadJobs}
               />
             )}
             {view === 'talents' && (
@@ -423,7 +550,7 @@ const App: React.FC = () => {
                 setSelectedJob={setSelectedJob}
                 mapContainerRef={mapContainerRef}
                 user={user}
-                setView={setView}
+                setView={navigateTo}
                 setShowPrimeModal={setShowPrimeModal}
                 isLoading={isJobsLoading}
               />
@@ -433,8 +560,8 @@ const App: React.FC = () => {
                 activeJob={activeJob}
                 isCheckedIn={isCheckedIn}
                 handleCheckIn={handleCheckIn}
-                handleCheckout={handleCheckout}
-                setView={setView}
+                handleCheckout={() => setShowCheckoutConfirm(true)}
+                setView={navigateTo}
               />
             )}
             {view === 'wallet' && (
@@ -443,7 +570,9 @@ const App: React.FC = () => {
                 handleWithdraw={handleWithdraw}
                 handleAnticipate={handleAnticipate}
                 setShowPrimeModal={setShowPrimeModal}
-                setView={setView}
+                isLoading={isWalletLoading}
+                error={walletError}
+                onRetry={retryLoadWallet}
               />
             )}
             {view === 'academy' && (
@@ -457,10 +586,11 @@ const App: React.FC = () => {
             {view === 'profile' && (
               <ProfileView
                 user={user}
-                setView={setView}
+                setView={navigateTo}
                 handleDownloadCertificate={handleDownloadCertificate}
                 showToast={showToast}
                 reviews={reviews}
+                isLoading={isProfileLoading}
               />
             )}
             {view === 'chat' && (
@@ -518,14 +648,20 @@ const App: React.FC = () => {
             {view === 'challenges' && (
               <ChallengesView
                 challenges={challenges}
-                setView={setView}
+                setView={navigateTo}
+                isLoading={isChallengesLoading}
+                error={challengesError}
+                onRetry={retryLoadChallenges}
               />
             )}
             {view === 'ranking' && (
               <RankingView
                 rankings={rankings}
                 user={user}
-                setView={setView}
+                setView={navigateTo}
+                isLoading={isRankingsLoading}
+                error={rankingsError}
+                onRetry={retryLoadRankings}
               />
             )}
             {view === 'store' && (
@@ -564,7 +700,7 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <BottomNav user={user} view={view} setView={setView} />
+      <BottomNav user={user} view={view} setView={navigateTo} isNavigating={isNavigating} />
 
       {showExamModal && currentCourse && (
         <ExamModal
@@ -682,6 +818,19 @@ const App: React.FC = () => {
           onClose={() => setSelectedJob(null)}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={showCheckoutConfirm}
+        title="Finalizar job?"
+        message="Confirme apenas se o contratante já validou a execução do serviço."
+        confirmLabel="Finalizar"
+        cancelLabel="Voltar"
+        onCancel={() => setShowCheckoutConfirm(false)}
+        onConfirm={() => {
+          setShowCheckoutConfirm(false);
+          handleCheckout(true);
+        }}
+      />
     </div>
   );
 };

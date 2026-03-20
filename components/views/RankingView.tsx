@@ -1,13 +1,26 @@
 import React from 'react';
 import { Niche, TalentRanking, UserProfile } from '../../types';
+import { EmptyState } from '../EmptyState';
+import { ErrorState } from '../ErrorState';
+import { Skeleton } from '../Skeleton';
 
 interface RankingViewProps {
   rankings: TalentRanking[];
   user: UserProfile;
   setView: (v: 'browse') => void;
+  isLoading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
-export const RankingView: React.FC<RankingViewProps> = ({ rankings, user, setView }) => (
+export const RankingView: React.FC<RankingViewProps> = ({
+  rankings,
+  user,
+  setView,
+  isLoading = false,
+  error = null,
+  onRetry,
+}) => (
   <div className="space-y-6 animate-in fade-in duration-500">
     <header className="flex items-center justify-between">
       <div>
@@ -29,7 +42,22 @@ export const RankingView: React.FC<RankingViewProps> = ({ rankings, user, setVie
 
     {/* Rankings List */}
     <div className="space-y-3">
-      {rankings.map((talent, index) => (
+      {error ? (
+        <ErrorState message={error} onRetry={onRetry} className="bg-white rounded-[2rem] border border-slate-100" />
+      ) : isLoading ? (
+        <>
+          <Skeleton className="h-28 rounded-[2rem]" />
+          <Skeleton className="h-28 rounded-[2rem]" />
+          <Skeleton className="h-28 rounded-[2rem]" />
+        </>
+      ) : rankings.length === 0 ? (
+        <EmptyState
+          icon="fa-trophy"
+          title="Ranking indisponível"
+          description="Ainda não há pontuação suficiente para exibir o ranking."
+          className="bg-white rounded-[2rem] border border-slate-100"
+        />
+      ) : rankings.map((talent, index) => (
         <div 
           key={talent.userId} 
           className={`bg-white p-5 rounded-[2rem] border-2 transition-all ${
@@ -77,7 +105,7 @@ export const RankingView: React.FC<RankingViewProps> = ({ rankings, user, setVie
     </div>
 
     {/* Your Position */}
-    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-[2.5rem] text-white">
+    {!isLoading && rankings.length > 0 && <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-[2.5rem] text-white">
       <p className="text-xs font-bold opacity-80 uppercase tracking-widest mb-2">Sua Posição</p>
       <div className="flex items-center justify-between">
         <div>
@@ -88,6 +116,6 @@ export const RankingView: React.FC<RankingViewProps> = ({ rankings, user, setVie
           🎯
         </div>
       </div>
-    </div>
+    </div>}
   </div>
 );

@@ -233,15 +233,10 @@ describe('Job browsing and niche filtering', () => {
   it('filters by niche when pill is clicked', async () => {
     const user = userEvent.setup();
     await renderApp();
-    // Get the first niche pill that is NOT "Todos"
-    const niche = screen.getAllByRole('button').find(
-      (b) => b.textContent !== 'Todos' && b.className.includes('rounded-full'),
-    );
-    if (niche) {
-      await user.click(niche);
-      // After filtering, empty state or filtered list appears
-      expect(screen.getByText('Freelas Próximos')).toBeInTheDocument();
-    }
+    const niche = screen.getByRole('button', { name: 'Gastronomia' });
+    await user.click(niche);
+    // After filtering, empty state or filtered list appears
+    expect(screen.getByText('Freelas Próximos')).toBeInTheDocument();
   });
 
   it('shows empty state when no jobs match filter', async () => {

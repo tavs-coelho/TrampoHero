@@ -103,9 +103,9 @@ export const useJobActions = (deps: {
     }
   };
   
-  const handleCheckout = () => {
+  const handleCheckout = (isConfirmed = false) => {
     if (!activeJob) return;
-    if (confirm("Confirmar finalização do serviço? Certifique-se de que o contratante está ciente.")) {
+    if (isConfirmed || confirm("Confirmar finalização do serviço? Certifique-se de que o contratante está ciente.")) {
         const jobPayment = activeJob.payment;
         const coinsEarned = Math.floor(jobPayment / COINS_PER_CURRENCY_UNIT);
         
