@@ -747,6 +747,7 @@ router.get(
 
       const [tickets, total] = await Promise.all([
         SupportTicket.find(filter)
+          .select('-messages')
           .populate('userId', 'name email role')
           .populate('assignedAdminId', 'name email')
           .sort({ createdAt: -1 })
@@ -915,7 +916,13 @@ router.post(
         userAgent: req.headers['user-agent'] || null,
       });
 
+      await ticket.populate([
+        { path: 'userId', select: 'name email role' },
+        { path: 'assignedAdminId', select: 'name email' },
+      ]);
+
       res.json({ success: true, data: ticket });
+
     } catch (error) {
       console.error('[POST /admin/tickets/:id/reply]', error.message);
       res.status(500).json({ success: false, error: 'Server error' });

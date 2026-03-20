@@ -624,7 +624,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, showToast }) => {
                     {tx.userId?.name ?? '—'} · {tx.type}
                   </p>
                   <p className="text-xs text-slate-400">
-                    {new Date(tx.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {new Date(tx.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
                 <span className={`font-black text-lg ml-2 ${tx.amount >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
@@ -643,9 +643,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, showToast }) => {
       {!isLoading && activeTab === 'tickets' && !selectedTicket && (
         <div className="space-y-2">
           {tickets.map(ticket => (
-            <div
+            <button
               key={ticket._id}
-              className="bg-white p-4 rounded-2xl border border-slate-100 cursor-pointer hover:border-indigo-200 transition-colors"
+              type="button"
+              className="w-full bg-white p-4 rounded-2xl border border-slate-100 cursor-pointer hover:border-indigo-200 transition-colors text-left"
               onClick={() => handleOpenTicket(ticket)}
             >
               <div className="flex justify-between items-start">
@@ -670,7 +671,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, showToast }) => {
                   {new Date(ticket.createdAt).toLocaleDateString('pt-BR')}
                 </span>
               </div>
-            </div>
+            </button>
           ))}
           {tickets.length === 0 && (
             <div className="text-center py-10">
@@ -740,7 +741,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, showToast }) => {
               >
                 <p className="font-bold text-xs mb-1">
                   {msg.authorRole === 'admin' ? 'Admin' : 'Usuário'} ·{' '}
-                  {new Date(msg.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  {new Date(msg.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                 </p>
                 <p>{msg.message}</p>
               </div>
@@ -869,7 +870,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ user, showToast }) => {
                   )}
                 </div>
                 <span className="text-xs text-slate-400 ml-2 whitespace-nowrap">
-                  {new Date(entry.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  {new Date(entry.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
             </div>
