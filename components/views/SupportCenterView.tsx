@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiService } from '../../services/apiService';
 import { UserProfile } from '../../types';
 
@@ -56,7 +56,7 @@ export const SupportCenterView: React.FC<SupportCenterViewProps> = ({ user, setV
 
   const backView = user.role === 'employer' ? 'dashboard' : 'browse';
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     const [metaRes, ticketsRes] = await Promise.all([
       apiService.supportGetOperationsMeta(),
@@ -74,11 +74,11 @@ export const SupportCenterView: React.FC<SupportCenterViewProps> = ({ user, setV
       showToast('Erro ao carregar tickets', 'error');
     }
     setIsLoading(false);
-  };
+  }, [showToast]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const selectedSlaText = useMemo(() => {
     if (!meta) return '—';
@@ -196,4 +196,3 @@ export const SupportCenterView: React.FC<SupportCenterViewProps> = ({ user, setV
     </div>
   );
 };
-

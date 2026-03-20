@@ -101,7 +101,7 @@ const supportTicketSchema = new mongoose.Schema(
     },
     incidentType: {
       type: String,
-      enum: ['general', 'dispute_company_freelancer', 'fraud_report', 'manual_review'],
+      enum: ['general', 'dispute_company_freelancer', 'fraud_report'],
       default: 'general',
     },
     assignedAdminId: {

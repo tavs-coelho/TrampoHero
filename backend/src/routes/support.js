@@ -9,7 +9,7 @@ const router = express.Router();
 const CATEGORIES = ['payment', 'job', 'account', 'kyc', 'technical', 'dispute', 'fraud', 'compliance', 'other'];
 const PRIORITIES = ['low', 'medium', 'high', 'critical'];
 const STATUSES = ['open', 'in_progress', 'waiting_user', 'manual_review', 'resolved', 'closed'];
-const INCIDENT_TYPES = ['general', 'dispute_company_freelancer', 'fraud_report', 'manual_review'];
+const INCIDENT_TYPES = ['general', 'dispute_company_freelancer', 'fraud_report'];
 
 const SLA_HOURS_BY_CATEGORY = {
   fraud: 1,
@@ -44,6 +44,13 @@ const RESPONSE_TEMPLATES = [
     category: 'fraud',
     text: 'Denúncia de fraude recebida. O caso foi priorizado e entrou em fluxo de análise de risco.',
   },
+];
+
+const PRIORITIZATION_RULES = [
+  'Fraude e denúncia de fraude são críticas (SLA 1h, revisão manual obrigatória).',
+  'Disputa empresa x freelancer é alta prioridade (SLA 8h, revisão manual obrigatória).',
+  'Pagamentos são alta prioridade (SLA 8h).',
+  'Demais incidentes seguem prioridade média/baixa por categoria.',
 ];
 
 const parseBoolean = (value) => value === true || value === 'true';
@@ -100,6 +107,13 @@ const ensureHistory = (ticket) => {
   }
 };
 
+const resolveIncidentType = ({ incidentType, category, isCompanyVsFreelancerDispute, isFraudReported }) => {
+  if (incidentType) return incidentType;
+  if (category === 'fraud' || isFraudReported) return 'fraud_report';
+  if (category === 'dispute' || isCompanyVsFreelancerDispute) return 'dispute_company_freelancer';
+  return 'general';
+};
+
 // @route   POST /api/support
 // @desc    Open a new support ticket
 // @access  Private
@@ -138,13 +152,12 @@ router.post(
         relatedDisputeId,
       } = req.body;
 
-      const normalizedIncidentType =
-        incidentType ||
-        (category === 'fraud' || parseBoolean(isFraudReported)
-          ? 'fraud_report'
-          : category === 'dispute' || parseBoolean(isCompanyVsFreelancerDispute)
-            ? 'dispute_company_freelancer'
-            : 'general');
+      const normalizedIncidentType = resolveIncidentType({
+        incidentType,
+        category,
+        isCompanyVsFreelancerDispute: parseBoolean(isCompanyVsFreelancerDispute),
+        isFraudReported: parseBoolean(isFraudReported),
+      });
       const manualReviewRequired =
         normalizedIncidentType === 'fraud_report' ||
         normalizedIncidentType === 'dispute_company_freelancer' ||
@@ -501,7 +514,8 @@ router.post(
 // @route   GET /api/support/operations/meta
 // @desc    Get support operational metadata (SLA, categories, status, templates)
 // @access  Private
-router.get('/operations/meta', authenticate, async (_req, res) => {
+router.get('/operations/meta', authenticate, async (req, res) => {
+  const isAdmin = req.user.role === 'admin';
   return res.json({
     success: true,
     data: {
@@ -510,13 +524,8 @@ router.get('/operations/meta', authenticate, async (_req, res) => {
       priorities: PRIORITIES,
       incidentTypes: INCIDENT_TYPES,
       slaHoursByCategory: SLA_HOURS_BY_CATEGORY,
-      responseTemplates: RESPONSE_TEMPLATES,
-      prioritizationRules: [
-        'Fraude e denúncia de fraude são críticas (SLA 1h, revisão manual obrigatória).',
-        'Disputa empresa x freelancer é alta prioridade (SLA 8h, revisão manual obrigatória).',
-        'Pagamentos são alta prioridade (SLA 8h).',
-        'Demais incidentes seguem prioridade média/baixa por categoria.',
-      ],
+      responseTemplates: isAdmin ? RESPONSE_TEMPLATES : [],
+      prioritizationRules: isAdmin ? PRIORITIZATION_RULES : [],
     },
   });
 });
