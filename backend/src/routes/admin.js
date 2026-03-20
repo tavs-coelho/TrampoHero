@@ -835,24 +835,35 @@ router.patch(
         return res.status(404).json({ success: false, error: 'Ticket not found' });
       }
 
-      const actionType = updates.assignedAdminId
-        ? 'ticket_assign'
-        : updates.status === 'resolved'
-        ? 'ticket_resolve'
-        : updates.status === 'closed'
-        ? 'ticket_close'
-        : 'ticket_update';
+      const actionTypes = [];
 
-      await AdminAction.create({
-        adminId: req.user.id,
-        action: actionType,
-        targetType: 'SupportTicket',
-        targetId: ticket._id,
-        details: { updates },
-        ipAddress: req.ip,
-        userAgent: req.headers['user-agent'] || null,
-      });
+      if (updates.assignedAdminId) {
+        actionTypes.push('ticket_assign');
+      }
 
+      if (updates.status === 'resolved') {
+        actionTypes.push('ticket_resolve');
+      } else if (updates.status === 'closed') {
+        actionTypes.push('ticket_close');
+      }
+
+      if (actionTypes.length === 0) {
+        actionTypes.push('ticket_update');
+      }
+
+      await Promise.all(
+        actionTypes.map((action) =>
+          AdminAction.create({
+            adminId: req.user.id,
+            action,
+            targetType: 'SupportTicket',
+            targetId: ticket._id,
+            details: { updates },
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] || null,
+          })
+        )
+      );
       res.json({ success: true, data: ticket });
     } catch (error) {
       console.error('[PATCH /admin/tickets/:id]', error.message);
