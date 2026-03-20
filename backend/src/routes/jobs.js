@@ -50,7 +50,11 @@ router.get('/', async (req, res) => {
     const filter = {};
     if (niche) filter.niche = niche;
     if (status) filter.status = status;
-    if (location) filter.location = { $regex: location, $options: 'i' };
+    if (location) {
+      // Escape special regex characters to prevent ReDoS
+      const escapedLocation = location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.location = { $regex: escapedLocation, $options: 'i' };
+    }
 
     const jobs = await Job.find(filter).sort({ isBoosted: -1, payment: -1 });
 

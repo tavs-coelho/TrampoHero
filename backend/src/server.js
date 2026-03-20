@@ -116,8 +116,6 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    env: env.NODE_ENV,
-    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
   });
 });
 

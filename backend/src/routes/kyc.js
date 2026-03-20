@@ -97,7 +97,7 @@ router.post(
 
       // If storage is not properly configured or uploads failed, do not persist null URLs
       if (!documentFrontUrl || !documentBackUrl || !selfieUrl) {
-        if (process.env.NODE_ENV !== 'production') {
+        if (env.NODE_ENV !== 'production') {
           console.error(
             '[kyc/submit] Failed to upload KYC documents: storage not configured or upload error.',
             {

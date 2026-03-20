@@ -1,6 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { env } from '../config/env.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -31,7 +32,7 @@ const ALLOWED_MODELS = new Set([
  *   systemInstruction{string}  Optional. System-level instruction.
  *   responseMimeType {string}  Optional. e.g. "application/json".
  */
-router.post('/generate', aiLimiter, async (req, res) => {
+router.post('/generate', authenticate, aiLimiter, async (req, res) => {
   try {
     const {
       prompt,
