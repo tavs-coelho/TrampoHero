@@ -15,7 +15,6 @@ function isSafeFileName(fileName) {
   if (!fileName) return false;
   if (fileName !== path.basename(fileName)) return false;
   if (fileName === '.' || fileName === '..') return false;
-  if (!fileName.toLowerCase().endsWith('.pdf')) return false;
   return /^[A-Za-z0-9._-]+\.pdf$/i.test(fileName);
 }
 

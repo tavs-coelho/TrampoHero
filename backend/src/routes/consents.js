@@ -54,16 +54,17 @@ router.post(
       return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    try {
-      const {
-        purpose,
-        legalBasis = 'consent',
-        granted = true,
-        policyVersion = null,
-        source = 'app',
-      } = req.body;
+    const {
+      purpose,
+      legalBasis = 'consent',
+      granted = true,
+      policyVersion = null,
+      source = 'app',
+    } = req.body;
 
-      const criteria = { userId: req.user.id, purpose, policyVersion };
+    const criteria = { userId: req.user.id, purpose, policyVersion };
+
+    try {
       const update = {
         legalBasis,
         granted,
@@ -82,11 +83,6 @@ router.post(
     } catch (error) {
       if (error?.code === 11000) {
         try {
-          const criteria = {
-            userId: req.user.id,
-            purpose: req.body.purpose,
-            policyVersion: req.body.policyVersion ?? null,
-          };
           const existing = await Consent.findOne(criteria);
           if (existing) {
             return res.status(200).json({ success: true, data: existing });
