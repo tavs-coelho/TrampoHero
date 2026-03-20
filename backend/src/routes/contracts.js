@@ -134,7 +134,8 @@ router.get(
       const resolvedDir = path.resolve(CONTRACTS_DIR);
       const resolvedPath = path.resolve(filePath);
       const relativePath = path.relative(resolvedDir, resolvedPath);
-      if (relativePath.startsWith('..')) {
+      const normalizedRelative = path.normalize(relativePath);
+      if (normalizedRelative.startsWith('..')) {
         return res.status(400).json({ success: false, error: 'Invalid file path' });
       }
 

@@ -17,12 +17,12 @@ const PIX_KEY_TYPES = {
 };
 
 function detectPixKeyType(pixKey) {
-  if (!pixKey) return PIX_KEY_TYPES.RANDOM;
+  if (!pixKey) return null;
   if (pixKey.includes('@')) return PIX_KEY_TYPES.EMAIL;
   const digits = pixKey.replace(/\D/g, '');
   if (digits.length === 11) return PIX_KEY_TYPES.CPF;
   if (digits.length === 14) return PIX_KEY_TYPES.CNPJ;
-  if (digits.length >= 10 && digits.length <= 13) return PIX_KEY_TYPES.PHONE;
+  if (digits.length === 13 && digits.startsWith('55')) return PIX_KEY_TYPES.PHONE;
   return PIX_KEY_TYPES.RANDOM;
 }
 
