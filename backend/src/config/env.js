@@ -42,6 +42,19 @@ function parsePositiveInt(value, name, defaultValue) {
 
 validateEnv();
 
+const parsedAllowedOrigins = (process.env.ALLOWED_ORIGINS ?? 'http://localhost:3000')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const parsedFrontendUrl = (process.env.FRONTEND_URL ?? '').trim();
+const mergedAllowedOrigins = Array.from(
+  new Set([
+    ...parsedAllowedOrigins,
+    ...(parsedFrontendUrl ? [parsedFrontendUrl] : []),
+  ])
+);
+
 export const env = {
   PORT: parsePositiveInt(process.env.PORT, 'PORT', 5000),
   NODE_ENV: process.env.NODE_ENV ?? 'development',
@@ -109,9 +122,6 @@ export const env = {
   AZURE_WEBPUBSUB_CONNECTION_STRING: process.env.AZURE_WEBPUBSUB_CONNECTION_STRING ?? '',
   AZURE_WEBPUBSUB_HUB_NAME: process.env.AZURE_WEBPUBSUB_HUB_NAME ?? '',
   /** Comma-separated list of allowed CORS origins, e.g. "http://localhost:3000,https://app.trampohero.com.br" */
-  ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS ?? 'http://localhost:3000')
-    .split(',')
-    .map((o) => o.trim())
-    .filter(Boolean),
-  FRONTEND_URL: process.env.FRONTEND_URL ?? 'http://localhost:3000',
+  ALLOWED_ORIGINS: mergedAllowedOrigins,
+  FRONTEND_URL: parsedFrontendUrl || mergedAllowedOrigins[0] || 'http://localhost:3000',
 };

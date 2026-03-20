@@ -113,8 +113,16 @@ app.use('/api/contracts', contractsRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
+  const dbReadyState = mongoose.connection.readyState;
+  const db = dbReadyState === 1 ? 'connected' : 'disconnected';
+  const status = db === 'connected' ? 'ok' : 'degraded';
+
+  res.set('Cache-Control', 'no-store');
+  res.status(status === 'ok' ? 200 : 503).json({
+    status,
+    db,
+    environment: env.NODE_ENV,
+    uptimeSeconds: Math.round(process.uptime()),
     timestamp: new Date().toISOString(),
   });
 });
@@ -126,18 +134,79 @@ app.use((req, res) => {
 
 // Centralized error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal Server Error',
+  const rawStatusCode = Number(err.status);
+  const statusCode = Number.isInteger(rawStatusCode) && rawStatusCode >= 100 && rawStatusCode <= 599
+    ? rawStatusCode
+    : 500;
+  console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`, err.stack);
+  const shouldMaskError = env.NODE_ENV === 'production' && statusCode >= 500;
+  res.status(statusCode).json({
+    error: shouldMaskError ? 'Internal Server Error' : (err.message || 'Internal Server Error'),
     ...(env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });
 
 // Start server
-app.listen(env.PORT, () => {
+const server = app.listen(env.PORT, () => {
   console.log(`🚀 TrampoHero API Server running on port ${env.PORT}`);
   console.log(`📡 Environment: ${env.NODE_ENV}`);
   console.log(`🌐 Allowed origins: ${env.ALLOWED_ORIGINS.join(', ')}`);
+});
+
+const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 10000;
+// Mongoose readyState numeric values:
+// 0 = disconnected, 3 = disconnecting
+const MONGOOSE_READY_STATE_DISCONNECTED = 0;
+const MONGOOSE_READY_STATE_DISCONNECTING = 3;
+
+let isShuttingDown = false;
+function closeMongoConnection() {
+  if (
+    mongoose.connection.readyState === MONGOOSE_READY_STATE_DISCONNECTED ||
+    mongoose.connection.readyState === MONGOOSE_READY_STATE_DISCONNECTING
+  ) {
+    return Promise.resolve();
+  }
+
+  return mongoose.connection.close().catch((mongoError) => {
+    console.error(`[${new Date().toISOString()}] Error closing MongoDB connection during shutdown:`, mongoError);
+    return Promise.resolve();
+  });
+}
+
+function shutdown(signalOrReason, exitCode = 0) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  console.error(`[${new Date().toISOString()}] Shutdown triggered: ${signalOrReason}`);
+
+  const forceShutdownTimer = setTimeout(() => {
+    const forceShutdownExitCode = exitCode === 0 ? 1 : exitCode;
+    console.error(`[${new Date().toISOString()}] Forced shutdown due to timeout`);
+    process.exit(forceShutdownExitCode);
+  }, GRACEFUL_SHUTDOWN_TIMEOUT_MS);
+  forceShutdownTimer.unref();
+
+  server.close((serverError) => {
+    if (serverError) {
+      console.error(`[${new Date().toISOString()}] Error closing HTTP server during shutdown:`, serverError);
+    }
+    closeMongoConnection().finally(() => {
+      clearTimeout(forceShutdownTimer);
+      process.exit(exitCode);
+    });
+  });
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM', 0));
+process.on('SIGINT', () => shutdown('SIGINT', 0));
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+  shutdown('unhandledRejection', 1);
+});
+process.on('uncaughtException', (error) => {
+  console.error('[uncaughtException]', error);
+  shutdown('uncaughtException', 1);
 });
 
 export default app;
