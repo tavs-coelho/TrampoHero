@@ -181,7 +181,7 @@ router.post('/login', authLimiter, [
 // @route   POST /api/auth/refresh
 // @desc    Exchange a valid refresh token for a new access token
 // @access  Public
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', authLimiter, async (req, res) => {
   try {
     const { refreshToken } = req.body;
     if (!refreshToken) {

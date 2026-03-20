@@ -134,7 +134,28 @@ router.put('/:id', authenticate, authorize('employer'), async (req, res) => {
       return res.status(403).json({ success: false, error: 'Not authorized' });
     }
 
-    const updatedJob = await Job.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const allowedFields = [
+      'title',
+      'payment',
+      'niche',
+      'location',
+      'coordinates',
+      'description',
+      'date',
+      'startTime',
+      'paymentType',
+      'isBoosted',
+      'isEscrowGuaranteed',
+      'minRatingRequired',
+    ];
+    const updates = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    }
+
+    const updatedJob = await Job.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
     res.json({ success: true, data: updatedJob });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Server error' });

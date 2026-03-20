@@ -589,6 +589,7 @@ describe('POST /api/payments/webhook', () => {
       .set('content-type', 'application/json')
       .send(Buffer.from('{}'));
     expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Webhook signature verification failed');
   });
 
   it('handles checkout.session.completed and activates Hero Prime', async () => {
@@ -751,6 +752,13 @@ describe('POST /api/payments/create-intent', () => {
     const res = await request(app).post('/api/payments/create-intent').send({ amount: -10 });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/positive/i);
+  });
+
+  it('returns 400 when amount is less than one cent', async () => {
+    const app = buildApp();
+    const res = await request(app).post('/api/payments/create-intent').send({ amount: 0.001 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/at least/i);
   });
 
   it('creates a PaymentIntent and returns 201 with clientSecret', async () => {

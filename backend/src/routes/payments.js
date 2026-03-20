@@ -40,6 +40,9 @@ router.post('/create-intent', authenticate, async (req, res) => {
     }
 
     const amountCents = Math.round(amountNumber * 100);
+    if (!Number.isInteger(amountCents) || amountCents < 1) {
+      return res.status(400).json({ success: false, error: 'amount must be at least R$ 0.01' });
+    }
 
     const paymentIntent = await gateway.createPaymentIntent({
       amountCents,
@@ -56,7 +59,7 @@ router.post('/create-intent', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('[payments/create-intent]', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
@@ -126,7 +129,7 @@ router.post('/escrow', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('[payments/escrow]', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
@@ -226,7 +229,7 @@ router.post('/release-escrow/:jobId', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('[payments/release-escrow]', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
@@ -296,7 +299,7 @@ router.post('/cancel-escrow/:jobId', authenticate, async (req, res) => {
     res.json({ success: true, data: { refund: refundRecord } });
   } catch (error) {
     console.error('[payments/cancel-escrow]', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
@@ -346,7 +349,7 @@ router.post('/subscription', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('[payments/subscription]', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
@@ -378,7 +381,7 @@ router.delete('/subscription', authenticate, async (req, res) => {
     res.json({ success: true, message: 'Subscription cancelled successfully' });
   } catch (error) {
     console.error('[payments/subscription DELETE]', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
@@ -398,7 +401,7 @@ router.post('/webhook', async (req, res) => {
     event = gateway.constructWebhookEvent(req.body, signature);
   } catch (err) {
     console.error('[webhook] Signature verification failed:', err.message);
-    return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
+    return res.status(400).json({ error: 'Webhook signature verification failed' });
   }
 
   try {

@@ -298,6 +298,7 @@ describe('POST /api/auth/refresh', () => {
     const res = await request(app).post('/api/auth/refresh').send({ refreshToken });
     expect(res.status).toBe(401);
   });
+
 });
 
 // ─── Verify email ─────────────────────────────────────────────────────────────
@@ -394,6 +395,16 @@ describe('POST /api/auth/forgot-password', () => {
   it('returns 400 for invalid email format', async () => {
     const res = await request(app).post('/api/auth/forgot-password').send({ email: 'not-email' });
     expect(res.status).toBe(400);
+  });
+
+  it('is rate-limited after too many forgot-password attempts', async () => {
+    let status = 200;
+    for (let i = 0; i < 120; i += 1) {
+      const res = await request(app).post('/api/auth/forgot-password').send({ email: 'nobody@example.com' });
+      status = res.status;
+      if (status === 429) break;
+    }
+    expect(status).toBe(429);
   });
 });
 
