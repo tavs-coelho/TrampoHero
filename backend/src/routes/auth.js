@@ -105,13 +105,9 @@ router.post('/register', authLimiter, [
     // Send verification email (non-blocking – do not fail registration if it errors)
     sendVerificationEmail(user.email, rawVerificationToken).catch((err) =>
       console.error('[auth] Failed to send verification email:', err.message)
-    // Generate JWT
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      env.JWT_SECRET,
-      { expiresIn: env.JWT_EXPIRE }
     );
 
+    // Generate JWT
     const token = issueAccessToken(user);
     const refreshToken = issueRefreshToken(user);
 
@@ -161,11 +157,8 @@ router.post('/login', authLimiter, [
     }
 
     // Generate JWT
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      env.JWT_SECRET,
-      { expiresIn: env.JWT_EXPIRE }
-    );
+    const token = issueAccessToken(user);
+    const refreshToken = issueRefreshToken(user);
 
     res.json({
       success: true,
