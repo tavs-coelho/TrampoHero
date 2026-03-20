@@ -12,12 +12,19 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CONTRACTS_DIR = path.join(__dirname, '..', '..', 'contracts');
 
 function isSafeFileName(fileName) {
-  return fileName === path.basename(fileName);
+  if (!fileName) return false;
+  if (fileName !== path.basename(fileName)) return false;
+  if (fileName === '.' || fileName === '..') return false;
+  if (!fileName.toLowerCase().endsWith('.pdf')) return false;
+  return /^[A-Za-z0-9._-]+\.pdf$/i.test(fileName);
 }
 
 async function getReadableFileError(filePath) {
   try {
-    await fs.access(filePath);
+    const stats = await fs.stat(filePath);
+    if (!stats.isFile()) {
+      return { status: 404, message: 'Contract file not found' };
+    }
     return null;
   } catch (err) {
     return {
@@ -58,45 +65,6 @@ router.get('/', authenticate, async (req, res) => {
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
-
-// @route   GET /api/contracts/:id
-// @desc    Get a single contract
-// @access  Private (employer or freelancer of that contract)
-router.get(
-  '/:id',
-  authenticate,
-  param('id').isMongoId().withMessage('Invalid contract ID'),
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
-
-    try {
-      const contract = await Contract.findById(req.params.id)
-        .populate('jobId', 'title date payment paymentType niche location')
-        .populate('freelancerId', 'name email rating')
-        .populate('employerId', 'name email rating');
-
-      if (!contract) {
-        return res.status(404).json({ success: false, error: 'Contract not found' });
-      }
-
-      const userId = req.user.id;
-      const isParty =
-        contract.freelancerId._id.toString() === userId ||
-        contract.employerId._id.toString() === userId;
-
-      if (!isParty && req.user.role !== 'admin') {
-        return res.status(403).json({ success: false, error: 'Not authorized' });
-      }
-
-      res.json({ success: true, data: contract });
-    } catch (error) {
-      res.status(500).json({ success: false, error: 'Server error' });
-    }
-  }
-);
 
 // @route   GET /api/contracts/files/:fileName
 // @desc    Download a contract file (authenticated and authorized)
@@ -148,6 +116,45 @@ router.get(
     } catch (error) {
       console.error('[GET /contracts/files]', error.message);
       return res.status(500).json({ success: false, error: 'Server error' });
+    }
+  }
+);
+
+// @route   GET /api/contracts/:id
+// @desc    Get a single contract
+// @access  Private (employer or freelancer of that contract)
+router.get(
+  '/:id',
+  authenticate,
+  param('id').isMongoId().withMessage('Invalid contract ID'),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    try {
+      const contract = await Contract.findById(req.params.id)
+        .populate('jobId', 'title date payment paymentType niche location')
+        .populate('freelancerId', 'name email rating')
+        .populate('employerId', 'name email rating');
+
+      if (!contract) {
+        return res.status(404).json({ success: false, error: 'Contract not found' });
+      }
+
+      const userId = req.user.id;
+      const isParty =
+        contract.freelancerId._id.toString() === userId ||
+        contract.employerId._id.toString() === userId;
+
+      if (!isParty && req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, error: 'Not authorized' });
+      }
+
+      res.json({ success: true, data: contract });
+    } catch (error) {
+      res.status(500).json({ success: false, error: 'Server error' });
     }
   }
 );

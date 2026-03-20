@@ -35,6 +35,7 @@ vi.mock('../config/env.js', () => ({
     AZURE_WEBPUBSUB_CONNECTION_STRING: '',
     AZURE_WEBPUBSUB_HUB_NAME: '',
     WITHDRAWAL_FEE: 2.50,
+    MIN_WITHDRAWAL: 10,
   },
 }));
 
