@@ -64,7 +64,7 @@ Medir ponta a ponta:
 - Prefixos por domínio (recomendado): `auth_`, `job_`, `application_`, `payment_`, `withdrawal_`, `support_`, `review_`, `fraud_`.
 - Campos comuns em todos os eventos:
   - `event_name`
-  - `occurred_at` (ISO-8601 UTC)
+  - `occurred_at` (ISO 8601 UTC)
   - `user_id` (ou `anonymous_id` quando público)
   - `user_role` (`freelancer` | `employer` | `admin`)
   - `session_id`
@@ -117,7 +117,10 @@ Medir ponta a ponta:
 - `withdrawal_requested`  
   - **Backend**: `backend/src/routes/wallet.js` em `POST /withdraw`.
 - `withdrawal_paid`  
-  - **Backend**: processador/worker de liquidação de saque e/ou webhook de pagamento (gateway), com persistência no `Withdrawal.status = paid` e `Transaction.status = completed`.
+  - **Backend**: hoje o projeto já registra `withdrawal_requested` em `backend/src/routes/wallet.js` (`POST /withdraw`), mas ainda não tem um endpoint explícito para liquidação final de saque.  
+  - **Recomendação v1**: implementar no `backend/src/routes/payments.js` (`POST /webhook`), pois é o caminho mais simples e consistente com os demais eventos financeiros já confirmados pelo gateway.  
+  - **Fallback**: usar worker dedicado apenas se o provedor de pagamento não oferecer webhook confiável/assíncrono para liquidação.  
+  - Em ambos os casos, atualizar `Withdrawal.status = completed` e `Transaction.status = completed`.
 - `review_submitted`  
   - **Backend**: `backend/src/routes/reviews.js` em `POST /`.
 - `support_ticket_created`  
@@ -129,8 +132,8 @@ Medir ponta a ponta:
   - taxa de `signup_started`/visitante
   - taxa de `signup_completed`/`signup_started`
 - **Ativação**
-  - freelancer: `% que fez application_submitted em até D+1`
-  - empresa: `% que fez job_created em até D+1`
+  - freelancer: `% que fez application_submitted em até D+1` (até 24h após signup)
+  - empresa: `% que fez job_created em até D+1` (até 24h após signup)
 - **Conversão marketplace**
   - `application_accepted` / `application_submitted`
   - `job_approved` / `job_created`
@@ -145,7 +148,7 @@ Medir ponta a ponta:
 ### 6.7 Métricas de fraude
 - taxa de tickets de fraude (`support_ticket_created` com `category = fraud`) por 100 jobs
 - % jobs com `proof_uploaded` ausente antes de aprovação
-- divergência de geolocalização de check-in (distância do ponto do job)
+- divergência de geolocalização de check-in (threshold configurável por categoria de vaga; default inicial: distância > **200m** do ponto do job em jobs presenciais, com calibração baseada em dados reais de precisão GPS)
 - taxa de reversão/cancelamento de pagamentos e saques sob revisão manual
 
 ### 6.8 Métricas de retenção
