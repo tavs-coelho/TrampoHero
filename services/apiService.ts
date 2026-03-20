@@ -405,6 +405,44 @@ class ApiService {
     });
   }
 
+  async supportGetOperationsMeta() {
+    return this.request('/support/operations/meta');
+  }
+
+  async supportGetTickets(filters?: { status?: string; category?: string; incidentType?: string }) {
+    const params = new URLSearchParams();
+    if (filters?.status) params.set('status', filters.status);
+    if (filters?.category) params.set('category', filters.category);
+    if (filters?.incidentType) params.set('incidentType', filters.incidentType);
+    const q = params.toString() ? `?${params.toString()}` : '';
+    return this.request(`/support${q}`);
+  }
+
+  async supportCreateTicket(payload: {
+    subject: string;
+    description: string;
+    category: string;
+    priority?: string;
+    incidentType?: string;
+    isCompanyVsFreelancerDispute?: boolean;
+    isFraudReported?: boolean;
+    relatedJobId?: string;
+    relatedTransactionId?: string;
+    relatedDisputeId?: string;
+  }) {
+    return this.request('/support', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async supportManualReview(ticketId: string, reason?: string) {
+    return this.request(`/support/${ticketId}/manual-review`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
   async adminGetAuditLog(filters?: { action?: string; adminId?: string; page?: number }) {
     const params = new URLSearchParams();
     if (filters?.action) params.set('action', filters.action);

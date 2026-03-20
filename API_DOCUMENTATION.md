@@ -756,3 +756,49 @@ describe('Gemini Service', () => {
 
 **Última atualização**: Fevereiro 2026
 **Versão da API**: 1.0.0
+# Suporte (Support)
+
+## Fluxo operacional (resumo)
+
+1. Usuário abre ticket em `/api/support` com categoria, incidente e contexto (job/disputa/transação).
+2. Priorização automática define `priority` e `SLA` por categoria.
+3. Casos de fraude/disputa entram em `manual_review` automaticamente.
+4. Admin acompanha via `/api/admin/tickets` e responde/atribui/encerra.
+5. Histórico do atendimento fica em `history` + `messages` no ticket.
+
+## Categorias e incidentes
+
+- Categorias: `payment`, `job`, `account`, `kyc`, `technical`, `dispute`, `fraud`, `compliance`, `other`
+- Incidentes: `general`, `dispute_company_freelancer`, `fraud_report`, `manual_review`
+
+## SLA por categoria (horas)
+
+- `fraud`: 1h
+- `dispute`: 8h
+- `payment`: 8h
+- `account`: 12h
+- `kyc`, `compliance`, `technical`, `job`: 24h
+- `other`: 48h
+
+## Status do ticket
+
+- `open`
+- `in_progress`
+- `waiting_user`
+- `manual_review`
+- `resolved`
+- `closed`
+
+## Endpoints novos/atualizados de suporte
+
+- `POST /api/support`  
+  Abre ticket com priorização automática, SLA, incidente e histórico inicial.
+
+- `GET /api/support`  
+  Lista tickets do usuário (ou todos para admin), com filtros opcionais por `status`, `category`, `incidentType`.
+
+- `GET /api/support/operations/meta`  
+  Retorna metadados operacionais (SLA, status, categorias, templates, regras de priorização).
+
+- `POST /api/support/:id/manual-review` (admin)  
+  Move ticket para revisão manual e registra auditoria.

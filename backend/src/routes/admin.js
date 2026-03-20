@@ -722,9 +722,9 @@ router.patch(
 router.get(
   '/tickets',
   [
-    query('status').optional().isIn(['open', 'in_progress', 'waiting_user', 'resolved', 'closed']),
+    query('status').optional().isIn(['open', 'in_progress', 'waiting_user', 'manual_review', 'resolved', 'closed']),
     query('priority').optional().isIn(['low', 'medium', 'high', 'critical']),
-    query('category').optional().isIn(['payment', 'job', 'account', 'kyc', 'technical', 'other']),
+    query('category').optional().isIn(['payment', 'job', 'account', 'kyc', 'technical', 'dispute', 'fraud', 'compliance', 'other']),
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
   ],
@@ -806,7 +806,7 @@ router.patch(
   '/tickets/:id',
   [
     param('id').isMongoId().withMessage('Invalid ticket id'),
-    body('status').optional().isIn(['open', 'in_progress', 'waiting_user', 'resolved', 'closed']),
+    body('status').optional().isIn(['open', 'in_progress', 'waiting_user', 'manual_review', 'resolved', 'closed']),
     body('assignedAdminId').optional().isMongoId(),
     body('priority').optional().isIn(['low', 'medium', 'high', 'critical']),
   ],
@@ -827,6 +827,7 @@ router.patch(
 
       if (updates.status === 'resolved') updates.resolvedAt = new Date();
       if (updates.status === 'closed') updates.closedAt = new Date();
+      if (updates.status === 'manual_review') updates.manualReviewRequired = true;
 
       const ticket = await SupportTicket.findByIdAndUpdate(req.params.id, updates, { new: true })
         .populate('userId', 'name email role')

@@ -28,6 +28,44 @@ const ticketMessageSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+const ticketHistorySchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      enum: ['ticket_opened', 'status_changed', 'assigned', 'reply', 'manual_review', 'priority_changed'],
+      required: true,
+    },
+    actorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    actorRole: {
+      type: String,
+      enum: ['user', 'admin', 'system'],
+      required: true,
+    },
+    description: {
+      type: String,
+      required: true,
+      maxlength: [300, 'Description cannot exceed 300 characters'],
+    },
+    fromStatus: {
+      type: String,
+      default: null,
+    },
+    toStatus: {
+      type: String,
+      default: null,
+    },
+    metadata: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+  },
+  { timestamps: true }
+);
+
 const supportTicketSchema = new mongoose.Schema(
   {
     userId: {
@@ -48,7 +86,7 @@ const supportTicketSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['payment', 'job', 'account', 'kyc', 'technical', 'other'],
+      enum: ['payment', 'job', 'account', 'kyc', 'technical', 'dispute', 'fraud', 'compliance', 'other'],
       required: true,
     },
     priority: {
@@ -58,8 +96,13 @@ const supportTicketSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['open', 'in_progress', 'waiting_user', 'resolved', 'closed'],
+      enum: ['open', 'in_progress', 'waiting_user', 'manual_review', 'resolved', 'closed'],
       default: 'open',
+    },
+    incidentType: {
+      type: String,
+      enum: ['general', 'dispute_company_freelancer', 'fraud_report', 'manual_review'],
+      default: 'general',
     },
     assignedAdminId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -79,6 +122,31 @@ const supportTicketSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Transaction',
       default: null,
+    },
+    relatedDisputeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Dispute',
+      default: null,
+    },
+    slaTargetAt: {
+      type: Date,
+      default: null,
+    },
+    firstResponseAt: {
+      type: Date,
+      default: null,
+    },
+    lastResponseAt: {
+      type: Date,
+      default: null,
+    },
+    manualReviewRequired: {
+      type: Boolean,
+      default: false,
+    },
+    history: {
+      type: [ticketHistorySchema],
+      default: [],
     },
     resolvedAt: {
       type: Date,
@@ -102,5 +170,7 @@ supportTicketSchema.index({ userId: 1, status: 1 });
 supportTicketSchema.index({ status: 1, priority: 1 });
 supportTicketSchema.index({ assignedAdminId: 1, status: 1 });
 supportTicketSchema.index({ createdAt: -1 });
+supportTicketSchema.index({ category: 1, slaTargetAt: 1 });
+supportTicketSchema.index({ incidentType: 1, createdAt: -1 });
 
 export default mongoose.model('SupportTicket', supportTicketSchema);

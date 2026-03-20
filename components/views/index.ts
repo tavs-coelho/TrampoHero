@@ -10,6 +10,7 @@ export { WalletView } from './WalletView';
 export { AcademyView } from './AcademyView';
 export { ProfileView } from './ProfileView';
 export { ChatView } from './ChatView';
+export { SupportCenterView } from './SupportCenterView';
 export { CoinsView } from './CoinsView';
 export { InsuranceView } from './InsuranceView';
 export { CreditView } from './CreditView';

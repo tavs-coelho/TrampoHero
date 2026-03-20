@@ -129,7 +129,7 @@ describe('Freelancer BottomNav navigation', () => {
     const user = userEvent.setup();
     await renderApp();
     await user.click(screen.getByText('Suporte'));
-    expect(screen.getByText('Suporte Hero IA')).toBeInTheDocument();
+    expect(screen.getByText('Central de Suporte')).toBeInTheDocument();
   });
 
   it('returns to Browse view via Início button', async () => {
@@ -213,7 +213,7 @@ describe('Employer navigation', () => {
   it('navigates to Employer Chat', async () => {
     const user = await renderAsEmployer();
     await user.click(screen.getByText('Suporte'));
-    expect(screen.getByText('Suporte Empresarial')).toBeInTheDocument();
+    expect(screen.getByText('Central de Suporte')).toBeInTheDocument();
   });
 
   it('navigates to Employer Active (monitoring)', async () => {
@@ -533,14 +533,14 @@ describe('Chat / Support view', () => {
     const user = userEvent.setup();
     await renderApp();
     await user.click(screen.getByText('Suporte'));
-    expect(screen.getByText('Suporte Hero IA')).toBeInTheDocument();
+    expect(screen.getByText('Central de Suporte')).toBeInTheDocument();
   });
 
   it('shows message input field', async () => {
     const user = userEvent.setup();
     await renderApp();
     await user.click(screen.getByText('Suporte'));
-    const input = screen.getByPlaceholderText(/escreva|mensagem|pergunta/i);
+    const input = screen.getByPlaceholderText(/descreva o problema|escreva|mensagem|pergunta/i);
     expect(input).toBeInTheDocument();
   });
 
@@ -548,23 +548,9 @@ describe('Chat / Support view', () => {
     const user = userEvent.setup();
     await renderApp();
     await user.click(screen.getByText('Suporte'));
-    const input = screen.getByPlaceholderText(/mensagem/i);
+    const input = screen.getByPlaceholderText(/descreva o problema/i);
     await user.type(input, 'Como funciona o saque?');
-    expect((input as HTMLInputElement).value).toBe('Como funciona o saque?');
-    // Send button has the fa-paper-plane icon (no text label)
-    const sendBtn = document.querySelector('.fa-paper-plane')?.closest('button') as HTMLElement | null;
-    if (sendBtn) {
-      await user.click(sendBtn);
-      await waitFor(() => {
-        expect(screen.getByText('Como funciona o saque?')).toBeInTheDocument();
-      });
-    } else {
-      // Fallback: press Enter to send
-      await user.keyboard('{Enter}');
-      await waitFor(() => {
-        expect(screen.getByText('Como funciona o saque?')).toBeInTheDocument();
-      });
-    }
+    expect((input as HTMLTextAreaElement).value).toBe('Como funciona o saque?');
   });
 });
 
@@ -634,10 +620,10 @@ describe('Employer Dashboard flows', () => {
     expect(screen.getByText(/Adicionar Saldo/)).toBeInTheDocument();
   });
 
-  it('employer chat shows "Suporte Empresarial"', async () => {
+  it('employer support center shows "Central de Suporte"', async () => {
     const user = await renderAsEmployer();
     await user.click(screen.getByText('Suporte'));
-    expect(screen.getByText('Suporte Empresarial')).toBeInTheDocument();
+    expect(screen.getByText('Central de Suporte')).toBeInTheDocument();
   });
 
   it('employer active shows monitoring view', async () => {
