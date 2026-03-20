@@ -13,6 +13,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+const MIN_WITHDRAWAL = vi.hoisted(() => 10);
+
 // ─── Mock env ─────────────────────────────────────────────────────────────────
 vi.mock('../config/env.js', () => ({
   env: {
@@ -35,7 +37,7 @@ vi.mock('../config/env.js', () => ({
     AZURE_WEBPUBSUB_CONNECTION_STRING: '',
     AZURE_WEBPUBSUB_HUB_NAME: '',
     WITHDRAWAL_FEE: 2.50,
-    MIN_WITHDRAWAL: 10,
+    MIN_WITHDRAWAL,
   },
 }));
 
@@ -445,7 +447,7 @@ describe('POST /api/wallet/withdraw', () => {
   it('returns 400 when amount is below minimum', async () => {
     const res = await request(buildWalletApp())
       .post('/api/wallet/withdraw')
-      .send({ amount: 5, pixKey: 'test@email.com' });
+      .send({ amount: MIN_WITHDRAWAL - 1, pixKey: 'test@email.com' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/minimum/i);
   });
