@@ -31,7 +31,9 @@ function maskPixKey(pixKey) {
   const trimmed = pixKey.trim();
   if (!trimmed) return '';
   if (trimmed.includes('@')) {
-    const [localPart, domain] = trimmed.split('@');
+    const atIndex = trimmed.indexOf('@');
+    const localPart = trimmed.slice(0, atIndex);
+    const domain = trimmed.slice(atIndex + 1);
     const firstChar = localPart[0] ?? '*';
     const domainParts = domain?.split('.') ?? [];
     const baseDomain = domainParts[0] ?? '';

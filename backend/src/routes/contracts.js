@@ -15,6 +15,20 @@ function isSafeFileName(fileName) {
   return fileName === path.basename(fileName);
 }
 
+async function getReadableFileError(filePath) {
+  try {
+    await fs.access(filePath);
+    return null;
+  } catch (err) {
+    return {
+      status: err.code === 'ENOENT' ? 404 : 500,
+      message: err.code === 'ENOENT'
+        ? 'Contract file not found'
+        : 'Error retrieving contract file',
+    };
+  }
+}
+
 // @route   GET /api/contracts
 // @desc    List contracts for the authenticated user (as employer or freelancer)
 // @access  Private
@@ -123,13 +137,10 @@ router.get(
       if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
         return res.status(400).json({ success: false, error: 'Invalid file path' });
       }
-      try {
-        await fs.access(filePath);
-      } catch (err) {
-        const message = err.code === 'ENOENT'
-          ? 'Contract file not found'
-          : 'Error retrieving contract file';
-        return res.status(err.code === 'ENOENT' ? 404 : 500).json({ success: false, error: message });
+
+      const fileError = await getReadableFileError(filePath);
+      if (fileError) {
+        return res.status(fileError.status).json({ success: false, error: fileError.message });
       }
 
       return res.sendFile(filePath);
