@@ -8,6 +8,41 @@ const WITHDRAWAL_FEE = env.WITHDRAWAL_FEE;
 
 const router = express.Router();
 
+const PIX_KEY_TYPES = {
+  CPF: 'cpf',
+  CNPJ: 'cnpj',
+  EMAIL: 'email',
+  PHONE: 'phone',
+  RANDOM: 'random',
+};
+
+function detectPixKeyType(pixKey) {
+  if (!pixKey) return PIX_KEY_TYPES.RANDOM;
+  if (pixKey.includes('@')) return PIX_KEY_TYPES.EMAIL;
+  const digits = pixKey.replace(/\D/g, '');
+  if (digits.length === 11) return PIX_KEY_TYPES.CPF;
+  if (digits.length === 14) return PIX_KEY_TYPES.CNPJ;
+  if (digits.length >= 10 && digits.length <= 13) return PIX_KEY_TYPES.PHONE;
+  return PIX_KEY_TYPES.RANDOM;
+}
+
+function maskPixKey(pixKey) {
+  if (!pixKey) return '';
+  const trimmed = pixKey.trim();
+  if (!trimmed) return '';
+  if (trimmed.includes('@')) {
+    const [localPart, domain] = trimmed.split('@');
+    const firstChar = localPart?.[0] ?? '*';
+    return `${firstChar}***@${domain || '***'}`;
+  }
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits.length >= 4) {
+    return `***${digits.slice(-4)}`;
+  }
+  if (trimmed.length <= 4) return '***';
+  return `${'*'.repeat(trimmed.length - 4)}${trimmed.slice(-4)}`;
+}
+
 // @route   GET /api/wallet/balance
 // @desc    Get wallet balance
 // @access  Private
@@ -75,6 +110,9 @@ router.post('/withdraw', authenticate, async (req, res) => {
     if (!amount || amount <= 0) {
       return res.status(400).json({ success: false, error: 'Invalid amount' });
     }
+    if (!pixKey || typeof pixKey !== 'string' || !pixKey.trim()) {
+      return res.status(400).json({ success: false, error: 'pixKey is required' });
+    }
 
     const user = await User.findById(req.user.id);
     if (!user || user.wallet.balance < amount) {
@@ -82,14 +120,18 @@ router.post('/withdraw', authenticate, async (req, res) => {
     }
 
     const fee = user.isPrime ? 0 : WITHDRAWAL_FEE;
+    const pixKeyMasked = maskPixKey(pixKey);
+    const pixKeyType = detectPixKeyType(pixKey);
 
     // Create transaction
     const transaction = await Transaction.create({
       userId: req.user.id,
       type: 'withdrawal',
       amount: -(amount + fee),
-      description: `Saque PIX (${pixKey})`,
+      description: `Saque PIX (${pixKeyMasked || 'chave protegida'})`,
       fee,
+      pixKeyMasked: pixKeyMasked || null,
+      pixKeyType,
     });
 
     // Update user wallet

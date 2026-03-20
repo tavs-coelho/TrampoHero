@@ -104,8 +104,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Serve generated PDF contracts for download (static files at /api/contracts/files/)
-app.use('/api/contracts/files', express.static(path.join(__dirname, '..', 'contracts')));
+// Serve generated PDF contracts via authenticated route in contracts router
 app.use('/api/contracts', contractsRoutes);
 
 // Health check endpoint

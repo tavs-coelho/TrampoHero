@@ -44,6 +44,14 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  pixKeyMasked: {
+    type: String,
+    default: null,
+  },
+  pixKeyType: {
+    type: String,
+    default: null,
+  },
 }, {
   timestamps: true,
 });

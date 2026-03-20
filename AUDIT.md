@@ -33,8 +33,8 @@
 | Uploads gerais | imagens (foto‑prova) | `Upload` (`backend/src/models/Upload.js`), SAS URLs | URLs permanentes podem expor arquivos |
 | Geolocalização | latitude, longitude, horário | `Job.checkin`, `Attendance` (`backend/src/routes/jobs.js`, `backend/src/models/Attendance.js`) | dado sensível por contexto |
 | Prova fotográfica | URL foto | `Job.proofPhoto`, `Attendance.proofPhotoUrl` | imagem de pessoa/local |
-| Contratos | nome, email, vaga, local, remuneração | PDF em `backend/contracts` + `Contract` (`pdfService.js`) | PDF serve PII; rota pública estática |
-| Pagamentos | wallet, transações, pixKey, IDs Stripe | `Transaction`, `User.wallet` (`wallet.js`, `payments.js`) | `pixKey` vai para `description` |
+| Contratos | nome, email, vaga, local, remuneração | PDF em `backend/contracts` + `Contract` (`pdfService.js`) | download exige autenticação |
+| Pagamentos | wallet, transações, pixKey (mascarada), IDs Stripe | `Transaction`, `User.wallet` (`wallet.js`, `payments.js`) | `pixKey` mascarada no histórico |
 | Avaliações | rating, comentário, autor/target | `Review` (`reviews.js`) | conteúdo livre pode incluir PII |
 | Suporte | assunto, descrição, mensagens, anexos | `SupportTicket` (`support.js`) | alto risco (pode conter dados sensíveis) |
 | Logs/Auditoria | IP, user‑agent (admin) | `AdminAction` (`AdminAction.js`) + `morgan` | dados pessoais de navegação |
@@ -83,15 +83,15 @@
 ### 6) Contratos
 **Dados coletados:** nome, email, dados da vaga, local, remuneração.  
 **Base legal provável:** execução de contrato / obrigação legal.  
-**Riscos:** PDFs ficam em disco e são servidos por rota **estática** `/api/contracts/files` sem autenticação (**severidade crítica**).  
-**Lacunas:** ausência de controle de acesso e expiração de links.  
+**Riscos:** PDFs ficam em disco e exigem autenticação para download; manter controle de autorização e expiração de links.  
+**Lacunas:** ausência de expiração de links e trilha de acesso.  
 **Consentimento:** aceite dos termos do contrato no fluxo de conclusão.
 
 ### 7) Dados de pagamento
-**Dados coletados:** wallet, transações, IDs Stripe; `pixKey` armazenado em `Transaction.description`.  
+**Dados coletados:** wallet, transações, IDs Stripe; `pixKey` mascarada no histórico.  
 **Base legal provável:** execução de contrato + obrigação legal (contábil/fiscal).  
 **Riscos:** exposição de pixKey e dados financeiros.  
-**Lacunas:** não há mascaramento de pixKey no log/descrição.  
+**Lacunas:** pixKey agora é mascarada no histórico, mas ainda requer política de retenção específica e criptografia em repouso se for armazenada.  
 **Consentimento:** não necessário, mas política deve informar parceiros de pagamento.
 
 ### 8) Avaliações
@@ -119,8 +119,8 @@
 1. **Documentos e selfie (KYC)** sem retenção/expurgo no código.  
 2. **Geolocalização** armazenada sem prazo definido.  
 3. **Provas fotográficas** armazenadas com URLs permanentes.  
-4. **Contratos PDF** expostos via rota estática sem autenticação (**severidade crítica**).  
-5. **PixKey** gravada em descrição de transações (pode ser CPF/telefone/email).  
+4. **Contratos PDF** exigem autenticação; manter controle de autorização e expiração.  
+5. **PixKey** agora é mascarada; evitar exposição em logs e manter campo dedicado.  
 6. **Token em localStorage** (risco XSS) sem mitigação (HttpOnly/CSP).  
 7. **Ausência de consentimentos** explícitos (KYC, geolocalização, marketing, cookies).  
 8. **Sem trilhas de direitos do titular** (exportar/excluir dados).  
@@ -129,8 +129,8 @@
 ---
 
 ## ✅ Ações técnicas obrigatórias (curto prazo)
-1. **Controle de acesso para contratos (prioridade imediata)**: exigir autenticação antes de servir PDF.  
-2. **Mascarar/omitir `pixKey` (prioridade alta)** em `Transaction.description` e mover para campo dedicado com criptografia.  
+1. **Controle de acesso para contratos (prioridade imediata)**: autenticação aplicada ao download de PDF.  
+2. **Mascarar/omitir `pixKey` (prioridade alta)** em `Transaction.description` e manter apenas campo dedicado mascarado (sem armazenar raw; considerar criptografia).  
 3. **Implementar retenção** (cron + política) para KYC, fotos, geolocalização e suporte.  
 4. **Registro de consentimentos** (coleção `consents` com propósito/base legal/dados e revogação).  
 5. **Rotas de direitos do titular**: exportar dados e excluir conta.  
