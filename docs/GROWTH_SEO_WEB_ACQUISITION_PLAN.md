@@ -62,6 +62,8 @@ Medir ponta a ponta:
 ### 6.2 Nomenclatura padronizada
 - Padrão de nome de evento: **`snake_case`**.
 - Prefixos por domínio (recomendado): `auth_`, `job_`, `application_`, `payment_`, `withdrawal_`, `support_`, `review_`, `fraud_`.
+- Regra de compatibilidade para auth: `auth_*` é o padrão canônico; `signup_*` e `login_*` (neste documento: `signup_started`, `signup_completed`, `login_success`) são aliases legados aceitos apenas para compatibilidade com a fase MVP inicial.
+- Plano de migração de aliases legados: manter dupla leitura por 1 ciclo de release, publicar aviso de depreciação e convergir para `auth_*` como padrão único após esse ciclo.
 - Campos comuns em todos os eventos:
   - `event_name`
   - `occurred_at` (ISO 8601 UTC)
@@ -115,12 +117,13 @@ Medir ponta a ponta:
 - `payment_released`  
   - **Backend**: `backend/src/routes/payments.js` em `POST /release-escrow/:jobId`.
 - `withdrawal_requested`  
-  - **Backend**: `backend/src/routes/wallet.js` em `POST /withdraw`.
+  - **Backend**: hoje o fluxo em `backend/src/routes/wallet.js` (`POST /withdraw`) cria registros transacionais `Withdrawal`/`Transaction` com `status = pending` no banco; a emissão do evento de tracking `withdrawal_requested` ainda precisa ser instrumentada nesse ponto.
+  - **Ação de implementação**: adicionar emissão explícita de evento imediatamente após `Withdrawal.create` e `Transaction.create` bem-sucedidos.
 - `withdrawal_paid`  
-  - **Backend**: hoje o projeto já registra `withdrawal_requested` em `backend/src/routes/wallet.js` (`POST /withdraw`), mas ainda não tem um endpoint explícito para liquidação final de saque.  
+  - **Backend**: hoje o projeto registra saque apenas de forma transacional no banco (criação de `Withdrawal`/`Transaction` em `backend/src/routes/wallet.js` — `POST /withdraw`), mas ainda não há endpoint explícito nem evento de tracking para a liquidação final do saque.  
   - **Recomendação v1**: implementar no `backend/src/routes/payments.js` (`POST /webhook`), pois é o caminho mais simples e consistente com os demais eventos financeiros já confirmados pelo gateway.  
   - **Fallback**: usar worker dedicado apenas se o provedor de pagamento não oferecer webhook confiável/assíncrono para liquidação.  
-  - Em ambos os casos, atualizar `Withdrawal.status = completed` e `Transaction.status = completed`.
+  - Em ambos os casos, finalizar o saque de forma atômica: atualizar `Withdrawal.status = completed` e `Transaction.status = completed` **e** aplicar a contabilidade de carteira (por exemplo, reduzir `wallet.scheduled`, incrementar `wallet.withdrawn` e garantir rollback em falha/cancelamento).
 - `review_submitted`  
   - **Backend**: `backend/src/routes/reviews.js` em `POST /`.
 - `support_ticket_created`  
@@ -148,7 +151,12 @@ Medir ponta a ponta:
 ### 6.7 Métricas de fraude
 - taxa de tickets de fraude (`support_ticket_created` com `category = fraud`) por 100 jobs
 - % jobs com `proof_uploaded` ausente antes de aprovação
-- divergência de geolocalização de check-in (threshold configurável por categoria de vaga; default inicial: distância > **200m** do ponto do job em jobs presenciais, com calibração baseada em dados reais de precisão GPS)
+- divergência de geolocalização de check-in:
+  - threshold configurável por `Job.niche` (campo atual de categoria no modelo `Job`) (default inicial: distância > **200m** do ponto do job);
+  - aplicar apenas para jobs marcados como presenciais;
+  - requer novo atributo `work_mode` no modelo `Job` como ENUM(`presencial`, `remoto`, `híbrido`), sem default na migração inicial (ou nullable) para evitar classificação incorreta de legados; após backfill, tornar obrigatório;
+  - backfill recomendado para legados: priorizar fonte declarativa (edição/confirmação do empregador); na ausência, inferir provisoriamente por sinais operacionais (ex.: uso de check-in geolocalizado) e revisar manualmente casos ambíguos;
+  - calibrar threshold com dados reais de precisão GPS.
 - taxa de reversão/cancelamento de pagamentos e saques sob revisão manual
 
 ### 6.8 Métricas de retenção
