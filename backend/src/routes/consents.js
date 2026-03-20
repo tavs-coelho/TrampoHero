@@ -3,10 +3,10 @@ import { body, validationResult } from 'express-validator';
 import { authenticate } from '../middleware/auth.js';
 import Consent from '../models/Consent.js';
 
-const buildCriteria = (userId, body) => ({
+const buildCriteria = (userId, purpose, policyVersion) => ({
   userId,
-  purpose: body.purpose,
-  policyVersion: body.policyVersion ?? null,
+  purpose,
+  policyVersion: policyVersion ?? null,
 });
 
 const router = express.Router();
@@ -60,7 +60,7 @@ router.post(
       return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    const criteria = buildCriteria(req.user.id, req.body);
+    const criteria = buildCriteria(req.user.id, req.body?.purpose, req.body?.policyVersion);
     try {
       const {
         purpose,

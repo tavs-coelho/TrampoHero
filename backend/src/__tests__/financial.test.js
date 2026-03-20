@@ -13,7 +13,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const MIN_WITHDRAWAL = vi.hoisted(() => 10);
+const { MIN_WITHDRAWAL } = vi.hoisted(() => ({ MIN_WITHDRAWAL: 10 }));
 
 // ─── Mock env ─────────────────────────────────────────────────────────────────
 vi.mock('../config/env.js', () => ({
