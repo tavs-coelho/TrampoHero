@@ -26,11 +26,28 @@ router.get('/', authenticate, async (req, res) => {
 router.post(
   '/',
   authenticate,
-  body('purpose').isString().notEmpty().withMessage('purpose is required'),
-  body('legalBasis').optional().isString(),
+  body('purpose')
+    .isString()
+    .trim()
+    .isLength({ max: 100 })
+    .notEmpty()
+    .withMessage('purpose is required'),
+  body('legalBasis')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 50 }),
   body('granted').optional().isBoolean(),
-  body('policyVersion').optional().isString(),
-  body('source').optional().isString(),
+  body('policyVersion')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 50 }),
+  body('source')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 50 }),
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
