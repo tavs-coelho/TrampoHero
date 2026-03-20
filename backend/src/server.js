@@ -134,9 +134,11 @@ app.use((req, res) => {
 
 // Centralized error handler
 app.use((err, req, res, next) => {
+  const statusCode = err.status || 500;
   console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`, err.stack);
-  res.status(err.status || 500).json({
-    error: env.NODE_ENV === 'production' ? 'Internal Server Error' : (err.message || 'Internal Server Error'),
+  const shouldMaskError = env.NODE_ENV === 'production' && statusCode >= 500;
+  res.status(statusCode).json({
+    error: shouldMaskError ? 'Internal Server Error' : (err.message || 'Internal Server Error'),
     ...(env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });
@@ -148,21 +150,50 @@ const server = app.listen(env.PORT, () => {
   console.log(`🌐 Allowed origins: ${env.ALLOWED_ORIGINS.join(', ')}`);
 });
 
-function shutdown(signalOrReason) {
+let isShuttingDown = false;
+
+function shutdown(signalOrReason, exitCode = 0) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
   console.error(`[${new Date().toISOString()}] Shutdown triggered: ${signalOrReason}`);
-  server.close(() => process.exit(0));
-  setTimeout(() => process.exit(1), 10000).unref();
+
+  const forceShutdownTimer = setTimeout(() => {
+    console.error(`[${new Date().toISOString()}] Forced shutdown due to timeout`);
+    process.exit(exitCode !== 0 ? exitCode : 1);
+  }, 10000);
+  forceShutdownTimer.unref();
+
+  const closeMongo = async () => {
+    if (mongoose.connection.readyState !== 0) {
+      try {
+        await mongoose.connection.close();
+      } catch (mongoError) {
+        console.error(`[${new Date().toISOString()}] Error closing MongoDB connection during shutdown:`, mongoError);
+      }
+    }
+  };
+
+  server.close(async (serverError) => {
+    if (serverError) {
+      console.error(`[${new Date().toISOString()}] Error closing HTTP server during shutdown:`, serverError);
+    }
+
+    await closeMongo();
+    clearTimeout(forceShutdownTimer);
+    process.exit(exitCode);
+  });
 }
 
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM', 0));
+process.on('SIGINT', () => shutdown('SIGINT', 0));
 process.on('unhandledRejection', (reason) => {
   console.error('[unhandledRejection]', reason);
-  shutdown('unhandledRejection');
+  shutdown('unhandledRejection', 1);
 });
 process.on('uncaughtException', (error) => {
   console.error('[uncaughtException]', error);
-  shutdown('uncaughtException');
+  shutdown('uncaughtException', 1);
 });
 
 export default app;
