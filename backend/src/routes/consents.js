@@ -54,6 +54,12 @@ router.post(
       return res.status(400).json({ success: false, errors: errors.array() });
     }
 
+    const buildCriteria = () => ({
+      userId: req.user.id,
+      purpose: req.body.purpose,
+      policyVersion: req.body.policyVersion ?? null,
+    });
+
     try {
       const {
         purpose,
@@ -63,7 +69,7 @@ router.post(
         source = 'app',
       } = req.body;
 
-      const criteria = { userId: req.user.id, purpose, policyVersion };
+      const criteria = buildCriteria();
       const update = {
         legalBasis,
         granted,
@@ -82,14 +88,10 @@ router.post(
     } catch (error) {
       if (error?.code === 11000) {
         try {
-          const criteria = {
-            userId: req.user.id,
-            purpose: req.body.purpose,
-            policyVersion: req.body.policyVersion ?? null,
-          };
+          const criteria = buildCriteria();
           const existing = await Consent.findOne(criteria);
           if (existing) {
-            return res.status(201).json({ success: true, data: existing });
+            return res.status(200).json({ success: true, data: existing });
           }
         } catch (lookupError) {
           console.error('[POST /consents] Duplicate lookup failed', lookupError.message);
