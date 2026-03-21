@@ -8,8 +8,8 @@ describe('SplashScreen', () => {
     expect(screen.getByText('TrampoHero')).toBeInTheDocument();
   });
 
-  it('renders "Conectando Talentos" subtitle', () => {
+  it('renders subtitle text', () => {
     render(<SplashScreen />);
-    expect(screen.getByText('Conectando Talentos')).toBeInTheDocument();
+    expect(screen.getByText('Trabalhos temporários no Brasil')).toBeInTheDocument();
   });
 });

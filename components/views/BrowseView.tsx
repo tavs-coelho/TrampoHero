@@ -30,54 +30,83 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
   setShowPrimeModal,
   isLoading = false,
 }) => (
-  <div className="space-y-6 animate-in fade-in duration-500">
+  <div className="space-y-5">
     <div className="flex items-center justify-between">
-      <h2 className="text-2xl font-black text-slate-900">Freelas Próximos</h2>
-      <div className="flex gap-2">
-        <button aria-label={browseMode === 'list' ? 'Alternar para mapa' : 'Alternar para lista'} onClick={() => setBrowseMode(m => m === 'list' ? 'map' : 'list')} className="w-10 h-10 bg-white border rounded-xl flex items-center justify-center text-slate-600 shadow-sm hover:bg-slate-50 transition-colors">
-          <i className={`fas ${browseMode === 'list' ? 'fa-map' : 'fa-list'}`}></i>
-        </button>
-      </div>
+      <h1 className="text-xl font-bold text-slate-900">Vagas disponíveis</h1>
+      <button
+        aria-label={browseMode === 'list' ? 'Alternar para mapa' : 'Alternar para lista'}
+        onClick={() => setBrowseMode(m => m === 'list' ? 'map' : 'list')}
+        className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+      >
+        <i className={`fas ${browseMode === 'list' ? 'fa-map' : 'fa-list'} text-sm`}></i>
+        <span className="text-xs font-medium">{browseMode === 'list' ? 'Mapa' : 'Lista'}</span>
+      </button>
     </div>
 
-    {/* Filtros de Categoria (Pills) */}
-    <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-        <button onClick={() => setFilterNiche('All')} className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all ${filterNiche === 'All' ? 'bg-slate-900 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200'}`}>Todos</button>
-        {Object.values(Niche).map(n => (
-            <button key={n} onClick={() => setFilterNiche(n)} className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all ${filterNiche === n ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200'}`}>
-                {n}
-            </button>
-        ))}
+    {/* Filtros de Categoria */}
+    <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+      <button
+        onClick={() => setFilterNiche('All')}
+        className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+          filterNiche === 'All'
+            ? 'bg-slate-900 text-white'
+            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+        }`}
+      >
+        Todos
+      </button>
+      {Object.values(Niche).map(n => (
+        <button
+          key={n}
+          onClick={() => setFilterNiche(n)}
+          className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            filterNiche === n
+              ? 'bg-indigo-600 text-white'
+              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          {n}
+        </button>
+      ))}
     </div>
 
     {browseMode === 'map' ? (
-      <div className="relative h-[500px] w-full mb-6">
-        <div ref={mapContainerRef} className="h-full w-full shadow-2xl rounded-[3rem] border-4 border-white overflow-hidden z-0"></div>
-        <div className="absolute top-4 right-4 z-[1] bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-lg border border-white text-[10px] font-black text-slate-400 uppercase tracking-widest pointer-events-none">
-          Clique nos ícones
+      <div className="relative h-[480px] w-full">
+        <div ref={mapContainerRef} className="h-full w-full rounded-xl border border-slate-200 overflow-hidden z-0"></div>
+        <div className="absolute top-3 right-3 z-[1] bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-500 pointer-events-none">
+          Clique nos marcadores
         </div>
       </div>
     ) : (
-      <div className="grid gap-4">
+      <div className="space-y-3">
         {!user.isPrime && (
-          <div onClick={() => setShowPrimeModal(true)} className="bg-indigo-600 p-6 rounded-[2.5rem] text-white shadow-xl cursor-pointer relative overflow-hidden group hover:shadow-2xl transition-all">
-            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:scale-110 transition-transform"><i className="fas fa-crown text-5xl"></i></div>
-            <h3 className="text-lg font-black mb-1">Seja Hero Prime</h3>
-            <p className="text-xs opacity-80 mb-4">Saque grátis, seguro e vagas VIP.</p>
-            <span className="text-[10px] font-bold uppercase bg-white/20 px-3 py-1 rounded-full group-hover:bg-white group-hover:text-indigo-600 transition-colors">Assinar agora</span>
-          </div>
+          <button
+            onClick={() => setShowPrimeModal(true)}
+            className="w-full bg-indigo-600 p-4 rounded-xl text-white text-left hover:bg-indigo-700 transition-colors"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold mb-0.5">Seja Hero Prime</p>
+                <p className="text-xs text-indigo-200">Saque grátis, seguro e vagas VIP</p>
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1.5 rounded-lg text-xs font-medium">
+                <i className="fas fa-crown text-xs"></i>
+                Assinar
+              </div>
+            </div>
+          </button>
         )}
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => <JobCardSkeleton key={i} />)
         ) : sortedOpenJobs.length === 0 ? (
-            <div className="text-center py-20 opacity-50">
-                <i className="fas fa-search text-4xl mb-4"></i>
-                <p className="font-bold">Nenhum bico encontrado nesta categoria.</p>
-            </div>
+          <div className="text-center py-16 text-slate-400">
+            <i className="fas fa-search text-3xl mb-3"></i>
+            <p className="text-sm font-medium">Nenhuma vaga encontrada nesta categoria.</p>
+          </div>
         ) : (
-            sortedOpenJobs.map(job => (
+          sortedOpenJobs.map(job => (
             <JobCard key={job.id} job={job} onClick={setSelectedJob} />
-            ))
+          ))
         )}
       </div>
     )}

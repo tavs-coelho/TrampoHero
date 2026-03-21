@@ -50,7 +50,7 @@ describe('BrowseView', () => {
         setShowPrimeModal={vi.fn()}
       />
     );
-    expect(screen.getByText('Freelas Próximos')).toBeInTheDocument();
+    expect(screen.getByText('Vagas disponíveis')).toBeInTheDocument();
   });
 
   it('renders niche filter options', () => {
@@ -187,7 +187,7 @@ describe('WalletView', () => {
         setShowPrimeModal={vi.fn()}
       />
     );
-    expect(screen.getByText('Saldo Total')).toBeInTheDocument();
+    expect(screen.getByText('Saldo disponível')).toBeInTheDocument();
   });
 
   it('renders PIX withdraw button', () => {
@@ -613,7 +613,7 @@ describe('ProfileView', () => {
         showToast={vi.fn()}
       />
     );
-    expect(screen.getByText('Recursos Exclusivos')).toBeInTheDocument();
+    expect(screen.getByText('Mais recursos')).toBeInTheDocument();
   });
 });
 

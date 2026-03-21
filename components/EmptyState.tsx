@@ -18,21 +18,21 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   className = '',
 }) => (
   <div
-    className={`flex flex-col items-center justify-center py-16 text-center px-6 ${className}`}
+    className={`flex flex-col items-center justify-center py-12 text-center px-6 ${className}`}
     role="status"
     aria-label={title}
   >
-    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-      <i className={`fas ${icon} text-2xl text-slate-400`} aria-hidden="true"></i>
+    <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3">
+      <i className={`fas ${icon} text-xl text-slate-400`} aria-hidden="true"></i>
     </div>
-    <h3 className="font-black text-slate-700 text-base mb-1">{title}</h3>
+    <h3 className="font-semibold text-slate-700 text-sm mb-1">{title}</h3>
     {description && (
-      <p className="text-slate-400 text-sm max-w-xs">{description}</p>
+      <p className="text-slate-400 text-xs max-w-xs leading-relaxed">{description}</p>
     )}
     {actionLabel && onAction && (
       <button
         onClick={onAction}
-        className="mt-6 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold text-sm hover:bg-indigo-700 active:scale-95 transition-all shadow-md"
+        className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
       >
         {actionLabel}
       </button>

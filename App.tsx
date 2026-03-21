@@ -500,13 +500,13 @@ const App: React.FC = () => {
 
   // --- Render ---
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-['Inter'] pb-24">
+    <div className="min-h-screen bg-gray-50 flex flex-col pb-16">
       {showSplash && <SplashScreen />}
       {toast && <Toast message={toast.msg} type={toast.type} onClose={clearToast} />}
 
       <Header user={user} setView={setView} setShowPrimeModal={setShowPrimeModal} setUser={setUser} />
 
-      <main className="flex-1 max-w-2xl mx-auto w-full p-4">
+      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-5">
         {user.role === 'employer' ? (
           <div className="space-y-6 animate-in fade-in duration-500">
             {(view === 'dashboard' || view === 'browse') && (

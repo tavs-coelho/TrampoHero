@@ -11,7 +11,7 @@ describe('JobCardSkeleton', () => {
   it('renders the card wrapper with rounded corners matching JobCard', () => {
     render(<JobCardSkeleton />);
     const card = screen.getByTestId('job-card-skeleton');
-    expect(card.className).toContain('rounded-[3rem]');
+    expect(card.className).toContain('rounded-xl');
   });
 
   it('renders skeleton placeholder elements', () => {

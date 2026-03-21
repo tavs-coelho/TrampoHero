@@ -11,19 +11,19 @@ describe('Toast', () => {
   it('renders success type with correct styling', () => {
     const { container } = render(<Toast message="Success" type="success" onClose={() => {}} />);
     const toastEl = container.firstChild as HTMLElement;
-    expect(toastEl.className).toContain('bg-emerald-500');
+    expect(toastEl.className).toContain('border-emerald-200');
   });
 
   it('renders error type with correct styling', () => {
     const { container } = render(<Toast message="Error" type="error" onClose={() => {}} />);
     const toastEl = container.firstChild as HTMLElement;
-    expect(toastEl.className).toContain('bg-red-500');
+    expect(toastEl.className).toContain('border-red-200');
   });
 
   it('renders info type with correct styling', () => {
     const { container } = render(<Toast message="Info" type="info" onClose={() => {}} />);
     const toastEl = container.firstChild as HTMLElement;
-    expect(toastEl.className).toContain('bg-slate-800');
+    expect(toastEl.className).toContain('border-slate-200');
   });
 
   it('calls onClose when close button is clicked', () => {

@@ -45,7 +45,7 @@ describe('CreateJobModal', () => {
 
   it('renders publish button', () => {
     render(<CreateJobModal {...defaultProps} />);
-    expect(screen.getByText('Publicar Agora')).toBeInTheDocument();
+    expect(screen.getByText('Publicar vaga')).toBeInTheDocument();
   });
 
   it('renders AI generate button', () => {
@@ -212,7 +212,7 @@ describe('PrimeModal', () => {
         onClose={vi.fn()}
       />
     );
-    expect(screen.getByText('Cancelar Assinatura')).toBeInTheDocument();
+    expect(screen.getByText('Cancelar assinatura')).toBeInTheDocument();
   });
 
   it('renders benefits', () => {
@@ -224,8 +224,8 @@ describe('PrimeModal', () => {
         onClose={vi.fn()}
       />
     );
-    expect(screen.getByText('Taxa Zero em Saques')).toBeInTheDocument();
-    expect(screen.getByText('Seguro Acidentes')).toBeInTheDocument();
+    expect(screen.getByText('Taxa zero em saques')).toBeInTheDocument();
+    expect(screen.getByText('Seguro de acidentes')).toBeInTheDocument();
     expect(screen.getByText('Vagas VIP')).toBeInTheDocument();
   });
 });
@@ -289,7 +289,7 @@ describe('JobDetailModal', () => {
 
   it('renders apply button for freelancer', () => {
     render(<JobDetailModal {...defaultProps} />);
-    expect(screen.getByText(/Aceitar Trampo/)).toBeInTheDocument();
+    expect(screen.getByText('Candidatar-se')).toBeInTheDocument();
   });
 
   it('renders share button for freelancer', () => {

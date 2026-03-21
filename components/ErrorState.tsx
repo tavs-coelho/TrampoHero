@@ -16,19 +16,19 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   className = '',
 }) => (
   <div
-    className={`flex flex-col items-center justify-center py-16 text-center px-6 ${className}`}
+    className={`flex flex-col items-center justify-center py-12 text-center px-6 ${className}`}
     role="alert"
     aria-live="assertive"
   >
-    <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
-      <i className="fas fa-exclamation-circle text-2xl text-red-400" aria-hidden="true"></i>
+    <div className="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center mb-3">
+      <i className="fas fa-exclamation-circle text-xl text-red-400" aria-hidden="true"></i>
     </div>
-    <h3 className="font-black text-slate-800 text-base mb-1">{title}</h3>
-    <p className="text-slate-400 text-sm max-w-xs">{message}</p>
+    <h3 className="font-semibold text-slate-800 text-sm mb-1">{title}</h3>
+    <p className="text-slate-400 text-xs max-w-xs leading-relaxed">{message}</p>
     {onRetry && (
       <button
         onClick={onRetry}
-        className="mt-6 px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-slate-800 active:scale-95 transition-all shadow-md flex items-center gap-2"
+        className="mt-4 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors flex items-center gap-2"
       >
         <i className="fas fa-rotate-right text-xs" aria-hidden="true"></i>
         {retryLabel}
