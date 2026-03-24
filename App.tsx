@@ -448,7 +448,7 @@ const App: React.FC = () => {
         const icon = L.divIcon({
           className: 'custom-icon',
           html: `<div class="hero-marker ${job.isBoosted ? 'ring-4 ring-amber-400 scale-125' : ''}"><i class="fas ${job.niche === Niche.RESTAURANT ? 'fa-utensils' : 'fa-briefcase'} text-xs"></i></div>`,
-          iconSize: [30, 30], iconAnchor: [15, 15]
+          iconSize: [28, 28], iconAnchor: [14, 14]
         });
 
         const popupDiv = document.createElement('div');

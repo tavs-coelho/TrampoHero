@@ -7,9 +7,10 @@ interface JobCardProps {
 }
 
 export const JobCard: React.FC<JobCardProps> = ({ job, onClick }) => (
-  <div
+  <button
+    type="button"
     onClick={() => onClick(job)}
-    className={`bg-white rounded-xl border transition-shadow cursor-pointer relative ${
+    className={`w-full bg-white rounded-xl border transition-shadow cursor-pointer relative text-left ${
       job.isBoosted
         ? 'border-amber-300 shadow-md hover:shadow-lg'
         : 'border-slate-200 shadow-sm hover:shadow-md'
@@ -35,5 +36,5 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onClick }) => (
         )}
       </div>
     </div>
-  </div>
+  </button>
 );

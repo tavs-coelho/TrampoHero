@@ -81,7 +81,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
       <div className="bg-white p-4 rounded-xl border border-slate-200 text-center">
         <p className="text-xs text-slate-500 mb-1">Candidatos</p>
-        <p className="text-2xl font-bold text-emerald-600">12</p>
+        <p className="text-2xl font-bold text-emerald-600">—</p>
       </div>
       <div className="bg-white p-4 rounded-xl border border-slate-200 text-center">
         <p className="text-xs text-slate-500 mb-1">Em andamento</p>
@@ -141,10 +141,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         />
       ) : (
         filteredEmployerJobs.map(job => (
-          <div
+          <button
+            type="button"
             key={job.id}
             onClick={() => handleManageJob(job)}
-            className="bg-white p-4 rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all cursor-pointer flex justify-between items-center"
+            className="w-full bg-white p-4 rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all text-left flex justify-between items-center"
           >
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -159,7 +160,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <p className="font-semibold text-slate-900 text-sm">R$ {job.payment}</p>
               <p className="text-xs text-indigo-600 mt-0.5">Gerenciar</p>
             </div>
-          </div>
+          </button>
         ))
       )}
     </div>
