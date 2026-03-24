@@ -87,7 +87,7 @@ describe('Initial render', () => {
 
   it('shows the BrowseView by default for freelancer', async () => {
     await renderApp();
-    expect(screen.getByText('Freelas Próximos')).toBeInTheDocument();
+    expect(screen.getByText('Vagas disponíveis')).toBeInTheDocument();
   });
 
   it('renders BottomNav with navigation buttons', async () => {
@@ -101,7 +101,7 @@ describe('Initial render', () => {
   it('shows job listings from mock data', async () => {
     await renderApp();
     // INITIAL_JOBS contains at least one job
-    const headings = screen.getAllByRole('heading', { level: 2 });
+    const headings = screen.getAllByRole('heading');
     expect(headings.length).toBeGreaterThan(0);
   });
 });
@@ -121,7 +121,7 @@ describe('Freelancer BottomNav navigation', () => {
     await renderApp();
     await user.click(screen.getByText('Carteira'));
     expect(
-      screen.queryByText('Saldo Total') || screen.queryByText('Algo deu errado')
+      screen.queryByText('Saldo disponível') || screen.queryByText('Algo deu errado')
     ).toBeTruthy();
   });
 
@@ -137,7 +137,7 @@ describe('Freelancer BottomNav navigation', () => {
     await renderApp();
     await user.click(screen.getByText('Carteira'));
     await user.click(screen.getByText('Início'));
-    expect(screen.getByText('Freelas Próximos')).toBeInTheDocument();
+    expect(screen.getByText('Vagas disponíveis')).toBeInTheDocument();
   });
 });
 
@@ -153,7 +153,7 @@ describe('Header navigation', () => {
     if (avatarDiv) {
       await user.click(avatarDiv);
       await waitFor(() => {
-        expect(screen.getByText('Recursos Exclusivos')).toBeInTheDocument();
+        expect(screen.getByText('Mais recursos')).toBeInTheDocument();
       });
     } else {
       // Header is present and has the profile navigation
@@ -166,7 +166,7 @@ describe('Header navigation', () => {
     await renderApp();
     await user.click(screen.getByText('Carteira'));
     await user.click(screen.getByText('TrampoHero'));
-    expect(screen.getByText('Freelas Próximos')).toBeInTheDocument();
+    expect(screen.getByText('Vagas disponíveis')).toBeInTheDocument();
   });
 });
 
@@ -176,16 +176,16 @@ describe('Mode switching (freelancer ↔ employer)', () => {
   it('switches to employer mode and shows Dashboard', async () => {
     const user = userEvent.setup();
     await renderApp();
-    await user.click(screen.getByRole('button', { name: /modo empresa/i }));
+    await user.click(screen.getByRole('button', { name: /empresa/i }));
     expect(screen.getByText('Painel de Controle')).toBeInTheDocument();
   });
 
   it('switches back to freelancer mode', async () => {
     const user = userEvent.setup();
     await renderApp();
-    await user.click(screen.getByRole('button', { name: /modo empresa/i }));
-    await user.click(screen.getByRole('button', { name: /modo freelancer/i }));
-    expect(screen.getByText('Freelas Próximos')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /empresa/i }));
+    await user.click(screen.getByRole('button', { name: /freelancer/i }));
+    expect(screen.getByText('Vagas disponíveis')).toBeInTheDocument();
   });
 });
 
@@ -195,7 +195,7 @@ describe('Employer navigation', () => {
   async function renderAsEmployer() {
     const user = userEvent.setup();
     await renderApp();
-    await user.click(screen.getByRole('button', { name: /modo empresa/i }));
+    await user.click(screen.getByRole('button', { name: /empresa/i }));
     return user;
   }
 
@@ -238,7 +238,7 @@ describe('Job browsing and niche filtering', () => {
     const niche = screen.getByRole('button', { name: 'Gastronomia' });
     await user.click(niche);
     // After filtering, empty state or filtered list appears
-    expect(screen.getByText('Freelas Próximos')).toBeInTheDocument();
+    expect(screen.getByText('Vagas disponíveis')).toBeInTheDocument();
   });
 
   it('shows empty state when no jobs match filter', async () => {
@@ -253,7 +253,7 @@ describe('Job browsing and niche filtering', () => {
     if (nichePills.length > 1) {
       await user.click(nichePills[nichePills.length - 1]);
       // App should still render BrowseView
-      expect(screen.getByText('Freelas Próximos')).toBeInTheDocument();
+      expect(screen.getByText('Vagas disponíveis')).toBeInTheDocument();
     }
   });
 });
@@ -274,7 +274,7 @@ describe('Job Detail Modal', () => {
       }
     }
     // If the job detail modal opened, the Apply button should be visible
-    const applyBtn = screen.queryByText(/Aceitar Trampo/);
+    const applyBtn = screen.queryByText('Candidatar-se');
     if (applyBtn) {
       expect(applyBtn).toBeInTheDocument();
     }
@@ -296,7 +296,7 @@ describe('Job Detail Modal', () => {
     const closeIcon = document.querySelector('.fa-times')?.closest('button') as HTMLElement | null;
     if (closeIcon) {
       await user.click(closeIcon);
-      expect(screen.queryByText(/Aceitar Trampo/)).not.toBeInTheDocument();
+      expect(screen.queryByText('Candidatar-se')).not.toBeInTheDocument();
     }
   });
 });
@@ -328,7 +328,7 @@ describe('Prime Modal flow', () => {
       await user.click(subscribeBtn);
       // After subscribing, prime modal closes and header shows PRIME ATIVO
       await waitFor(() => {
-        expect(screen.queryByText(/PRIME ATIVO/) || screen.queryByText('Hero Prime')).toBeTruthy();
+        expect(screen.queryByText(/prime ativo/i) || screen.queryByText('Hero Prime')).toBeTruthy();
       });
     }
   });
@@ -359,7 +359,7 @@ describe('Payment Modal flow', () => {
     const user = userEvent.setup();
     await renderApp();
     // Switch to employer to access "Adicionar Saldo"
-    await user.click(screen.getByRole('button', { name: /modo empresa/i }));
+    await user.click(screen.getByRole('button', { name: /empresa/i }));
     await user.click(screen.getByText('Carteira'));
     const addBalanceBtn = screen.queryByText(/Adicionar Saldo/);
     if (addBalanceBtn) {
@@ -403,7 +403,7 @@ describe('Create Job Modal flow (employer)', () => {
   async function openCreateJobModal() {
     const user = userEvent.setup();
     await renderApp();
-    await user.click(screen.getByRole('button', { name: /modo empresa/i }));
+    await user.click(screen.getByRole('button', { name: /empresa/i }));
     // The "Criar Primeira Vaga" button opens the modal
     const createBtn =
       screen.queryByText('Criar Primeira Vaga') ||
@@ -433,7 +433,7 @@ describe('Create Job Modal flow (employer)', () => {
   it('shows validation error for empty title', async () => {
     const user = await openCreateJobModal();
     if (screen.queryByText('Publicar Vaga')) {
-      const publishBtn = screen.getByText('Publicar Agora');
+      const publishBtn = screen.getByText('Publicar vaga');
       await user.click(publishBtn);
       // Toast should appear with error (validation is in useJobActions)
       await waitFor(() => {
@@ -441,7 +441,7 @@ describe('Create Job Modal flow (employer)', () => {
         expect(document.body.textContent).toContain('obrigatório');
       }, { timeout: 2000 }).catch(() => {
         // Validation message may vary; just ensure form is still visible
-        expect(screen.getByText('Publicar Agora')).toBeInTheDocument();
+        expect(screen.getByText('Publicar vaga')).toBeInTheDocument();
       });
     }
   });
@@ -469,7 +469,7 @@ describe('Active Job view (freelancer)', () => {
     await renderApp();
     await user.click(screen.getByText('Job Ativo'));
     await user.click(screen.getByText('Procurar Vagas'));
-    expect(screen.getByText('Freelas Próximos')).toBeInTheDocument();
+    expect(screen.getByText('Vagas disponíveis')).toBeInTheDocument();
   });
 });
 
@@ -481,7 +481,7 @@ describe('Wallet view (freelancer)', () => {
     await renderApp();
     await user.click(screen.getByText('Carteira'));
     expect(
-      screen.queryByText('Saldo Total') || screen.queryByText('Algo deu errado')
+      screen.queryByText('Saldo disponível') || screen.queryByText('Algo deu errado')
     ).toBeTruthy();
   });
 
@@ -571,7 +571,7 @@ describe('Profile view (freelancer)', () => {
       if (profileLink) await user.click(profileLink);
     }
     await waitFor(() => {
-      expect(screen.queryByText('Recursos Exclusivos')).toBeInTheDocument();
+      expect(screen.queryByText('Mais recursos')).toBeInTheDocument();
     }, { timeout: 2000 }).catch(() => {
       // Profile may not be accessible through this path; skip
     });
@@ -584,7 +584,7 @@ describe('Employer Dashboard flows', () => {
   async function renderAsEmployer() {
     const user = userEvent.setup();
     await renderApp();
-    await user.click(screen.getByRole('button', { name: /modo empresa/i }));
+    await user.click(screen.getByRole('button', { name: /empresa/i }));
     return user;
   }
 
@@ -676,7 +676,7 @@ describe('localStorage persistence', () => {
     localStorage.setItem('trampoHeroUser', JSON.stringify(storedUser));
     await renderApp();
     // The user name should appear somewhere in the app (e.g., wallet balance)
-    expect(screen.getByText('Freelas Próximos')).toBeInTheDocument();
+    expect(screen.getByText('Vagas disponíveis')).toBeInTheDocument();
   });
 });
 
@@ -693,10 +693,10 @@ describe('Map / list toggle', () => {
     if (toggleBtn) {
       await user.click(toggleBtn);
       // After toggling to map mode, the map container div is rendered
-      expect(document.querySelector('.h-\\[500px\\]')).toBeInTheDocument();
+      expect(document.querySelector('.h-\\[480px\\]')).toBeInTheDocument();
     } else {
       // Toggle button always exists in BrowseView
-      expect(screen.getByText('Freelas Próximos')).toBeInTheDocument();
+      expect(screen.getByText('Vagas disponíveis')).toBeInTheDocument();
     }
   });
 });
@@ -707,7 +707,7 @@ describe('Employer Talents view', () => {
   it('shows Talentos Disponíveis heading', async () => {
     const user = userEvent.setup();
     await renderApp();
-    await user.click(screen.getByRole('button', { name: /modo empresa/i }));
+    await user.click(screen.getByRole('button', { name: /empresa/i }));
     // Navigate to Talents via DashboardView button
     const talentsBtn = screen.queryByRole('button', { name: /talentos/i }) ||
       screen.queryByText(/Ver Talentos/);

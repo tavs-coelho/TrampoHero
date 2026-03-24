@@ -15,53 +15,53 @@ const PrimeModal: React.FC<PrimeModalProps> = ({
   onClose,
 }) => {
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-indigo-900/90 backdrop-blur-md p-6 animate-in fade-in duration-300">
-        <div className="bg-white w-full max-w-sm rounded-[3rem] p-8 shadow-2xl relative overflow-hidden">
-            <button onClick={onClose} className="absolute top-6 right-6 w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors">&times;</button>
-            
-            <div className="text-center mb-8">
-                <div className="w-20 h-20 bg-amber-400 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg shadow-amber-200">
-                    <i className="fas fa-crown text-4xl text-white"></i>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 p-4">
+        <div className="bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden">
+            <div className="bg-indigo-600 p-6 text-center text-white relative">
+                <button onClick={onClose} className="absolute top-4 right-4 w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center text-white hover:bg-white/30 transition-colors text-sm">&times;</button>
+                <div className="w-12 h-12 bg-white/20 rounded-xl mx-auto mb-3 flex items-center justify-center">
+                    <i className="fas fa-crown text-xl text-amber-300"></i>
                 </div>
-                <h2 className="text-2xl font-black text-slate-900">Hero Prime</h2>
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Acelere seus Ganhos</p>
+                <h2 className="text-xl font-bold">Hero Prime</h2>
+                <p className="text-indigo-200 text-sm mt-1">Maximize seus ganhos</p>
             </div>
 
-            <div className="space-y-4 mb-8">
+            <div className="p-5 space-y-3 mb-2">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0"><i className="fas fa-money-bill-transfer"></i></div>
+                    <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0 text-sm"><i className="fas fa-money-bill-transfer"></i></div>
                     <div>
-                        <h4 className="font-bold text-slate-900 text-sm">Taxa Zero em Saques</h4>
-                        <p className="text-[10px] text-slate-500">Economize R$ 2,50 a cada saque PIX.</p>
+                        <p className="text-sm font-medium text-slate-900">Taxa zero em saques</p>
+                        <p className="text-xs text-slate-500">Economize R$ 2,50 por saque PIX</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0"><i className="fas fa-shield-halved"></i></div>
+                    <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 text-sm"><i className="fas fa-shield-halved"></i></div>
                     <div>
-                        <h4 className="font-bold text-slate-900 text-sm">Seguro Acidentes</h4>
-                        <p className="text-[10px] text-slate-500">Cobertura de até R$ 20.000 em jobs.</p>
+                        <p className="text-sm font-medium text-slate-900">Seguro de acidentes</p>
+                        <p className="text-xs text-slate-500">Cobertura de até R$ 20.000</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0"><i className="fas fa-bolt"></i></div>
+                    <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0 text-sm"><i className="fas fa-bolt"></i></div>
                     <div>
-                        <h4 className="font-bold text-slate-900 text-sm">Vagas VIP</h4>
-                        <p className="text-[10px] text-slate-500">Acesso a vagas de alto valor (+R$ 200).</p>
+                        <p className="text-sm font-medium text-slate-900">Vagas VIP</p>
+                        <p className="text-xs text-slate-500">Acesso a vagas de alto valor (+R$ 200)</p>
                     </div>
                 </div>
             </div>
 
-            {user.isPrime ? (
-                <button onClick={handleUnsubscribePrime} className="w-full py-4 bg-red-50 text-red-500 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-red-100 transition-colors">
-                    Cancelar Assinatura
-                </button>
-            ) : (
-                <button onClick={handleSubscribePrime} className="w-full py-5 bg-indigo-600 text-white rounded-3xl font-black uppercase tracking-widest shadow-xl shadow-indigo-200 active:scale-95 transition-all">
-                    Assinar por R$ 29,90/mês
-                </button>
-            )}
-            
-            <p className="text-center text-[9px] text-slate-400 mt-4 font-bold opacity-60">Cancele quando quiser. Termos aplicáveis.</p>
+            <div className="px-5 pb-5">
+                {user.isPrime ? (
+                    <button onClick={handleUnsubscribePrime} className="w-full py-2.5 bg-red-50 text-red-500 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors">
+                        Cancelar assinatura
+                    </button>
+                ) : (
+                    <button onClick={handleSubscribePrime} className="w-full py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors">
+                        Assinar por R$ 29,90/mês
+                    </button>
+                )}
+                <p className="text-center text-xs text-slate-400 mt-2">Cancele quando quiser. Termos aplicáveis.</p>
+            </div>
         </div>
     </div>
   );

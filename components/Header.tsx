@@ -10,33 +10,50 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ user, setView, setShowPrimeModal, setUser }) => (
-  <nav className="bg-white border-b border-slate-200 sticky top-0 z-40 px-6 h-16 flex items-center justify-between shadow-sm">
-    <button type="button" className="flex items-center gap-3 text-left" onClick={() => setView('browse')} aria-label="Ir para início">
-      <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg cursor-pointer hover:bg-slate-800 transition-colors">
-        <i className="fas fa-bolt text-indigo-400"></i>
+  <nav className="bg-white border-b border-slate-200 sticky top-0 z-40 px-4 sm:px-6 h-14 flex items-center justify-between">
+    <button type="button" className="flex items-center gap-2.5 text-left" onClick={() => setView('browse')} aria-label="Ir para início">
+      <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white flex-shrink-0">
+        <i className="fas fa-bolt text-sm"></i>
       </div>
-      <div className="cursor-pointer">
-        <span className="font-black text-lg tracking-tighter block leading-none">TrampoHero</span>
-        <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-widest">PRO Version</span>
-      </div>
+      <span className="font-bold text-base text-slate-900 tracking-tight">TrampoHero</span>
     </button>
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-3">
       {user.role === 'freelancer' && (
-         user.isPrime ? (
-            <button type="button" onClick={() => setShowPrimeModal(true)} className="bg-indigo-600 text-white flex items-center gap-1 text-[8px] font-black px-3 py-1.5 rounded-full animate-pulse shadow-lg shadow-indigo-300 cursor-pointer" aria-label="Abrir Hero Prime">
-                <i className="fas fa-crown"></i> PRIME ATIVO
-            </button>
-          ) : (
-            <button type="button" onClick={() => setShowPrimeModal(true)} className="text-slate-300 hover:text-amber-500 cursor-pointer transition-colors" aria-label="Conhecer Hero Prime">
-                <i className="fas fa-crown text-xl"></i>
-            </button>
-          )
+        user.isPrime ? (
+          <button
+            type="button"
+            onClick={() => setShowPrimeModal(true)}
+            className="hidden sm:flex items-center gap-1.5 bg-indigo-600 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
+            aria-label="Abrir Hero Prime"
+          >
+            <i className="fas fa-crown text-xs"></i>
+            Prime ativo
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowPrimeModal(true)}
+            className="hidden sm:flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 text-xs font-medium transition-colors"
+            aria-label="Conhecer Hero Prime"
+          >
+            <i className="fas fa-crown"></i>
+            Prime
+          </button>
+        )
       )}
-      <button type="button" onClick={() => setView('profile')} className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center cursor-pointer hover:bg-slate-200 transition-colors" aria-label="Abrir perfil">
-         <i className="fas fa-user text-slate-500 text-xs"></i>
+      <button
+        type="button"
+        onClick={() => setView('profile')}
+        className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center hover:bg-slate-200 transition-colors"
+        aria-label="Abrir perfil"
+      >
+        <i className="fas fa-user text-slate-500 text-xs"></i>
       </button>
-      <button onClick={() => setUser(prev => ({ ...prev, role: prev.role === 'freelancer' ? 'employer' : 'freelancer' }))} className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border bg-white text-slate-500 border-slate-200 hover:bg-slate-50 transition-colors">
-        {user.role === 'freelancer' ? 'Modo Empresa' : 'Modo Freelancer'}
+      <button
+        onClick={() => setUser(prev => ({ ...prev, role: prev.role === 'freelancer' ? 'employer' : 'freelancer' }))}
+        className="px-3 py-1.5 rounded-md text-xs font-medium border bg-white text-slate-600 border-slate-200 hover:bg-slate-50 transition-colors"
+      >
+        {user.role === 'freelancer' ? 'Empresa' : 'Freelancer'}
       </button>
     </div>
   </nav>

@@ -7,16 +7,34 @@ interface JobCardProps {
 }
 
 export const JobCard: React.FC<JobCardProps> = ({ job, onClick }) => (
-  <div onClick={() => onClick(job)} className={`bg-white p-6 rounded-[3rem] border transition-all cursor-pointer relative active:scale-[0.98] ${job.isBoosted ? 'border-amber-400 shadow-amber-100 shadow-xl' : 'border-slate-100 shadow-sm hover:shadow-md'}`}>
-    {job.isBoosted && <div className="absolute -top-3 left-8 bg-amber-400 text-white text-[8px] font-black px-3 py-1 rounded-full shadow-lg uppercase tracking-widest"><i className="fas fa-bolt mr-1"></i> Destaque</div>}
-    <div className="flex justify-between items-start mb-2">
-      <span className="text-[10px] font-black text-indigo-500 uppercase">{job.niche}</span>
-      <p className="font-black text-slate-900 text-lg">R$ {job.payment}</p>
+  <button
+    type="button"
+    onClick={() => onClick(job)}
+    className={`w-full bg-white rounded-xl border transition-shadow relative text-left ${
+      job.isBoosted
+        ? 'border-amber-300 shadow-md hover:shadow-lg'
+        : 'border-slate-200 shadow-sm hover:shadow-md'
+    }`}
+  >
+    {job.isBoosted && (
+      <div className="absolute -top-2.5 left-4 bg-amber-400 text-white text-[10px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+        <i className="fas fa-bolt text-[9px]"></i> Destaque
+      </div>
+    )}
+    <div className="p-4">
+      <div className="flex justify-between items-start mb-1">
+        <span className="text-xs font-medium text-indigo-600">{job.niche}</span>
+        <p className="font-bold text-slate-900 text-base">R$ {job.payment}</p>
+      </div>
+      <h3 className="font-semibold text-slate-800 text-sm leading-snug mb-2">{job.title}</h3>
+      <div className="flex items-center gap-3 text-xs text-slate-400">
+        <span><i className="fas fa-building mr-1"></i>{job.employer}</span>
+        {job.isEscrowGuaranteed && (
+          <span className="text-emerald-600 font-medium flex items-center gap-1">
+            <i className="fas fa-shield-check"></i> Pagamento garantido
+          </span>
+        )}
+      </div>
     </div>
-    <h3 className="font-bold text-slate-800 text-lg leading-tight">{job.title}</h3>
-    <div className="flex items-center gap-3 mt-3">
-      <p className="text-[10px] text-slate-400 font-bold uppercase"><i className="fas fa-building mr-1"></i> {job.employer}</p>
-      {job.isEscrowGuaranteed && <span className="text-[8px] text-emerald-600 font-black uppercase flex items-center gap-1"><i className="fas fa-shield-check"></i> Seguro</span>}
-    </div>
-  </div>
+  </button>
 );

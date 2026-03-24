@@ -10,14 +10,20 @@ export const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => (
   <div
     role="status"
     aria-live="polite"
-    className={`fixed top-20 right-4 z-[60] animate-in slide-in-from-right duration-300 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 max-w-xs backdrop-blur-md border ${
-    type === 'success' ? 'bg-emerald-500/90 text-white border-emerald-400' : 
-    type === 'error' ? 'bg-red-500/90 text-white border-red-400' : 
-    'bg-slate-800/90 text-white border-slate-700'
-  }`}
+    className={`fixed top-16 right-4 z-[60] px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 max-w-sm border ${
+      type === 'success' ? 'bg-white border-emerald-200 text-emerald-800' :
+      type === 'error' ? 'bg-white border-red-200 text-red-800' :
+      'bg-white border-slate-200 text-slate-800'
+    }`}
   >
-    <i className={`fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} text-xl`}></i>
-    <p className="font-bold text-xs">{message}</p>
-    <button onClick={onClose} aria-label="Fechar notificação" className="ml-2 opacity-70 hover:opacity-100"><i className="fas fa-times"></i></button>
+    <i className={`fas text-sm ${
+      type === 'success' ? 'fa-check-circle text-emerald-500' :
+      type === 'error' ? 'fa-exclamation-circle text-red-500' :
+      'fa-info-circle text-indigo-500'
+    }`}></i>
+    <p className="text-sm flex-1">{message}</p>
+    <button onClick={onClose} aria-label="Fechar notificação" className="text-slate-400 hover:text-slate-600">
+      <i className="fas fa-times text-xs"></i>
+    </button>
   </div>
 );

@@ -58,6 +58,6 @@ describe('JobCard', () => {
   it('shows "Seguro" badge when isEscrowGuaranteed is true', () => {
     const escrowJob = { ...mockJob, isEscrowGuaranteed: true };
     render(<JobCard job={escrowJob} onClick={() => {}} />);
-    expect(screen.getByText('Seguro')).toBeInTheDocument();
+    expect(screen.getByText('Pagamento garantido')).toBeInTheDocument();
   });
 });

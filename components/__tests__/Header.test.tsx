@@ -33,37 +33,31 @@ describe('Header', () => {
     expect(screen.getByText('TrampoHero')).toBeInTheDocument();
   });
 
-  it('renders PRO Version text', () => {
-    render(<Header {...defaultProps()} />);
-    expect(screen.getByText('PRO Version')).toBeInTheDocument();
-  });
-
-  it('renders "Modo Empresa" button for freelancer', () => {
+  it('renders "Empresa" button for freelancer', () => {
     const props = defaultProps();
     props.user = createMockUser({ role: 'freelancer' });
     render(<Header {...props} />);
-    expect(screen.getByText('Modo Empresa')).toBeInTheDocument();
+    expect(screen.getByText('Empresa')).toBeInTheDocument();
   });
 
-  it('renders "Modo Freelancer" button for employer', () => {
+  it('renders "Freelancer" button for employer', () => {
     const props = defaultProps();
     props.user = createMockUser({ role: 'employer' });
     render(<Header {...props} />);
-    expect(screen.getByText('Modo Freelancer')).toBeInTheDocument();
+    expect(screen.getByText('Freelancer')).toBeInTheDocument();
   });
 
   it('shows Prime badge when user.isPrime is true', () => {
     const props = defaultProps();
     props.user = createMockUser({ role: 'freelancer', isPrime: true });
     render(<Header {...props} />);
-    expect(screen.getByText('PRIME ATIVO')).toBeInTheDocument();
+    expect(screen.getByText('Prime ativo')).toBeInTheDocument();
   });
 
   it('profile click calls setView with "profile"', () => {
     const props = defaultProps();
-    const { container } = render(<Header {...props} />);
-    const profileDiv = container.querySelector('.fa-user')!.closest('[class*="cursor-pointer"]') as HTMLElement;
-    fireEvent.click(profileDiv);
+    render(<Header {...props} />);
+    fireEvent.click(screen.getByLabelText('Abrir perfil'));
     expect(props.setView).toHaveBeenCalledWith('profile');
   });
 
@@ -71,7 +65,7 @@ describe('Header', () => {
     const props = defaultProps();
     props.user = createMockUser({ role: 'freelancer' });
     render(<Header {...props} />);
-    fireEvent.click(screen.getByText('Modo Empresa'));
+    fireEvent.click(screen.getByText('Empresa'));
     expect(props.setUser).toHaveBeenCalledOnce();
     // Verify the updater function toggles the role
     const updater = props.setUser.mock.calls[0][0] as (prev: UserProfile) => UserProfile;

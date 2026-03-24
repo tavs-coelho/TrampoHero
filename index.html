@@ -57,11 +57,15 @@
       }
     </script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
         .leaflet-container {
             width: 100%;
             height: 100%;
-            border-radius: 2rem;
+            border-radius: 0.75rem;
             z-index: 1;
         }
         /* Custom map marker style */
@@ -69,22 +73,24 @@
             background: #4f46e5;
             color: white;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            width: 28px;
+            height: 28px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 3px solid white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            transition: all 0.2s;
+            font-size: 11px;
+            border: 2px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            transition: background 0.15s;
         }
         .hero-marker:hover {
-            transform: scale(1.2);
             background: #4338ca;
         }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
+<body class="bg-gray-50 text-slate-900">
     <noscript>Para acessar todas as funcionalidades do TrampoHero, ative o JavaScript no seu navegador.</noscript>
     <div id="root"></div>
     <!-- Leaflet JS -->
