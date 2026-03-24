@@ -10,7 +10,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onClick }) => (
   <button
     type="button"
     onClick={() => onClick(job)}
-    className={`w-full bg-white rounded-xl border transition-shadow cursor-pointer relative text-left ${
+    className={`w-full bg-white rounded-xl border transition-shadow relative text-left ${
       job.isBoosted
         ? 'border-amber-300 shadow-md hover:shadow-lg'
         : 'border-slate-200 shadow-sm hover:shadow-md'
