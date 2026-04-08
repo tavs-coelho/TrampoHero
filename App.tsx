@@ -29,11 +29,41 @@ import { analyticsService } from './services/analyticsService';
 declare const L: any;
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ?? '');
+// Screenshot mode only supports top-level views that are renderable in App.tsx.
+const QUERY_VIEW_VALUES: readonly ViewType[] = [
+  'browse', 'wallet', 'active', 'chat', 'dashboard', 'academy', 'profile', 'talents',
+  'coins', 'insurance', 'credit', 'analytics', 'referrals', 'challenges',
+  'ranking', 'store', 'kyc', 'admin',
+];
+const QUERY_ROLE_VALUES: readonly UserProfile['role'][] = ['freelancer', 'employer', 'admin'];
+const QUERY_VIEWS_BY_ROLE: Readonly<Record<UserProfile['role'], readonly ViewType[]>> = {
+  freelancer: ['browse', 'wallet', 'active', 'chat', 'academy', 'profile', 'coins', 'insurance', 'credit', 'analytics', 'referrals', 'challenges', 'ranking', 'store', 'kyc'],
+  employer: ['dashboard', 'talents', 'profile', 'wallet', 'chat', 'active', 'browse'],
+  admin: ['admin'],
+};
+
+const getSearchParams = () => new URLSearchParams(window.location.search);
+const getIsScreenshotMode = () => getSearchParams().get('screenshotMode') === '1';
+
+const getInitialViewFromQuery = (role: UserProfile['role']): ViewType | null => {
+  if (!getIsScreenshotMode()) return null;
+  const raw = getSearchParams().get('view');
+  if (!raw || !QUERY_VIEW_VALUES.includes(raw as ViewType)) return null;
+  return QUERY_VIEWS_BY_ROLE[role].includes(raw as ViewType) ? (raw as ViewType) : null;
+};
+
+const getInitialRoleFromQuery = (): UserProfile['role'] | null => {
+  if (!getIsScreenshotMode()) return null;
+  const raw = getSearchParams().get('role');
+  return raw && QUERY_ROLE_VALUES.includes(raw as UserProfile['role']) ? (raw as UserProfile['role']) : null;
+};
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('trampoHeroUser');
-    return saved ? JSON.parse(saved) : INITIAL_USER;
+    const initialUser = saved ? JSON.parse(saved) : INITIAL_USER;
+    const roleFromQuery = getInitialRoleFromQuery();
+    return roleFromQuery ? { ...initialUser, role: roleFromQuery } : initialUser;
   });
 
   const [jobs, setJobs] = useState<Job[]>(INITIAL_JOBS);
@@ -47,7 +77,14 @@ const App: React.FC = () => {
   const [isRankingsLoading, setIsRankingsLoading] = useState(true);
   const [rankingsError, setRankingsError] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
-  const [view, setView] = useState<ViewType>('browse');
+  const [view, setView] = useState<ViewType>(() => {
+    const roleFromQuery = getInitialRoleFromQuery();
+    const saved = localStorage.getItem('trampoHeroUser');
+    const savedRole = saved ? (JSON.parse(saved) as Partial<UserProfile>)?.role : null;
+    const validatedSavedRole = savedRole && QUERY_ROLE_VALUES.includes(savedRole) ? savedRole : INITIAL_USER.role;
+    const roleForValidation = roleFromQuery ?? validatedSavedRole;
+    return getInitialViewFromQuery(roleForValidation) ?? 'browse';
+  });
   const [browseMode, setBrowseMode] = useState<'list' | 'map'>('list');
   const [selectedJob, setSelectedJob] = useState<Job | null>(() => {
     const params = new URLSearchParams(window.location.search);
@@ -57,7 +94,7 @@ const App: React.FC = () => {
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => !getIsScreenshotMode());
 
   const [showCreateJobModal, setShowCreateJobModal] = useState(false);
   const [newJobData, setNewJobData] = useState({ title: '', payment: '', niche: Niche.RESTAURANT, date: '', startTime: '', description: '' });

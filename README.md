@@ -64,6 +64,14 @@
 
    Acesse: **http://localhost:3000** 🎉
 
+4. **Gerar screenshots das telas web**:
+   ```bash
+   npm run screenshots:web:install
+   npm run screenshots:web
+   ```
+
+   As imagens serão salvas em `artifacts/web-screenshots/`.
+
 ### Instalação Backend (Opcional, mas necessário para IA)
 
 1. **Instale as dependências do backend**:
