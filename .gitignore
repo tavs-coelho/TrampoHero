@@ -38,3 +38,4 @@ AuthKey_*.p8
 *.keystore
 service-account-key.json
 .env
+artifacts/web-screenshots/

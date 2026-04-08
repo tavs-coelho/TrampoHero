@@ -29,11 +29,32 @@ import { analyticsService } from './services/analyticsService';
 declare const L: any;
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ?? '');
+const QUERY_VIEW_VALUES: readonly ViewType[] = [
+  'browse', 'wallet', 'active', 'chat', 'dashboard', 'academy', 'profile', 'talents',
+  'coins', 'insurance', 'credit', 'analytics', 'contracts', 'referrals', 'challenges',
+  'ranking', 'store', 'ads', 'kyc', 'admin',
+];
+const QUERY_ROLE_VALUES: readonly UserProfile['role'][] = ['freelancer', 'employer', 'admin'];
+
+const getSearchParams = () => new URLSearchParams(window.location.search);
+const getIsScreenshotMode = () => getSearchParams().get('screenshotMode') === '1';
+
+const getInitialViewFromQuery = (): ViewType | null => {
+  const raw = getSearchParams().get('view');
+  return raw && QUERY_VIEW_VALUES.includes(raw as ViewType) ? (raw as ViewType) : null;
+};
+
+const getInitialRoleFromQuery = (): UserProfile['role'] | null => {
+  const raw = getSearchParams().get('role');
+  return raw && QUERY_ROLE_VALUES.includes(raw as UserProfile['role']) ? (raw as UserProfile['role']) : null;
+};
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('trampoHeroUser');
-    return saved ? JSON.parse(saved) : INITIAL_USER;
+    const initialUser = saved ? JSON.parse(saved) : INITIAL_USER;
+    const roleFromQuery = getInitialRoleFromQuery();
+    return roleFromQuery ? { ...initialUser, role: roleFromQuery } : initialUser;
   });
 
   const [jobs, setJobs] = useState<Job[]>(INITIAL_JOBS);
@@ -47,7 +68,7 @@ const App: React.FC = () => {
   const [isRankingsLoading, setIsRankingsLoading] = useState(true);
   const [rankingsError, setRankingsError] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
-  const [view, setView] = useState<ViewType>('browse');
+  const [view, setView] = useState<ViewType>(() => getInitialViewFromQuery() ?? 'browse');
   const [browseMode, setBrowseMode] = useState<'list' | 'map'>('list');
   const [selectedJob, setSelectedJob] = useState<Job | null>(() => {
     const params = new URLSearchParams(window.location.search);
@@ -57,7 +78,7 @@ const App: React.FC = () => {
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => !getIsScreenshotMode());
 
   const [showCreateJobModal, setShowCreateJobModal] = useState(false);
   const [newJobData, setNewJobData] = useState({ title: '', payment: '', niche: Niche.RESTAURANT, date: '', startTime: '', description: '' });
