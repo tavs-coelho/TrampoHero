@@ -74,13 +74,13 @@ export const EmployerWalletView: React.FC<EmployerWalletViewProps> = ({
               onClick={handleOpenAddBalance}
               className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-lg transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             >
-              Adicionar saldo
+              Adicionar Saldo
             </button>
             <button
               onClick={handleShowInvoices}
               className="rounded-xl bg-indigo-500 px-4 py-3 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-200"
             >
-              Notas fiscais
+              Notas Fiscais
             </button>
           </div>
         </div>
@@ -99,14 +99,14 @@ export const EmployerWalletView: React.FC<EmployerWalletViewProps> = ({
           className="rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
         >
           <p className="text-xs uppercase tracking-wider text-slate-500">Ação rápida</p>
-          <p className="mt-2 text-sm font-semibold text-slate-900">Adicionar saldo</p>
+          <p className="mt-2 text-sm font-semibold text-slate-900">Reforçar caixa</p>
         </button>
         <button
           onClick={handleShowInvoices}
           className="rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
         >
           <p className="text-xs uppercase tracking-wider text-slate-500">Gestão</p>
-          <p className="mt-2 text-sm font-semibold text-slate-900">Notas fiscais</p>
+          <p className="mt-2 text-sm font-semibold text-slate-900">Gerar comprovantes</p>
         </button>
       </section>
 
