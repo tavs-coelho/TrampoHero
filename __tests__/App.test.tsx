@@ -65,6 +65,7 @@ async function renderApp() {
 
 beforeEach(() => {
   localStorage.clear();
+  window.history.replaceState({}, '', '/');
   // Expose mock Leaflet as the global `L` that App.tsx references
   (global as any).L = mockLeaflet;
   // jsdom does not implement scrollIntoView
@@ -103,6 +104,28 @@ describe('Initial render', () => {
     // INITIAL_JOBS contains at least one job
     const headings = screen.getAllByRole('heading');
     expect(headings.length).toBeGreaterThan(0);
+  });
+});
+
+describe('Query string initialization for screenshots', () => {
+  it('ignores role/view query params outside screenshot mode', async () => {
+    window.history.replaceState({}, '', '/?role=admin&view=admin');
+    await renderApp();
+    expect(screen.queryByText('Painel Admin')).not.toBeInTheDocument();
+    expect(screen.getByText('Vagas disponíveis')).toBeInTheDocument();
+  });
+
+  it('applies role/view query params when screenshot mode is enabled', async () => {
+    window.history.replaceState({}, '', '/?screenshotMode=1&role=employer&view=wallet');
+    await renderApp();
+    expect(screen.getByText('Carteira Corporativa')).toBeInTheDocument();
+  });
+
+  it('falls back to browse when role/view combination is not renderable', async () => {
+    window.history.replaceState({}, '', '/?screenshotMode=1&role=freelancer&view=admin');
+    await renderApp();
+    expect(screen.queryByText('Painel Admin')).not.toBeInTheDocument();
+    expect(screen.getByText('Vagas disponíveis')).toBeInTheDocument();
   });
 });
 

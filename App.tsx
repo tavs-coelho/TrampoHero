@@ -31,20 +31,28 @@ declare const L: any;
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ?? '');
 const QUERY_VIEW_VALUES: readonly ViewType[] = [
   'browse', 'wallet', 'active', 'chat', 'dashboard', 'academy', 'profile', 'talents',
-  'coins', 'insurance', 'credit', 'analytics', 'contracts', 'referrals', 'challenges',
-  'ranking', 'store', 'ads', 'kyc', 'admin',
+  'coins', 'insurance', 'credit', 'analytics', 'referrals', 'challenges',
+  'ranking', 'store', 'kyc', 'admin',
 ];
 const QUERY_ROLE_VALUES: readonly UserProfile['role'][] = ['freelancer', 'employer', 'admin'];
+const QUERY_VIEWS_BY_ROLE: Readonly<Record<UserProfile['role'], readonly ViewType[]>> = {
+  freelancer: ['browse', 'wallet', 'active', 'chat', 'academy', 'profile', 'coins', 'insurance', 'credit', 'analytics', 'referrals', 'challenges', 'ranking', 'store', 'kyc'],
+  employer: ['dashboard', 'talents', 'profile', 'wallet', 'chat', 'active', 'browse'],
+  admin: ['admin'],
+};
 
 const getSearchParams = () => new URLSearchParams(window.location.search);
 const getIsScreenshotMode = () => getSearchParams().get('screenshotMode') === '1';
 
-const getInitialViewFromQuery = (): ViewType | null => {
+const getInitialViewFromQuery = (role: UserProfile['role']): ViewType | null => {
+  if (!getIsScreenshotMode()) return null;
   const raw = getSearchParams().get('view');
-  return raw && QUERY_VIEW_VALUES.includes(raw as ViewType) ? (raw as ViewType) : null;
+  if (!raw || !QUERY_VIEW_VALUES.includes(raw as ViewType)) return null;
+  return QUERY_VIEWS_BY_ROLE[role].includes(raw as ViewType) ? (raw as ViewType) : null;
 };
 
 const getInitialRoleFromQuery = (): UserProfile['role'] | null => {
+  if (!getIsScreenshotMode()) return null;
   const raw = getSearchParams().get('role');
   return raw && QUERY_ROLE_VALUES.includes(raw as UserProfile['role']) ? (raw as UserProfile['role']) : null;
 };
@@ -68,7 +76,13 @@ const App: React.FC = () => {
   const [isRankingsLoading, setIsRankingsLoading] = useState(true);
   const [rankingsError, setRankingsError] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
-  const [view, setView] = useState<ViewType>(() => getInitialViewFromQuery() ?? 'browse');
+  const [view, setView] = useState<ViewType>(() => {
+    const roleFromQuery = getInitialRoleFromQuery();
+    const saved = localStorage.getItem('trampoHeroUser');
+    const savedRole = saved ? (JSON.parse(saved) as Partial<UserProfile>)?.role : null;
+    const roleForValidation = roleFromQuery ?? (savedRole && QUERY_ROLE_VALUES.includes(savedRole) ? savedRole : INITIAL_USER.role);
+    return getInitialViewFromQuery(roleForValidation) ?? 'browse';
+  });
   const [browseMode, setBrowseMode] = useState<'list' | 'map'>('list');
   const [selectedJob, setSelectedJob] = useState<Job | null>(() => {
     const params = new URLSearchParams(window.location.search);

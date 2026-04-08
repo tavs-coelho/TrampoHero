@@ -5,11 +5,16 @@ import process from 'node:process';
 import { chromium } from 'playwright';
 
 const APP_URL = process.env.APP_URL || 'http://127.0.0.1:4173';
+const parsedAppUrl = new URL(APP_URL);
 const OUTPUT_DIR = process.env.SCREENSHOT_OUTPUT_DIR || path.resolve(process.cwd(), 'artifacts', 'web-screenshots');
 const VIEWPORT = { width: 1440, height: 2200 };
 const INITIAL_WAIT_INTERVAL_MS = 100;
 const MAX_WAIT_INTERVAL_MS = 500;
 const MAX_WAIT_MS = 30_000;
+const LOCAL_APP_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
+const PREVIEW_HOST = parsedAppUrl.hostname;
+const PREVIEW_PORT = parsedAppUrl.port || '4173';
+const SHOULD_START_PREVIEW = LOCAL_APP_HOSTS.has(PREVIEW_HOST) && !process.env.APP_URL;
 
 const viewsToCapture = [
   { role: 'freelancer', view: 'browse' },
@@ -60,7 +65,7 @@ const runViteBuild = async () => {
 };
 
 const startServer = () =>
-  spawn(process.execPath, [path.resolve(process.cwd(), 'node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--host', '127.0.0.1', '--port', '4173', '--strictPort'], {
+  spawn(process.execPath, [path.resolve(process.cwd(), 'node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--host', PREVIEW_HOST, '--port', PREVIEW_PORT, '--strictPort'], {
     cwd: process.cwd(),
     stdio: 'inherit',
     env: {
@@ -88,12 +93,53 @@ const waitForServer = async (url) => {
 };
 
 const stopServer = async (serverProcess) => {
-  if (!serverProcess || serverProcess.killed) return;
-  serverProcess.kill();
-  await new Promise(resolve => {
-    serverProcess.once('exit', resolve);
-    setTimeout(resolve, 2000);
-  });
+  if (!serverProcess || serverProcess.exitCode !== null) return;
+
+  const waitForProcessExit = (timeoutMs) =>
+    new Promise(resolve => {
+      let settled = false;
+      const onExit = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        resolve(true);
+      };
+      const timeoutId = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        serverProcess.removeListener('exit', onExit);
+        resolve(false);
+      }, timeoutMs);
+      serverProcess.once('exit', onExit);
+    });
+
+  try {
+    serverProcess.kill();
+  } catch {
+    return;
+  }
+
+  const exitedGracefully = await waitForProcessExit(2000);
+  if (exitedGracefully || serverProcess.exitCode !== null) return;
+
+  if (process.platform === 'win32' && typeof serverProcess.pid === 'number') {
+    await new Promise(resolve => {
+      const killer = spawn('taskkill', ['/PID', String(serverProcess.pid), '/T', '/F'], {
+        stdio: 'ignore',
+        windowsHide: true,
+      });
+      killer.once('error', resolve);
+      killer.once('exit', resolve);
+    });
+  } else {
+    try {
+      serverProcess.kill('SIGKILL');
+    } catch {
+      // process may have already exited
+    }
+  }
+
+  await waitForProcessExit(2000);
 };
 
 const getScreenshotUrl = ({ role, view }) => {
@@ -107,8 +153,11 @@ const getScreenshotUrl = ({ role, view }) => {
 
 const main = async () => {
   await mkdir(OUTPUT_DIR, { recursive: true });
-  await runViteBuild();
-  const serverProcess = startServer();
+  let serverProcess = null;
+  if (SHOULD_START_PREVIEW) {
+    await runViteBuild();
+    serverProcess = startServer();
+  }
 
   try {
     await waitForServer(APP_URL);
@@ -138,7 +187,9 @@ const main = async () => {
       throw new Error(`Falha ao capturar ${failedScreenshots.length} screenshot(s): ${failedScreenshots.join(', ')}`);
     }
   } finally {
-    await stopServer(serverProcess);
+    if (serverProcess) {
+      await stopServer(serverProcess);
+    }
   }
 };
 
