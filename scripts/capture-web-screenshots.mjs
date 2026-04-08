@@ -7,7 +7,8 @@ import { chromium } from 'playwright';
 const APP_URL = process.env.APP_URL || 'http://127.0.0.1:4173';
 const OUTPUT_DIR = process.env.SCREENSHOT_OUTPUT_DIR || path.resolve(process.cwd(), 'artifacts', 'web-screenshots');
 const VIEWPORT = { width: 1440, height: 2200 };
-const WAIT_INTERVAL_MS = 500;
+const INITIAL_WAIT_INTERVAL_MS = 100;
+const MAX_WAIT_INTERVAL_MS = 500;
 const MAX_WAIT_MS = 30_000;
 
 const viewsToCapture = [
@@ -35,8 +36,31 @@ const viewsToCapture = [
   { role: 'employer', view: 'active' },
 ];
 
+const runViteBuild = async () => {
+  const buildProcess = spawn(
+    process.execPath,
+    [path.resolve(process.cwd(), 'node_modules', 'vite', 'bin', 'vite.js'), 'build'],
+    {
+      cwd: process.cwd(),
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        VITE_STRIPE_PUBLISHABLE_KEY: process.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_dummy',
+      },
+    }
+  );
+
+  const exitCode = await new Promise(resolve => {
+    buildProcess.once('exit', resolve);
+  });
+
+  if (exitCode !== 0) {
+    throw new Error('Falha ao gerar build para captura de screenshots.');
+  }
+};
+
 const startServer = () =>
-  spawn(process.execPath, [path.resolve(process.cwd(), 'node_modules', 'vite', 'bin', 'vite.js'), '--host', '127.0.0.1', '--port', '4173'], {
+  spawn(process.execPath, [path.resolve(process.cwd(), 'node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--host', '127.0.0.1', '--port', '4173', '--strictPort'], {
     cwd: process.cwd(),
     stdio: 'inherit',
     env: {
@@ -47,6 +71,7 @@ const startServer = () =>
 
 const waitForServer = async (url) => {
   const startedAt = Date.now();
+  let waitIntervalMs = INITIAL_WAIT_INTERVAL_MS;
 
   while (Date.now() - startedAt < MAX_WAIT_MS) {
     try {
@@ -55,7 +80,8 @@ const waitForServer = async (url) => {
     } catch {
       // keep waiting
     }
-    await new Promise(resolve => setTimeout(resolve, WAIT_INTERVAL_MS));
+    await new Promise(resolve => setTimeout(resolve, waitIntervalMs));
+    waitIntervalMs = Math.min(MAX_WAIT_INTERVAL_MS, Math.round(waitIntervalMs * 1.5));
   }
 
   throw new Error(`Servidor não iniciou em ${MAX_WAIT_MS / 1000}s (${url})`);
@@ -81,6 +107,7 @@ const getScreenshotUrl = ({ role, view }) => {
 
 const main = async () => {
   await mkdir(OUTPUT_DIR, { recursive: true });
+  await runViteBuild();
   const serverProcess = startServer();
 
   try {
