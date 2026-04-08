@@ -242,6 +242,52 @@ describe('EmployerWalletView', () => {
     );
     expect(screen.getByText(/Adicionar Saldo/)).toBeInTheDocument();
   });
+
+  it('renders empty history state when there are no transactions', () => {
+    render(
+      <EmployerWalletView
+        user={createMockUser({
+          role: 'employer',
+          wallet: { balance: 500, pending: 10, scheduled: 20, transactions: [] },
+        })}
+        handleWithdraw={vi.fn()}
+        handleOpenAddBalance={vi.fn()}
+        handleShowInvoices={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Sem pagamentos registrados')).toBeInTheDocument();
+  });
+
+  it('renders outgoing style and icon for negative job payment transaction', () => {
+    render(
+      <EmployerWalletView
+        user={createMockUser({
+          role: 'employer',
+          wallet: {
+            balance: 320,
+            pending: 0,
+            scheduled: 0,
+            transactions: [
+              {
+                id: 'txn-1',
+                type: 'job_payment',
+                amount: -180,
+                date: '2026-04-08',
+                description: 'Pagamento talent pool',
+              },
+            ],
+          },
+        })}
+        handleWithdraw={vi.fn()}
+        handleOpenAddBalance={vi.fn()}
+        handleShowInvoices={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Pagamento talent pool')).toBeInTheDocument();
+    expect(screen.getByText(/R\$\s*-180\.00/)).toHaveClass('text-rose-600');
+    expect(document.querySelector('.fa-briefcase')).toBeInTheDocument();
+  });
 });
 
 describe('ChatView', () => {

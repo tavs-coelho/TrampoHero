@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserProfile } from '../../types';
+import type { Transaction, UserProfile } from '../../types';
 
 interface EmployerWalletViewProps {
   user: UserProfile;
@@ -8,19 +8,43 @@ interface EmployerWalletViewProps {
   handleShowInvoices: () => void;
 }
 
-const getTransactionStyle = (amount: number, type: string) => {
-  if (amount > 0 || type === 'deposit' || type === 'escrow_release') {
+const TRANSACTION_ICON_BY_TYPE: Record<Transaction['type'], string> = {
+  deposit: 'fa-plus',
+  withdrawal: 'fa-arrow-up',
+  anticipation: 'fa-bolt',
+  job_payment: 'fa-briefcase',
+  coin_earned: 'fa-coins',
+  coin_redeemed: 'fa-coins',
+  loan: 'fa-hand-holding-dollar',
+  loan_repayment: 'fa-receipt',
+  referral_bonus: 'fa-user-plus',
+  challenge_reward: 'fa-trophy',
+  escrow: 'fa-lock',
+  escrow_release: 'fa-lock-open',
+  escrow_refund: 'fa-rotate-left',
+  subscription: 'fa-crown',
+  fee_charge: 'fa-percent',
+  refund: 'fa-rotate-left',
+  dispute_hold: 'fa-shield-halved',
+  dispute_release: 'fa-shield-halved',
+};
+
+const getTransactionStyle = (amount: number, type: Transaction['type']) => {
+  const isIncoming = amount > 0;
+  const isOutgoing = amount < 0;
+
+  if (isIncoming) {
     return {
-      icon: 'fa-plus',
+      icon: TRANSACTION_ICON_BY_TYPE[type],
       iconContainer: 'bg-emerald-50 text-emerald-600',
       amountClass: 'text-emerald-600',
       signal: '+',
     };
   }
 
-  if (type === 'withdrawal' || type === 'fee_charge') {
+  if (isOutgoing) {
     return {
-      icon: 'fa-arrow-up',
+      icon: TRANSACTION_ICON_BY_TYPE[type],
       iconContainer: 'bg-rose-50 text-rose-600',
       amountClass: 'text-rose-600',
       signal: '',
@@ -28,10 +52,10 @@ const getTransactionStyle = (amount: number, type: string) => {
   }
 
   return {
-    icon: 'fa-arrow-right-arrow-left',
+    icon: TRANSACTION_ICON_BY_TYPE[type],
     iconContainer: 'bg-indigo-50 text-indigo-600',
     amountClass: 'text-slate-900',
-    signal: amount > 0 ? '+' : '',
+    signal: '',
   };
 };
 
