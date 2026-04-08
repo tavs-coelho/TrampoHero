@@ -14,8 +14,7 @@ const MAX_WAIT_MS = 30_000;
 const LOCAL_APP_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
 const PREVIEW_HOST = parsedAppUrl.hostname;
 const PREVIEW_PORT = parsedAppUrl.port || '4173';
-const hasCustomAppUrl = Boolean(process.env.APP_URL);
-const SHOULD_START_PREVIEW = LOCAL_APP_HOSTS.has(PREVIEW_HOST) && !hasCustomAppUrl;
+const SHOULD_START_PREVIEW = LOCAL_APP_HOSTS.has(PREVIEW_HOST);
 
 const viewsToCapture = [
   { role: 'freelancer', view: 'browse' },
