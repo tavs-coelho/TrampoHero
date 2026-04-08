@@ -36,7 +36,7 @@ const viewsToCapture = [
 ];
 
 const startServer = () =>
-  spawn('npm', ['run', 'dev', '--', '--host', '127.0.0.1', '--port', '4173'], {
+  spawn(process.execPath, [path.resolve(process.cwd(), 'node_modules', 'vite', 'bin', 'vite.js'), '--host', '127.0.0.1', '--port', '4173'], {
     cwd: process.cwd(),
     stdio: 'inherit',
     env: {
@@ -59,6 +59,15 @@ const waitForServer = async (url) => {
   }
 
   throw new Error(`Servidor não iniciou em ${MAX_WAIT_MS / 1000}s (${url})`);
+};
+
+const stopServer = async (serverProcess) => {
+  if (!serverProcess || serverProcess.killed) return;
+  serverProcess.kill();
+  await new Promise(resolve => {
+    serverProcess.once('exit', resolve);
+    setTimeout(resolve, 2000);
+  });
 };
 
 const getScreenshotUrl = ({ role, view }) => {
@@ -85,7 +94,7 @@ const main = async () => {
       const outputPath = path.join(OUTPUT_DIR, fileName);
 
       await page.goto(url, { waitUntil: 'networkidle' });
-      await page.waitForTimeout(500);
+      await page.waitForSelector('main');
       await page.screenshot({ path: outputPath, fullPage: true });
       console.log(`✅ ${fileName}`);
     }
@@ -93,7 +102,7 @@ const main = async () => {
     await browser.close();
     console.log(`\nScreenshots salvos em: ${OUTPUT_DIR}`);
   } finally {
-    serverProcess.kill('SIGTERM');
+    await stopServer(serverProcess);
   }
 };
 
