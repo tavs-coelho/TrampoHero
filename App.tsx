@@ -29,6 +29,7 @@ import { analyticsService } from './services/analyticsService';
 declare const L: any;
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ?? '');
+// Screenshot mode only supports top-level views that are renderable in App.tsx.
 const QUERY_VIEW_VALUES: readonly ViewType[] = [
   'browse', 'wallet', 'active', 'chat', 'dashboard', 'academy', 'profile', 'talents',
   'coins', 'insurance', 'credit', 'analytics', 'referrals', 'challenges',
@@ -80,7 +81,8 @@ const App: React.FC = () => {
     const roleFromQuery = getInitialRoleFromQuery();
     const saved = localStorage.getItem('trampoHeroUser');
     const savedRole = saved ? (JSON.parse(saved) as Partial<UserProfile>)?.role : null;
-    const roleForValidation = roleFromQuery ?? (savedRole && QUERY_ROLE_VALUES.includes(savedRole) ? savedRole : INITIAL_USER.role);
+    const validatedSavedRole = savedRole && QUERY_ROLE_VALUES.includes(savedRole) ? savedRole : INITIAL_USER.role;
+    const roleForValidation = roleFromQuery ?? validatedSavedRole;
     return getInitialViewFromQuery(roleForValidation) ?? 'browse';
   });
   const [browseMode, setBrowseMode] = useState<'list' | 'map'>('list');
