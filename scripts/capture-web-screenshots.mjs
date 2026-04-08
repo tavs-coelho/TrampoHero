@@ -114,20 +114,29 @@ const main = async () => {
     await waitForServer(APP_URL);
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage({ viewport: VIEWPORT });
+    const failedScreenshots = [];
 
     for (const target of viewsToCapture) {
       const url = getScreenshotUrl(target);
       const fileName = `${target.role}-${target.view}.png`;
       const outputPath = path.join(OUTPUT_DIR, fileName);
 
-      await page.goto(url, { waitUntil: 'networkidle' });
-      await page.waitForSelector('main');
-      await page.screenshot({ path: outputPath, fullPage: true });
-      console.log(`✅ ${fileName}`);
+      try {
+        await page.goto(url, { waitUntil: 'networkidle' });
+        await page.waitForSelector('main');
+        await page.screenshot({ path: outputPath, fullPage: true });
+        console.log(`✅ ${fileName}`);
+      } catch (error) {
+        failedScreenshots.push(fileName);
+        console.error(`❌ ${fileName}`, error);
+      }
     }
 
     await browser.close();
     console.log(`\nScreenshots salvos em: ${OUTPUT_DIR}`);
+    if (failedScreenshots.length > 0) {
+      throw new Error(`Falha ao capturar ${failedScreenshots.length} screenshot(s): ${failedScreenshots.join(', ')}`);
+    }
   } finally {
     await stopServer(serverProcess);
   }
