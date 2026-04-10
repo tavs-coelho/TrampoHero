@@ -10,51 +10,51 @@ interface BottomNavProps {
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({ user, view, setView, isNavigating = false }) => (
-  <div className="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 h-16 flex items-center justify-around px-6 z-50">
+  <div className="fixed bottom-0 left-0 z-50 flex h-20 w-full items-center justify-around border-t border-slate-200 bg-white/95 px-4 shadow-[0_-8px_20px_rgba(15,23,42,0.05)] backdrop-blur supports-[backdrop-filter]:bg-white/90">
     {isNavigating && (
-      <div className="absolute top-0 left-0 h-0.5 bg-indigo-500 animate-pulse w-full" aria-hidden="true" />
+      <div className="absolute top-0 left-0 h-0.5 bg-brand-500 animate-pulse w-full" aria-hidden="true" />
     )}
     <button
       aria-label="Ir para início"
       onClick={() => setView(user.role === 'employer' ? 'dashboard' : 'browse')}
-      className={`flex flex-col items-center gap-1 transition-colors ${view === 'browse' || view === 'dashboard' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+      className={`flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-xl px-2 transition-colors ${view === 'browse' || view === 'dashboard' ? 'bg-brand-50 text-brand-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
     >
       <i className="fas fa-house text-lg"></i>
-      <span className="text-[10px] font-medium">Início</span>
+      <span className="text-xs font-medium">Início</span>
     </button>
     <button
       aria-label="Ir para job ativo"
       onClick={() => setView('active')}
-      className={`flex flex-col items-center gap-1 transition-colors ${view === 'active' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+      className={`flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-xl px-2 transition-colors ${view === 'active' ? 'bg-brand-50 text-brand-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
     >
       <i className="fas fa-briefcase text-lg"></i>
-      <span className="text-[10px] font-medium">Job Ativo</span>
+      <span className="text-xs font-medium">Job Ativo</span>
     </button>
     <button
       aria-label="Ir para carteira"
       onClick={() => setView('wallet')}
-      className={`flex flex-col items-center gap-1 transition-colors ${view === 'wallet' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+      className={`flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-xl px-2 transition-colors ${view === 'wallet' ? 'bg-brand-50 text-brand-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
     >
       <i className="fas fa-wallet text-lg"></i>
-      <span className="text-[10px] font-medium">Carteira</span>
+      <span className="text-xs font-medium">Carteira</span>
     </button>
     {user.role === 'admin' ? (
       <button
         aria-label="Ir para admin"
         onClick={() => setView('admin')}
-        className={`flex flex-col items-center gap-1 transition-colors ${view === 'admin' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+        className={`flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-xl px-2 transition-colors ${view === 'admin' ? 'bg-brand-50 text-brand-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
       >
         <i className="fas fa-shield-halved text-lg"></i>
-        <span className="text-[10px] font-medium">Admin</span>
+        <span className="text-xs font-medium">Admin</span>
       </button>
     ) : (
       <button
         aria-label="Ir para suporte"
         onClick={() => setView('chat')}
-        className={`flex flex-col items-center gap-1 transition-colors ${view === 'chat' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+        className={`flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-xl px-2 transition-colors ${view === 'chat' ? 'bg-brand-50 text-brand-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
       >
         <i className="fas fa-headset text-lg"></i>
-        <span className="text-[10px] font-medium">Suporte</span>
+        <span className="text-xs font-medium">Suporte</span>
       </button>
     )}
   </div>

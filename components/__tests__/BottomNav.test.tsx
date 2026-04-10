@@ -75,6 +75,6 @@ describe('BottomNav', () => {
     const { container } = render(<BottomNav user={mockUser} view="browse" setView={() => {}} />);
     const buttons = container.querySelectorAll('button');
     const homeButton = buttons[0];
-    expect(homeButton.className).toContain('text-indigo-600');
+    expect(homeButton.className).toContain('text-brand-600');
   });
 });

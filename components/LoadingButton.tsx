@@ -9,15 +9,15 @@ interface LoadingButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 const variantClasses: Record<string, string> = {
-  primary: 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200',
-  secondary: 'bg-slate-900 text-white hover:bg-slate-800',
-  danger: 'bg-red-600 text-white hover:bg-red-700',
+  primary: 'btn-primary',
+  secondary: 'btn-secondary',
+  danger: 'btn-danger',
 };
 
 const sizeClasses: Record<string, string> = {
-  sm: 'px-4 py-2 text-xs rounded-xl',
-  md: 'px-6 py-3 text-sm rounded-2xl',
-  lg: 'w-full py-5 text-base rounded-2xl',
+  sm: 'btn-sm',
+  md: 'px-4 py-2 text-sm rounded-lg',
+  lg: 'btn-lg',
 };
 
 export const LoadingButton: React.FC<LoadingButtonProps> = ({
@@ -35,9 +35,8 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
     disabled={disabled || isLoading}
     aria-busy={isLoading}
     className={`
-      font-black uppercase tracking-wide transition-all active:scale-95
-      disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100
-      flex items-center justify-center gap-2
+      btn-base active:scale-95
+      disabled:active:scale-100
       ${variantClasses[variant]}
       ${sizeClasses[size]}
       ${className}

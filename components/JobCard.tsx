@@ -10,15 +10,15 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onClick }) => (
   <button
     type="button"
     onClick={() => onClick(job)}
-    className={`w-full bg-white rounded-xl border transition-shadow relative text-left ${
+    className={`surface-card-interactive relative w-full text-left ${
       job.isBoosted
         ? 'border-amber-300 shadow-md hover:shadow-lg'
-        : 'border-slate-200 shadow-sm hover:shadow-md'
+        : ''
     }`}
   >
     {job.isBoosted && (
-      <div className="absolute -top-2.5 left-4 bg-amber-400 text-white text-[10px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-        <i className="fas fa-bolt text-[9px]"></i> Destaque
+      <div className="badge absolute -top-2.5 left-4 bg-amber-400 text-white">
+        <i className="fas fa-bolt text-xs"></i> Destaque
       </div>
     )}
     <div className="p-4">

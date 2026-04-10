@@ -56,8 +56,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="flex gap-2">
         <button
           onClick={simulateVoiceCreate}
-          className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
-            isRecording ? 'bg-red-500 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+          className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
+            isRecording ? 'bg-red-500 text-white' : 'btn-ghost text-slate-600'
           }`}
           aria-label="Criar vaga por voz"
         >
@@ -65,7 +65,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </button>
         <button
           onClick={onCreateJobClick}
-          className="flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+          className="btn-primary"
         >
           <i className="fas fa-plus text-xs"></i>
           Nova vaga
@@ -99,19 +99,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
       <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
         {TOP_TALENTS.slice(0, 4).map(talent => (
-          <div key={talent.id} className="min-w-[130px] bg-white p-3 rounded-xl border border-slate-200 flex flex-col items-center">
+          <div key={talent.id} className="surface-card min-w-[130px] p-3 flex flex-col items-center">
             <div className="w-10 h-10 bg-slate-100 rounded-full mb-2 flex items-center justify-center font-semibold text-slate-600 text-sm">
               {talent.name.split(' ').map(n => n[0]).join('')}
             </div>
             <h4 className="font-medium text-slate-900 text-xs mb-0.5 text-center line-clamp-1">{talent.name}</h4>
-            <p className="text-[11px] text-slate-500 mb-2">{talent.role}</p>
+            <p className="text-xs text-slate-500 mb-2">{talent.role}</p>
             <div className="flex items-center gap-1 mb-3">
-              <i className="fas fa-star text-[10px] text-amber-400"></i>
+              <i className="fas fa-star text-xs text-amber-400"></i>
               <span className="text-xs font-medium text-slate-700">{talent.rating}</span>
             </div>
             <button
               onClick={() => handleInviteTalent(talent.name, talent.id)}
-              className="w-full py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-medium hover:bg-slate-700 transition-colors"
+              className="btn-secondary btn-sm w-full"
             >
               Convidar
             </button>
