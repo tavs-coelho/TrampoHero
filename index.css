@@ -3,11 +3,89 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    color-scheme: light;
+  }
+
   body {
-    @apply bg-gray-50 text-slate-900 antialiased;
+    @apply bg-slate-50 text-slate-900 antialiased;
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  *:focus-visible {
+    @apply outline-none ring-2 ring-brand-500/70 ring-offset-2 ring-offset-white;
+  }
+}
+
+@layer components {
+  .surface-card {
+    @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+  }
+
+  .surface-card-interactive {
+    @apply surface-card transition-all duration-200 hover:border-slate-300 hover:shadow-card;
+  }
+
+  .section-title {
+    @apply text-sm font-semibold text-slate-700;
+  }
+
+  .chip {
+    @apply inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+
+  .btn-base {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-primary {
+    @apply btn-base bg-brand-600 text-white hover:bg-brand-700 shadow-soft;
+  }
+
+  .btn-secondary {
+    @apply btn-base bg-slate-900 text-white hover:bg-slate-800 shadow-soft;
+  }
+
+  .btn-ghost {
+    @apply btn-base border border-slate-200 bg-white text-slate-700 hover:bg-slate-50;
+  }
+
+  .btn-danger {
+    @apply btn-base bg-red-600 text-white hover:bg-red-700 shadow-soft;
+  }
+
+  .btn-sm {
+    @apply rounded-md px-3 py-1.5 text-xs;
+  }
+
+  .btn-lg {
+    @apply w-full rounded-xl px-5 py-3 text-base;
+  }
+
+  .field-label {
+    @apply mb-1.5 block text-xs font-medium text-slate-600;
+  }
+
+  .field-hint {
+    @apply text-xs text-slate-400;
+  }
+
+  .input-base {
+    @apply w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 transition-colors placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .progress-track {
+    @apply h-2 w-full overflow-hidden rounded-full bg-slate-100;
+  }
+
+  .progress-fill {
+    @apply h-full rounded-full bg-brand-600 transition-all duration-300 ease-out;
   }
 }
 

@@ -136,7 +136,7 @@ export const KycView: React.FC<KycViewProps> = ({ user, setUser, showToast, setV
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="absolute bottom-2 right-2 bg-white text-slate-700 text-[9px] font-black px-2 py-1 rounded-lg shadow border border-slate-200"
+            className="btn-ghost btn-sm absolute bottom-2 right-2 font-semibold"
           >
             <i className="fas fa-sync-alt mr-1"></i>Trocar
           </button>
@@ -149,8 +149,8 @@ export const KycView: React.FC<KycViewProps> = ({ user, setUser, showToast, setV
         >
           <i className={`fas ${icon} text-2xl`}></i>
           <span className="text-xs font-black text-slate-700">{label}</span>
-          <span className="text-[10px] text-slate-400 text-center">{hint}</span>
-          <span className="text-[9px] font-bold text-indigo-600 border border-indigo-200 px-3 py-1 rounded-full">
+          <span className="text-xs text-slate-400 text-center">{hint}</span>
+          <span className="text-xs font-semibold text-indigo-600 border border-indigo-200 px-3 py-1 rounded-full">
             Anexar Imagem
           </span>
         </button>
@@ -182,7 +182,7 @@ export const KycView: React.FC<KycViewProps> = ({ user, setUser, showToast, setV
 
         {/* Status Badge */}
         <div className="mt-4 flex items-center gap-2">
-          <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase ${KYC_STATUS_COLORS[kycStatus]}`}>
+          <span className={`text-xs font-black px-3 py-1 rounded-full uppercase ${KYC_STATUS_COLORS[kycStatus]}`}>
             {KYC_STATUS_LABELS[kycStatus]}
           </span>
           {kycStatus === 'approved' && (
@@ -211,7 +211,7 @@ export const KycView: React.FC<KycViewProps> = ({ user, setUser, showToast, setV
             Seus documentos foram enviados e estão sendo analisados. O processo leva até 2 dias úteis.
           </p>
           {user.kyc?.submittedAt && (
-            <p className="text-[10px] text-slate-400 mt-3">
+            <p className="text-xs text-slate-400 mt-3">
               Enviado em: {new Date(user.kyc.submittedAt).toLocaleDateString('pt-BR')}
             </p>
           )}

@@ -10,9 +10,9 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ user, setView, setShowPrimeModal, setUser }) => (
-  <nav className="bg-white border-b border-slate-200 sticky top-0 z-40 px-4 sm:px-6 h-14 flex items-center justify-between">
+  <nav className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-white/85 sm:px-6">
     <button type="button" className="flex items-center gap-2.5 text-left" onClick={() => setView('browse')} aria-label="Ir para início">
-      <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white flex-shrink-0">
+      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white">
         <i className="fas fa-bolt text-sm"></i>
       </div>
       <span className="font-bold text-base text-slate-900 tracking-tight">TrampoHero</span>
@@ -23,7 +23,7 @@ export const Header: React.FC<HeaderProps> = ({ user, setView, setShowPrimeModal
           <button
             type="button"
             onClick={() => setShowPrimeModal(true)}
-            className="hidden sm:flex items-center gap-1.5 bg-indigo-600 text-white text-xs font-semibold px-3 py-1.5 rounded-md"
+            className="btn-primary btn-sm hidden sm:inline-flex"
             aria-label="Abrir Hero Prime"
           >
             <i className="fas fa-crown text-xs"></i>
@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({ user, setView, setShowPrimeModal
           <button
             type="button"
             onClick={() => setShowPrimeModal(true)}
-            className="hidden sm:flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 text-xs font-medium transition-colors"
+            className="btn-ghost btn-sm hidden sm:inline-flex"
             aria-label="Conhecer Hero Prime"
           >
             <i className="fas fa-crown"></i>
@@ -44,14 +44,14 @@ export const Header: React.FC<HeaderProps> = ({ user, setView, setShowPrimeModal
       <button
         type="button"
         onClick={() => setView('profile')}
-        className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center hover:bg-slate-200 transition-colors"
+        className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 transition-colors hover:bg-slate-100"
         aria-label="Abrir perfil"
       >
         <i className="fas fa-user text-slate-500 text-xs"></i>
       </button>
       <button
         onClick={() => setUser(prev => ({ ...prev, role: prev.role === 'freelancer' ? 'employer' : 'freelancer' }))}
-        className="px-3 py-1.5 rounded-md text-xs font-medium border bg-white text-slate-600 border-slate-200 hover:bg-slate-50 transition-colors"
+        className="btn-ghost btn-sm"
       >
         {user.role === 'freelancer' ? 'Empresa' : 'Freelancer'}
       </button>

@@ -78,24 +78,24 @@ export const AcademyView: React.FC<AcademyViewProps> = ({ user, handleStartCours
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex gap-2 flex-wrap">
-                        <span className="bg-amber-50 text-amber-600 text-[8px] font-black px-2 py-1 rounded uppercase tracking-widest">
+                        <span className="bg-amber-50 text-amber-600 text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wide">
                           <i className="fas fa-clock mr-1"></i> {course.duration}
                         </span>
                         {course.price && course.price > 0 ? (
-                          <span className="bg-indigo-50 text-indigo-600 text-[8px] font-black px-2 py-1 rounded uppercase tracking-widest">
+                          <span className="bg-indigo-50 text-indigo-600 text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wide">
                             R$ {course.price}
                           </span>
                         ) : (
-                          <span className="bg-emerald-50 text-emerald-600 text-[8px] font-black px-2 py-1 rounded uppercase tracking-widest">
+                          <span className="bg-emerald-50 text-emerald-600 text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wide">
                             GRÁTIS
                           </span>
                         )}
-                        <span className="bg-slate-100 text-slate-600 text-[8px] font-black px-2 py-1 rounded uppercase tracking-widest">
+                        <span className="bg-slate-100 text-slate-600 text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wide">
                           {course.level === 'basic' ? 'Básico' : 
                            course.level === 'intermediate' ? 'Intermediário' : 
                            course.level === 'advanced' ? 'Avançado' : 'Certificação'}
                         </span>
-                        <span className="bg-purple-50 text-purple-600 text-[8px] font-black px-2 py-1 rounded uppercase tracking-widest">
+                        <span className="bg-purple-50 text-purple-600 text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wide">
                           <i className="fas fa-question-circle mr-1"></i> {course.examQuestions.length} questões
                         </span>
                       </div>
@@ -106,18 +106,18 @@ export const AcademyView: React.FC<AcademyViewProps> = ({ user, handleStartCours
                     <h4 className="font-black text-slate-800 text-lg mb-1">{course.title}</h4>
                     <p className="text-xs text-slate-400 mb-3">{course.description}</p>
                     {!course.provider && (
-                      <p className="text-[9px] text-indigo-600 font-bold mb-3">
+                      <p className="text-xs text-indigo-600 font-semibold mb-3">
                         <i className="fas fa-certificate mr-1"></i>Emissor: {course.certificateIssuer}
                       </p>
                     )}
                     {course.provider && (
-                      <p className="text-[9px] text-indigo-600 font-bold mb-3">
+                      <p className="text-xs text-indigo-600 font-semibold mb-3">
                         <i className="fas fa-graduation-cap mr-1"></i>Parceiro: {course.provider}
                       </p>
                     )}
                     <button 
                       onClick={() => handleStartCourse(course)} 
-                      className={`w-full py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
+                      className={`w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wide transition-all ${
                         isCompleted
                           ? 'bg-emerald-50 text-emerald-600 cursor-default'
                           : course.price && course.price > 0 

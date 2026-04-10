@@ -112,7 +112,7 @@ export const ActiveJobView: React.FC<ActiveJobViewProps> = ({ activeJob, isCheck
                             <p className="text-xs font-bold text-emerald-600">Foto enviada ✓</p>
                             <button
                               onClick={() => fileInputRef.current?.click()}
-                              className="text-[10px] text-indigo-500 font-bold mt-1"
+                              className="text-xs text-indigo-600 font-semibold mt-1 hover:text-indigo-700"
                             >
                               Trocar foto
                             </button>
@@ -128,7 +128,7 @@ export const ActiveJobView: React.FC<ActiveJobViewProps> = ({ activeJob, isCheck
                         </button>
                       )}
                       {proofUploadError && (
-                        <p className="text-[10px] text-red-500 font-bold mt-2">{proofUploadError}</p>
+                        <p className="text-xs text-red-500 font-semibold mt-2">{proofUploadError}</p>
                       )}
                       <input
                         ref={fileInputRef}
@@ -159,4 +159,3 @@ export const ActiveJobView: React.FC<ActiveJobViewProps> = ({ activeJob, isCheck
     </div>
   );
 };
-
