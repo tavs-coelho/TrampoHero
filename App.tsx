@@ -537,7 +537,7 @@ const App: React.FC = () => {
 
   // --- Render ---
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col pb-16">
+    <div className="min-h-screen bg-gray-50 flex flex-col pb-20">
       {showSplash && <SplashScreen />}
       {toast && <Toast message={toast.msg} type={toast.type} onClose={clearToast} />}
 

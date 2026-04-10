@@ -23,19 +23,9 @@ export default {
           700: '#4338ca',
         },
       },
-      fontSize: {
-        micro: ['0.75rem', { lineHeight: '1rem' }],
-      },
-      borderRadius: {
-        xl2: '1rem',
-        xl3: '1.5rem',
-      },
       boxShadow: {
         soft: '0 4px 14px rgba(15, 23, 42, 0.08)',
         card: '0 1px 3px rgba(15, 23, 42, 0.08), 0 8px 24px rgba(15, 23, 42, 0.06)',
-      },
-      spacing: {
-        18: '4.5rem',
       },
     },
   },

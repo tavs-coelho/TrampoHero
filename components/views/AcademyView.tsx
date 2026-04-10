@@ -78,24 +78,24 @@ export const AcademyView: React.FC<AcademyViewProps> = ({ user, handleStartCours
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex gap-2 flex-wrap">
-                        <span className="bg-amber-50 text-amber-600 text-micro font-bold px-2 py-1 rounded uppercase tracking-wide">
+                        <span className="bg-amber-50 text-amber-600 text-xs font-bold px-2 py-1 rounded tracking-wide">
                           <i className="fas fa-clock mr-1"></i> {course.duration}
                         </span>
                         {course.price && course.price > 0 ? (
-                          <span className="bg-indigo-50 text-indigo-600 text-micro font-bold px-2 py-1 rounded uppercase tracking-wide">
+                          <span className="bg-indigo-50 text-indigo-600 text-xs font-bold px-2 py-1 rounded tracking-wide">
                             R$ {course.price}
                           </span>
                         ) : (
-                          <span className="bg-emerald-50 text-emerald-600 text-micro font-bold px-2 py-1 rounded uppercase tracking-wide">
+                          <span className="bg-emerald-50 text-emerald-600 text-xs font-bold px-2 py-1 rounded tracking-wide">
                             GRÁTIS
                           </span>
                         )}
-                        <span className="bg-slate-100 text-slate-600 text-micro font-bold px-2 py-1 rounded uppercase tracking-wide">
+                        <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded tracking-wide">
                           {course.level === 'basic' ? 'Básico' : 
                            course.level === 'intermediate' ? 'Intermediário' : 
                            course.level === 'advanced' ? 'Avançado' : 'Certificação'}
                         </span>
-                        <span className="bg-purple-50 text-purple-600 text-micro font-bold px-2 py-1 rounded uppercase tracking-wide">
+                        <span className="bg-purple-50 text-purple-600 text-xs font-bold px-2 py-1 rounded tracking-wide">
                           <i className="fas fa-question-circle mr-1"></i> {course.examQuestions.length} questões
                         </span>
                       </div>
