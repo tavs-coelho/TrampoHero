@@ -17,7 +17,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ user, view, setView, isNav
     <button
       aria-label="Ir para início"
       onClick={() => setView(user.role === 'employer' ? 'dashboard' : 'browse')}
-      className={`flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-xl px-2 transition-colors ${view === 'browse' || view === 'dashboard' ? 'bg-brand-50 text-brand-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+      className={`flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-xl px-2 transition-colors ${view === 'browse' || view === 'dashboard' ? 'bg-brand-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
     >
       <i className="fas fa-house text-lg"></i>
       <span className="text-xs font-medium">Início</span>
@@ -25,7 +25,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ user, view, setView, isNav
     <button
       aria-label="Ir para job ativo"
       onClick={() => setView('active')}
-      className={`flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-xl px-2 transition-colors ${view === 'active' ? 'bg-brand-50 text-brand-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+      className={`flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-xl px-2 transition-colors ${view === 'active' ? 'bg-brand-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
     >
       <i className="fas fa-briefcase text-lg"></i>
       <span className="text-xs font-medium">Job Ativo</span>
@@ -33,7 +33,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ user, view, setView, isNav
     <button
       aria-label="Ir para carteira"
       onClick={() => setView('wallet')}
-      className={`flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-xl px-2 transition-colors ${view === 'wallet' ? 'bg-brand-50 text-brand-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+      className={`flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-xl px-2 transition-colors ${view === 'wallet' ? 'bg-brand-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
     >
       <i className="fas fa-wallet text-lg"></i>
       <span className="text-xs font-medium">Carteira</span>
@@ -42,7 +42,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ user, view, setView, isNav
       <button
         aria-label="Ir para admin"
         onClick={() => setView('admin')}
-        className={`flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-xl px-2 transition-colors ${view === 'admin' ? 'bg-brand-50 text-brand-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+        className={`flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-xl px-2 transition-colors ${view === 'admin' ? 'bg-brand-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
       >
         <i className="fas fa-shield-halved text-lg"></i>
         <span className="text-xs font-medium">Admin</span>
@@ -51,7 +51,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ user, view, setView, isNav
       <button
         aria-label="Ir para suporte"
         onClick={() => setView('chat')}
-        className={`flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-xl px-2 transition-colors ${view === 'chat' ? 'bg-brand-50 text-brand-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+        className={`flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-xl px-2 transition-colors ${view === 'chat' ? 'bg-brand-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
       >
         <i className="fas fa-headset text-lg"></i>
         <span className="text-xs font-medium">Suporte</span>

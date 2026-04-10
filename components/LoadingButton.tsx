@@ -35,7 +35,7 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
     disabled={disabled || isLoading}
     aria-busy={isLoading}
     className={`
-      btn-base active:scale-[0.99]
+      btn-base active:scale-95
       disabled:active:scale-100
       ${variantClasses[variant]}
       ${sizeClasses[size]}

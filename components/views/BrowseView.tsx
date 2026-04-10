@@ -71,7 +71,7 @@ export const BrowseView: React.FC<BrowseViewProps> = ({
     </div>
 
     {browseMode === 'map' ? (
-      <div className="relative h-[420px] w-full sm:h-[480px]">
+      <div className="relative h-[480px] w-full max-sm:h-[420px]">
         <div ref={mapContainerRef} className="h-full w-full overflow-hidden rounded-xl border border-slate-200 z-0"></div>
         <div className="absolute top-3 right-3 z-[1] bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-500 pointer-events-none">
           Clique nos marcadores

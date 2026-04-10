@@ -25,7 +25,7 @@
   }
 
   .surface-card-interactive {
-    @apply surface-card transition-all duration-200 hover:border-slate-300 hover:shadow-card;
+    @apply surface-card transition-[border-color,box-shadow] duration-200 hover:border-slate-300 hover:shadow-card;
   }
 
   .section-title {
@@ -41,7 +41,7 @@
   }
 
   .btn-base {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-[background-color,border-color,color,box-shadow,transform] duration-200 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   .btn-primary {
